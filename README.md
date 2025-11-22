@@ -5,9 +5,11 @@ Miscellaneous R functions for papers & blogposts by Uri Simonsohn.
 ## Installation
 
 ```r
-# Install from source (if you have the package directory)
-groundhog::groundhog.library("urisohn/sohn", date) 
- 
+# Install from GitHub with `groundhog` (for version control)
+groundhog::groundhog.library("urisohn/sohn", date)   #date is a date to load with version control 
+
+# Or install from GitHub with `devtools`
+devtools::install_github("urisohn/sohn")
 ```
 
 ## Overview
@@ -28,16 +30,12 @@ y <- 2*x + rnorm(100)
 scatter.gam(x, y, data.dots = TRUE, three.dots = TRUE)
 ```
 
-**Key features:**
-- Fits a GAM model with smooth terms
-- Optional display of original data points
-- Optional three-way spline summary points (tertiles)
-- Supports custom styling and basis dimensions
+
 
 ### `fhist()`
 
-Plots an empirical distribution of a variable.
-Unlike histograms, no binning
+Plots distribution of a variable.  
+Unlike histograms, no binning.  
 Unlike barplots, all possible values included in x-axis.
 
 **Example:**
@@ -46,10 +44,7 @@ x <- c(1, 1, 2, 2, 2, 5, 5)
 fhist(x, col = "steelblue", xlab = "Value", ylab = "Frequency")
 ```
 
-**Key features:**
-- No binning - shows exact frequencies
-- Displays all values in range (including zeros for non-observed values)
-- Customizable colors and styling
+
 
 ### `cdf.by()`
 
@@ -62,11 +57,7 @@ x <- rep(c("A", "B", "C"), c(30, 40, 30))
 cdf.by(y, x, col = c("red", "green", "blue"), lwd = 2)
 ```
 
-**Key features:**
-- Computes ECDFs for each group
-- Vectorized plotting parameters (scalars apply to all, vectors apply element-wise)
-- Supports data frame input
-- Returns ECDF functions invisibly
+
 
 ### `format.pvalue()`
 
@@ -81,30 +72,24 @@ format.pvalue(0.05, include_p = TRUE)
 # [1] "p = .05"
 ```
 
-**Key features:**
-- Removes leading zeros (0.05 → .05)
-- Handles edge cases (< .0001, > .9999)
-- Optional "p" prefix
-- Configurable precision
+
 
 ### `namedList()`
 
-Creates a  list where objects are automatically named based on their variable names.
+Creates a  list where objects are automatically named based on their variable names.  
+The existing name is a default, you can also set new names with it.
 
 **Example:**
 ```r
 x <- 1:5
 y <- letters[1:3]
-z <- matrix(1:4, nrow = 2)
+z_MAT <- matrix(1:4, nrow = 2)
 
-my_list <- namedList(x, y, z)
+my_list <- namedList(x, y, z=z_MAT)
 names(my_list)  # "x" "y" "z"
 ```
 
-**Key features:**
-- Automatic naming from variable names
-- Works with explicit names too
-- Useful for creating organized data structures
+
 
 ## Dependencies
 
