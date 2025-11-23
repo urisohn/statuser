@@ -19,6 +19,12 @@
 #'   (always use \code{fhist()}), or \code{"hist"} (always use \code{hist()}).
 #'   When \code{NULL}, uses \code{fhist()} if there are 25 or fewer unique values,
 #'   otherwise uses \code{hist()}.
+#' @param dot.pch Plotting character for data points when \code{data.dots = TRUE}.
+#'   Default is 16 (filled circle).
+#' @param dot.col Color for data points when \code{data.dots = TRUE}. Default is
+#'   \code{adjustcolor('gray', 0.7)} (semi-transparent gray).
+#' @param jitter Logical. If TRUE, applies a small amount of jitter to data points
+#'   to reduce overplotting. Default is FALSE.
 #' @param ... Additional arguments passed to \code{plot()} and \code{gam()}.
 #'
 #' @return Invisibly returns the fitted GAM model object.
@@ -58,7 +64,8 @@
 #'
 #' @importFrom mgcv gam
 #' @export
-scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL, k = NULL, plot.dist = NULL, ...) {
+scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL, k = NULL, plot.dist = NULL, 
+                        dot.pch = 16, dot.col = adjustcolor('gray', 0.7), jitter = FALSE, ...) {
   # Capture x and y names for labels (before potentially overwriting)
   x_name <- deparse(substitute(x))
   y_name <- deparse(substitute(y))
@@ -199,7 +206,20 @@ scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL
   
   # Add data points if requested
   if (data.dots == TRUE) {
-    points(x, y, col = 'gray66')
+    # Apply jitter if requested
+    if (jitter) {
+      # Calculate jitter amount based on data range
+      x_range <- diff(range(x, na.rm = TRUE))
+      y_range <- diff(range(y, na.rm = TRUE))
+      x_jitter <- x_range * 0.01  # 1% of x range
+      y_jitter <- y_range * 0.01  # 1% of y range
+      x_plot <- x + runif(length(x), -x_jitter, x_jitter)
+      y_plot <- y + runif(length(y), -y_jitter, y_jitter)
+    } else {
+      x_plot <- x
+      y_plot <- y
+    }
+    points(x_plot, y_plot, pch = dot.pch, col = dot.col)
   }
   
   # Add three-way spline points if requested
@@ -212,8 +232,17 @@ scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL
     # Switch to bottom panel
     par(mar = c(5.1, 4.1, 0, 2.1))  # Bottom plot: no top margin
     
-    # Ensure x-axis range matches the scatter plot
-    xlim_dist <- range(x, na.rm = TRUE)
+    # Determine xlim for distribution plot
+    # Use user-provided xlim if available, otherwise calculate from data with buffer
+    if ("xlim" %in% names(plot_args)) {
+      # Use the same xlim as the scatter plot (user-specified)
+      xlim_dist <- plot_args$xlim
+    } else {
+      # Calculate x-axis range with buffer (10% on each side for better visibility)
+      x_range <- range(x, na.rm = TRUE)
+      x_buffer <- diff(x_range) * 0.10
+      xlim_dist <- c(x_range[1] - x_buffer, x_range[2] + x_buffer)
+    }
     
     # Prepare distribution plot arguments - only pass essential arguments
     # fhist() and hist() have their own defaults, so we only override what's necessary

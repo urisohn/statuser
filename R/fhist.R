@@ -39,14 +39,52 @@ fhist <- function(x, col='dodgerblue',lwd=9, value.labels=TRUE, ...) {
   xs <- as.numeric(names(freq_table))
   fs <- as.numeric(freq_table)
   
+  # Determine the range to use (xlim if provided, otherwise data range)
+  if ("xlim" %in% names(dots)) {
+    data_min <- min(xs)
+    data_max <- max(xs)
+    xlim_min <- dots$xlim[1]
+    xlim_max <- dots$xlim[2]
+    # Use the wider range (xlim might extend beyond data)
+    range_min <- min(data_min, xlim_min)
+    range_max <- max(data_max, xlim_max)
+  } else {
+    range_min <- min(xs)
+    range_max <- max(xs)
+    # apply padding
+      span=.02
+      span <- range_max - range_min
+      range_min <- range_min - pad * span
+      range_max <- range_max + pad * span
+  }
+  
   # Create full range from min to max
-  full_range <- min(xs):max(xs)
+  # Handle both integer and decimal values
+  if (length(xs) > 1) {
+    # Find the minimum step size between consecutive values
+    xs_sorted <- sort(xs)
+    steps <- diff(xs_sorted)
+    min_step <- min(steps[steps > 0])  # Smallest positive step
+    
+    # Create sequence covering the full range with the minimum step size
+    full_range <- seq(from = range_min, to = range_max, by = min_step)
+  } else {
+    # Only one unique value
+    if ("xlim" %in% names(dots)) {
+      # If xlim provided, create sequence covering the range
+      # Use a small step (0.1 if decimal, 1 if integer)
+      min_step <- if (xs[1] %% 1 == 0) 1 else 0.1
+      full_range <- seq(from = range_min, to = range_max, by = min_step)
+    } else {
+      full_range <- xs
+    }
+  }
   
   # Initialize frequencies for full range (zeros for missing values)
   fs_full <- numeric(length(full_range))
   names(fs_full) <- full_range
   
-  # Fill in observed frequencies
+  # Fill in observed frequencies (only for values that exist in the data)
   fs_full[as.character(xs)] <- fs
   
   # Update xs and fs to include full range
@@ -74,7 +112,8 @@ fhist <- function(x, col='dodgerblue',lwd=9, value.labels=TRUE, ...) {
   
   # Remove default axis padding to eliminate gap at bottom
   if (!"yaxs" %in% names(dots)) dots$yaxs <- "i"
-  if (!"xaxs" %in% names(dots)) dots$xaxs <- "i"
+  # Only set xaxs = "i" if xlim is not provided (to allow padding when xlim is set)
+  if (!"xaxs" %in% names(dots) && !"xlim" %in% names(dots)) dots$xaxs <- "i"
   
   # Add las=1 to dots if not provided
   if (!"las" %in% names(dots)) dots$las <- 1
@@ -86,7 +125,7 @@ fhist <- function(x, col='dodgerblue',lwd=9, value.labels=TRUE, ...) {
   # Set type='n' to create plot frame without drawing points (unless user specifies type)
   if (!"type" %in% names(dots)) dots$type <- "n"
   
-  # Track if user provided yaxt - if not, we'll draw custom integer-only axis
+  # Track if user provided yaxt - if not, we'll draw custom axis
   user_provided_yaxt <- "yaxt" %in% names(dots)
   if (!user_provided_yaxt) dots$yaxt <- "n"
   
@@ -94,11 +133,22 @@ fhist <- function(x, col='dodgerblue',lwd=9, value.labels=TRUE, ...) {
   plot_args <- c(list(x = xs, y = fs), dots)
   do.call(plot, plot_args)
   
-  # Draw custom y-axis with integer ticks only (if we suppressed the default axis)
+  # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
   if (!user_provided_yaxt) {
-    # Use the actual ylim maximum for ticks
-    y_max_actual <- dots$ylim[2]
-    y_ticks <- 0:ceiling(y_max_actual)
+    # Get y-axis range
+    y_max <- max(fs, na.rm = TRUE)
+    if ("ylim" %in% names(dots)) {
+      y_max_plot <- dots$ylim[2]
+    } else {
+      y_max_plot <- y_max
+    }
+    
+    # Calculate midpoint and round all values to integers (since these are counts)
+    y_max_rounded <- round(y_max_plot)
+    y_mid <- round(y_max_rounded / 2)
+    
+    # Draw tickmarks at 0, midpoint, and maximum (all integers)
+    y_ticks <- c(0, y_mid, y_max_rounded)
     axis(2, at = y_ticks, las = 1)
   }
   
