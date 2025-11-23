@@ -35,61 +35,10 @@ fhist <- function(x, col='dodgerblue',lwd=9, value.labels=TRUE, ...) {
   dots <- list(...)
   
   # Calculate frequencies for each unique value
-  freq_table <- table(x)
-  xs <- as.numeric(names(freq_table))
-  fs <- as.numeric(freq_table)
+    freq_table <- table(x)
+    xs <- as.numeric(names(freq_table))
+    fs <- as.numeric(freq_table)
   
-  # Determine the range to use (xlim if provided, otherwise data range)
-  if ("xlim" %in% names(dots)) {
-    data_min <- min(xs)
-    data_max <- max(xs)
-    xlim_min <- dots$xlim[1]
-    xlim_max <- dots$xlim[2]
-    # Use the wider range (xlim might extend beyond data)
-    range_min <- min(data_min, xlim_min)
-    range_max <- max(data_max, xlim_max)
-  } else {
-    range_min <- min(xs)
-    range_max <- max(xs)
-    # apply padding
-      span=.02
-      span <- range_max - range_min
-      range_min <- range_min - pad * span
-      range_max <- range_max + pad * span
-  }
-  
-  # Create full range from min to max
-  # Handle both integer and decimal values
-  if (length(xs) > 1) {
-    # Find the minimum step size between consecutive values
-    xs_sorted <- sort(xs)
-    steps <- diff(xs_sorted)
-    min_step <- min(steps[steps > 0])  # Smallest positive step
-    
-    # Create sequence covering the full range with the minimum step size
-    full_range <- seq(from = range_min, to = range_max, by = min_step)
-  } else {
-    # Only one unique value
-    if ("xlim" %in% names(dots)) {
-      # If xlim provided, create sequence covering the range
-      # Use a small step (0.1 if decimal, 1 if integer)
-      min_step <- if (xs[1] %% 1 == 0) 1 else 0.1
-      full_range <- seq(from = range_min, to = range_max, by = min_step)
-    } else {
-      full_range <- xs
-    }
-  }
-  
-  # Initialize frequencies for full range (zeros for missing values)
-  fs_full <- numeric(length(full_range))
-  names(fs_full) <- full_range
-  
-  # Fill in observed frequencies (only for values that exist in the data)
-  fs_full[as.character(xs)] <- fs
-  
-  # Update xs and fs to include full range
-  xs <- full_range
-  fs <- fs_full
   
   # Set default xlab if not provided
   if (!"xlab" %in% names(dots)) dots$xlab <- x_name
@@ -111,28 +60,29 @@ fhist <- function(x, col='dodgerblue',lwd=9, value.labels=TRUE, ...) {
   }
   
   # Remove default axis padding to eliminate gap at bottom
-  if (!"yaxs" %in% names(dots)) dots$yaxs <- "i"
+    if (!"yaxs" %in% names(dots)) dots$yaxs <- "i"
+    
   # Only set xaxs = "i" if xlim is not provided (to allow padding when xlim is set)
-  if (!"xaxs" %in% names(dots) && !"xlim" %in% names(dots)) dots$xaxs <- "i"
+    if (!"xaxs" %in% names(dots) && !"xlim" %in% names(dots)) dots$xaxs <- "i"
   
   # Add las=1 to dots if not provided
-  if (!"las" %in% names(dots)) dots$las <- 1
+    if (!"las" %in% names(dots)) dots$las <- 1
   
   # Set axis label formatting (xlab/ylab, not tick labels)
-  if (!"font.lab" %in% names(dots)) dots$font.lab <- 2
-  if (!"cex.lab" %in% names(dots)) dots$cex.lab <- 1.2
+    if (!"font.lab" %in% names(dots)) dots$font.lab <- 2
+    if (!"cex.lab" %in% names(dots)) dots$cex.lab <- 1.2
   
   # Set type='n' to create plot frame without drawing points (unless user specifies type)
-  if (!"type" %in% names(dots)) dots$type <- "n"
+    if (!"type" %in% names(dots)) dots$type <- "n"
   
   # Track if user provided yaxt - if not, we'll draw custom axis
-  user_provided_yaxt <- "yaxt" %in% names(dots)
-  if (!user_provided_yaxt) dots$yaxt <- "n"
+    user_provided_yaxt <- "yaxt" %in% names(dots)
+    if (!user_provided_yaxt) dots$yaxt <- "n"
   
   # Plot the frequencies (empty plot frame)
-  plot_args <- c(list(x = xs, y = fs), dots)
-  do.call(plot, plot_args)
-  
+    plot_args <- c(list(x = xs, y = fs), dots)
+    do.call(plot, plot_args)
+    
   # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
   if (!user_provided_yaxt) {
     # Get y-axis range
