@@ -39,6 +39,10 @@ fhist <- function(x, col='dodgerblue',lwd=9, value.labels=TRUE, ...) {
     xs <- as.numeric(names(freq_table))
     fs <- as.numeric(freq_table)
   
+  # Set default xlim to min and max of unique values if not provided
+  if (!"xlim" %in% names(dots)) {
+    dots$xlim <- c(min(xs), max(xs))
+  }
   
   # Set default xlab if not provided
   if (!"xlab" %in% names(dots)) dots$xlab <- x_name
