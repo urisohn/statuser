@@ -112,13 +112,33 @@ fhist <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, ...) 
         y_max_plot <- y_max
       }
       
-      # Calculate midpoint and round all values to integers (since these are counts)
+      if (freq == FALSE) {
+        # When showing percentages, set ticks at multiples of 10%
+        total <- sum(fs)
+        y_max_pct <- (y_max_plot / total) * 100
+        
+        # Generate ticks at multiples of 10% that fit within the range
+        pct_ticks <- seq(0, ceiling(y_max_pct / 10) * 10, by = 10)
+        # Only keep ticks that are <= y_max_pct (or slightly above for rounding)
+        pct_ticks <- pct_ticks[pct_ticks <= y_max_pct + 1]
+        
+        # Convert percentage ticks back to raw frequencies for positioning
+        y_ticks <- (pct_ticks / 100) * total
+        
+        # Create labels with % sign
+        y_labels <- paste0(pct_ticks, "%")
+        
+        axis(2, at = y_ticks, labels = y_labels, las = 1)
+      } else {
+        # Original behavior for frequency mode
+        # Calculate midpoint and round all values to integers (since these are counts)
         y_max_rounded <- round(y_max_plot)
         y_mid <- round(y_max_rounded / 2)
         
         # Draw tickmarks at 0, midpoint, and maximum (all integers)
         y_ticks <- c(0, y_mid, y_max_rounded)
         axis(2, at = y_ticks, las = 1)
+      }
     }
     
   # Identify non-zero frequencies (only draw segments and labels for these)
