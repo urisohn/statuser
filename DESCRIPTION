@@ -1,7 +1,7 @@
 Package: sohn
 Type: Package
 Title: R functions I wished existed, and now do
-Version: 0.1.2
+Version: 0.1.3
 Author: Uri Simonsohn [aut, cre]
 Maintainer: Uri Simonsohn <urisohn@gmail.com>
 Description: Miscellaneous functions that I use for my papers and blogposts
