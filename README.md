@@ -6,7 +6,7 @@ Miscellaneous R functions for papers & blogposts by Uri Simonsohn.
 
 ```r
 # Install from GitHub with `groundhog` (for version control)
-groundhog::groundhog.library("urisohn/sohn", date)   #date is a date to load with version control 
+groundhog::groundhog.library("urisohn/sohn", date)   #date used for version control 
 
 # Or install from GitHub with `devtools`
 devtools::install_github("urisohn/sohn")
@@ -14,51 +14,33 @@ devtools::install_github("urisohn/sohn")
 
 ## Overview
 
-Common data visualization and formatting I have used in papers & Data Colada blog posts.
-Created with help from Cursor (AI)
+Functions I often use and are not (sufficiently?) available in existing packages.
 
 ## Functions
 
-Functions are organized into the following categories. Click on a category to expand and see available functions:
+### 📊 Graphing
 
-<details>
-<summary><b>📊 Graphing</b></summary>
-
-- `cdf.by()`: CDF plots for multiple variables in one graph
-- `fhist()`: Frequency distribution without binning
+- `cdf.by()`: CDF plots for multiple variables in one plot
+- `fhist()`: Frequency distribution without binning, with value labels
 - `scatter.gam()`: Scatter plots with GAM smooth lines
 
-</details>
+### 📈 Statistical Analyses
 
-<details>
-<summary><b>📈 Statistical Analyses</b></summary>
+- `lmr()`: lm() with robust & clustered standard errors
 
-- `lmr()`: Linear models with robust standard errors
+### ✨ Formatting
 
-</details>
-
-<details>
-<summary><b>✨ Formatting</b></summary>
-
-- `format.pvalue()`: Format p-values for clean display in figures and tables
+- `format.pvalue()`: Format p-values for clean display in figures and tables (e.g., p<.0001)
 - `message.col()`: Print colored messages to console
 
-</details>
+### 🔄 Simulations
 
-<details>
-<summary><b>🔄 Simulations</b></summary>
+- `counter()`: Show # of simulations run so far inside a monte carlo loop
 
-- `counter()`: Adaptive progress reporter for simulations
+### 🗂️ Data Management
 
-</details>
-
-<details>
-<summary><b>🗂️ Data Management</b></summary>
-
-- `namedList()`: Create lists with automatic naming from variable names
-- `convert_to_sql()`: Convert CSV files to SQL INSERT statements
-
-</details>
+- `namedList()`: Create lists with objects without having to name them
+- `convert_to_sql()`: Convert CSV to SQL 
 
 
 

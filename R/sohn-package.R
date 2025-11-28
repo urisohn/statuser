@@ -54,7 +54,5 @@
 #'   \item \url{https://github.com/urisohn/sohn}
 #' }
 #'
-#' @docType package
-#' @name sohn-package
-#' @aliases sohn
-NULL
+#' @keywords internal
+"_PACKAGE"
