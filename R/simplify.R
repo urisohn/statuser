@@ -80,6 +80,10 @@ simplify.htest <- function(object, digits = 3, ...) {
     stop("simplify() for htest objects currently only supports t-test results")
   }
   
+  # Store the calling environment for simplify_ttest to access original variables
+  # This allows us to extract group values for formula syntax
+  calling_env <- parent.frame()
+  
   # Route to simplify_ttest
-  simplify_ttest(object, digits = digits, ...)
+  simplify_ttest(object, digits = digits, calling_env = calling_env, ...)
 }

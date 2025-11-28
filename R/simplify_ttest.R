@@ -6,14 +6,15 @@
 #' @param object An htest object from t.test()
 #' @param digits Number of decimal places to display for means and difference
 #'   of means. Default is 3.
+#' @param calling_env The environment where simplify() was called (used to extract
+#'   original variables for formula syntax). Internal use only.
 #' @param ... Additional arguments (not currently used).
 #'
 #' @return The same object with enhanced printing (invisibly).
 #'
 #' @details
 #' This function parses the \code{data.name} attribute from the t.test output
-#' to extract variable names and then formats the output using the same print
-#' method as \code{t.test2()}.
+#' to extract variable names and then formats the output in a simplified format.
 #'
 #' @examples
 #' # Two-sample t-test
@@ -30,7 +31,7 @@
 #' @seealso \code{\link[stats]{t.test}}, \code{\link{simplify}}
 #'
 #' @keywords internal
-simplify_ttest <- function(object, digits = 3, ...) {
+simplify_ttest <- function(object, digits = 3, calling_env = NULL, ...) {
   if (!inherits(object, "htest")) {
     stop("object must be of class 'htest'")
   }
@@ -57,14 +58,33 @@ simplify_ttest <- function(object, digits = 3, ...) {
       object$group_var_name <- group_var_name
       object$is_formula <- TRUE
       
-      # For formula syntax, we need the group values to show "When cond==0"
-      # But we don't have access to the original data, so we'll use a simpler format
-      # Store group means from estimates (assuming estimate[1] is first group, estimate[2] is second)
+      # Try to get original data from the environment where simplify() was called
+      # This allows us to show "When cond==0" format
+      if (is.null(calling_env)) {
+        # Fallback: try parent.frame() and .GlobalEnv
+        env <- tryCatch(parent.frame(), error = function(e) .GlobalEnv)
+      } else {
+        env <- calling_env
+      }
+      
+      tryCatch({
+        y_var <- get(y_var_name, envir = env)
+        group_var <- get(group_var_name, envir = env)
+        if (length(y_var) > 0 && length(group_var) > 0 && length(y_var) == length(group_var)) {
+          object$y_var <- y_var
+          object$group_var <- group_var
+        } else {
+          object$y_var <- NULL
+          object$group_var <- NULL
+        }
+      }, error = function(e) {
+        object$y_var <- NULL
+        object$group_var <- NULL
+      })
+      
+      # Calculate difference
       if (length(object$estimate) == 2) {
         object$diff <- object$estimate[1] - object$estimate[2]
-        # We'll need to infer group values - for now use generic labels
-        object$group_var <- NULL  # Can't reconstruct without original data
-        object$y_var <- NULL
       }
     }
   } else {
@@ -93,7 +113,7 @@ simplify_ttest <- function(object, digits = 3, ...) {
   object$digits <- digits
   
   # Change class to use our print method
-  class(object) <- c("t.test2.enhanced", class(object))
+  class(object) <- c("simplified_ttest", class(object))
   
   # Print the enhanced output
   print(object)

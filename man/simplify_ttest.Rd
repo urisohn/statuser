@@ -4,13 +4,16 @@
 \alias{simplify_ttest}
 \title{Simplify t-test output}
 \usage{
-simplify_ttest(object, digits = 3, ...)
+simplify_ttest(object, digits = 3, calling_env = NULL, ...)
 }
 \arguments{
 \item{object}{An htest object from t.test()}
 
 \item{digits}{Number of decimal places to display for means and difference
 of means. Default is 3.}
+
+\item{calling_env}{The environment where simplify() was called (used to extract
+original variables for formula syntax). Internal use only.}
 
 \item{...}{Additional arguments (not currently used).}
 }
@@ -23,8 +26,7 @@ This function extracts variable names from the t.test output and formats the res
 }
 \details{
 This function parses the \code{data.name} attribute from the t.test output
-to extract variable names and then formats the output using the same print
-method as \code{t.test2()}.
+to extract variable names and then formats the output in a simplified format.
 }
 \examples{
 # Two-sample t-test
