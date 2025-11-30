@@ -34,8 +34,18 @@ clear <- function() {
   }
   
   # Clear all plots (close all devices except null device)
-  if (dev.cur() != 1) {
-    dev.off(which = dev.list())
+  # Close devices one at a time, checking each iteration
+  dev_list <- dev.list()
+  if (!is.null(dev_list) && length(dev_list) > 0) {
+    for (dev_num in dev_list) {
+      if (dev_num != 1) {  # Don't close the null device
+        tryCatch({
+          dev.off(which = dev_num)
+        }, error = function(e) {
+          # Device may have been closed already, ignore error
+        })
+      }
+    }
   }
   
   # Print confirmation message

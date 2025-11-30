@@ -101,6 +101,9 @@ fhist <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, ...) 
       plot_args <- c(list(x = xs, y = fs), dots)
       do.call(plot, plot_args)
     
+  # Calculate total sample size and add it under the main title
+      tot <- sum(fs)
+      mtext(paste0("(N=", tot, ")"), side = 3, line = 0.35, font = 3)
           
   # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
     if (!user_provided_yaxt) {
@@ -113,14 +116,16 @@ fhist <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, ...) 
       }
       
       if (freq == FALSE) {
-        # When showing percentages, set ticks at multiples of 10%
+        # When showing percentages, use pretty() to generate reasonable tick marks
         total <- sum(fs)
         y_max_pct <- (y_max_plot / total) * 100
         
-        # Generate ticks at multiples of 10% that fit within the range
-        pct_ticks <- seq(0, ceiling(y_max_pct / 10) * 10, by = 10)
-        # Only keep ticks that are <= y_max_pct (or slightly above for rounding)
-        pct_ticks <- pct_ticks[pct_ticks <= y_max_pct + 1]
+        # Use pretty() to generate nice tick intervals (typically 4-5 ticks)
+        # pretty() will choose appropriate intervals (e.g., 0, 5, 10, 15, 20 or 0, 10, 20, 30, etc.)
+        pct_range <- c(0, y_max_pct)
+        pct_ticks <- pretty(pct_range, n = 5)
+        # Only keep ticks that are >= 0 and <= y_max_pct (with small tolerance for rounding)
+        pct_ticks <- pct_ticks[pct_ticks >= 0 & pct_ticks <= y_max_pct + 0.1]
         
         # Convert percentage ticks back to raw frequencies for positioning
         y_ticks <- (pct_ticks / 100) * total

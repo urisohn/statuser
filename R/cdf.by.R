@@ -116,6 +116,18 @@ cdf.by <- function(y, x, data = NULL, ...) {
     x <- data[[x_name_raw]]
   }
   
+  #Drop missing data
+    isnax=is.na(x)
+    isnay=is.na(y)
+    x=x[!isnax & !isnay]
+    y=y[!isnax & !isnay]
+    
+    n.nax = sum(isnax)
+    n.nay = sum(isnay)
+    
+    if (n.nax>0) message.col("sohn::cdf.by() says: dropped ",n.nax," observations with missing '",x_name_raw,"' values",col='red4')
+    if (n.nay>0) message.col("sohn::cdf.by() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+  
   # Get unique groups and their order
   unique_x <- unique(x)
   n_groups <- length(unique_x)
@@ -180,31 +192,44 @@ cdf.by <- function(y, x, data = NULL, ...) {
     type1 <- get_param("type", 1) %||% "s"
     pch1 <- get_param("pch", 1)
     
-    # Remove vectorized parameters and data from dots for plot() (keep others like xlab, ylab, etc.)
-    plot_dots <- dots
-    vectorized_params <- c("col", "lwd", "lty", "type", "pch", "data")
-    plot_dots[vectorized_params] <- NULL
-    
     # Build plot arguments
     # Set main title if not provided
-    if (!"main" %in% names(plot_dots)) {
-      plot_dots$main <- paste0("Comparing Distribution of '", y_name, "' by '", x_name, "'")
+    if (!"main" %in% names(dots)) {
+      main_title <- paste0("Comparing Distribution of '", y_name, "' by '", x_name, "'")
+    } else {
+      main_title <- dots$main
     }
     # Set font and size for main title if not provided
-    if (!"font.main" %in% names(plot_dots)) plot_dots$font.main <- 2
-    if (!"cex.main" %in% names(plot_dots)) plot_dots$cex.main <- 1.3
+    font_main <- if ("font.main" %in% names(dots)) dots$font.main else 2
+    cex_main <- if ("cex.main" %in% names(dots)) dots$cex.main else 1.3
+    
+    # Set xlab if not provided
+    xlab_title <- if ("xlab" %in% names(dots)) dots$xlab else y_name
+    
+    # Set ylab if not provided
+    ylab_title <- if ("ylab" %in% names(dots)) dots$ylab else "% of observations"
     
     # Set default ylim if not provided (extend to 1.15 to accommodate legend above plot)
-    if (!"ylim" %in% names(plot_dots)) {
+    if (!"ylim" %in% names(dots)) {
       default_ylim <- c(0, 1.15)
     } else {
-      default_ylim <- plot_dots$ylim
+      default_ylim <- dots$ylim
     }
+    
+    # Remove vectorized parameters and data from dots for plot()
+    # Also remove xlab, ylab, main since we handle them separately
+      plot_dots <- dots
+      vectorized_params <- c("col", "lwd", "lty", "type", "pch", "data")
+      plot_params_to_remove <- c(vectorized_params, "xlab", "ylab", "main")
+      plot_dots[plot_params_to_remove] <- NULL
     
     plot_args <- list(x = y_seq, y = first_y_vals, 
                       type = type1, col = col1, lwd = lwd1, lty = lty1,
-                      xlab = y_name, 
-                      ylab = "% of observations",
+                      xlab = xlab_title, 
+                      ylab = ylab_title,
+                      main = main_title,
+                      font.main = font_main,
+                      cex.main = cex_main,
                       ylim = default_ylim,
                       font.lab = 2, cex.lab = 1.2, las = 1,
                       yaxt = "n")  # Suppress default y-axis to draw custom percentage axis
