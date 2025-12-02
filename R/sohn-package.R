@@ -17,7 +17,6 @@
 #'
 #' @section Statistical Analyses:
 #' \itemize{
-#'   \item \code{\link{lmr}}: Linear models with robust standard errors
 #' }
 #'
 #' @section Formatting:

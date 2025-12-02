@@ -49,17 +49,19 @@ scatter.gam(x, y)
 ```
 </details>
 
-### 📈 Statistical Analyses
-
 <details>
-<summary><code>lmr()</code>: lm() with robust & clustered standard errors</summary>
+<summary><code>text2()</code>: text() wrapper with intuitive text-alignment & background color</summary>
 
 ```r
-x <- rnorm(100)
-y <- 2 + 3*x + rnorm(100)
-lmr(y ~ x, robust = TRUE)
+plot(1:10, 1:10, type = "n")
+text2(2, 8, "Left", align = "left", bg = "lightblue")
+text2(5, 8, "Center", align = "center", bg = "lightgreen")
+text2(8, 8, "Right", align = "right", bg = "lightyellow")
+text2(5, 5, "Red Text", col = "red", bg = "white")
 ```
 </details>
+
+### 📈 Statistical Analyses
 
 <details>
 <summary><code>simplify()</code>: Simplify statistical test output (e.g., t-tests) for cleaner, more readable results</summary>
@@ -146,7 +148,6 @@ clear()
 ## Dependencies
 
 - `mgcv` (for `scatter.gam()`)
-- `sandwich` (for `lmr()`)
 
 ## Author
 

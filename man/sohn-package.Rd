@@ -25,7 +25,6 @@ This package contains various utility functions organized into the following cat
 \section{Statistical Analyses}{
 
 \itemize{
-  \item \code{\link{lmr}}: Linear models with robust standard errors
 }
 }
 

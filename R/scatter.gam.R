@@ -123,11 +123,15 @@ scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL
   }
   g1 <- do.call(mgcv::gam, c(list(formula = gam_formula), gam_args))
   
-  # Predict fitted values
-  yh <- predict(g1)
-  
-  # Order by x for smooth line plotting
-  ord <- order(x)
+  # Create grid for smooth line prediction
+  # Use user-provided xlim if available, otherwise use data range
+  if ("xlim" %in% names(plot_args)) {
+    x_range <- plot_args$xlim
+  } else {
+    x_range <- range(x, na.rm = TRUE)
+  }
+  newdat <- data.frame(x = seq(x_range[1], x_range[2], length.out = 400))
+  yh <- predict(g1, newdata = newdat)
   
   # Calculate three-way spline points if requested
   if (three.dots == TRUE) {
@@ -199,15 +203,43 @@ scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL
     plot_args$xaxt <- "n"
   }
   
-  # Plot smooth line
-  plot_args_line <- c(list(x = x[ord], y = yh[ord], type = 'l', col = 'blue', ylim = ylim), 
+  # Plot smooth line using grid predictions
+  plot_args_line <- c(list(x = newdat$x, y = yh, type = 'l', col = 'blue', ylim = ylim), 
                       plot_args)
   do.call(plot, plot_args_line)
   
   # Add data points if requested
   if (data.dots == TRUE) {
-    # Apply jitter if requested
-    if (jitter) {
+    # Detect dense data and adjust visualization accordingly
+    n_points <- length(x)
+    n_unique_x <- length(unique(x))
+    density_ratio <- n_points / n_unique_x
+    
+    # Auto-adjust transparency and jitter for dense data
+    auto_jitter <- jitter
+    auto_dot_col <- dot.col
+    auto_cex <- 0.8  # Default point size
+    
+    # If data is dense (many points per unique x value), use more transparency and auto-jitter
+    if (density_ratio > 10 && !jitter) {
+      auto_jitter <- TRUE
+      # Make points more transparent for dense data
+      if (identical(dot.col, adjustcolor('gray', 0.7))) {
+        # Only adjust if using default color
+        auto_dot_col <- adjustcolor('gray', 0.3)  # Much more transparent
+        auto_cex <- 0.5  # Smaller points for dense data
+      }
+    } else if (density_ratio > 5 && !jitter) {
+      # Moderate density - still use jitter
+      auto_jitter <- TRUE
+      if (identical(dot.col, adjustcolor('gray', 0.7))) {
+        auto_dot_col <- adjustcolor('gray', 0.4)
+        auto_cex <- 0.6
+      }
+    }
+    
+    # Apply jitter if requested or auto-enabled
+    if (auto_jitter) {
       # Calculate jitter amount based on data range
       x_range <- diff(range(x, na.rm = TRUE))
       y_range <- diff(range(y, na.rm = TRUE))
@@ -219,7 +251,7 @@ scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL
       x_plot <- x
       y_plot <- y
     }
-    points(x_plot, y_plot, pch = dot.pch, col = dot.col)
+    points(x_plot, y_plot, pch = dot.pch, col = auto_dot_col, cex = auto_cex)
   }
   
   # Add three-way spline points if requested
