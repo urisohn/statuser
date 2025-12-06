@@ -88,6 +88,15 @@ resize_images <- function(folder, width) {
 
   } else if (length(width) != length(files)) {
 
+    # Print error message in red
+    message.col("Error", col = "red", font = 2)
+    message.col("The folder contains ", length(files), " images, but ", length(width), " widths were provided.", col = "red")
+    
+    # List files with counter
+    for (j in seq_along(files)) {
+      message.col("  ", j, ". ", basename(files[j]), col = "red")
+    }
+    
     stop("Width vector length must match number of files or be scalar.")
 
   }
