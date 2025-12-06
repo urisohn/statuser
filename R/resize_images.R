@@ -1,9 +1,9 @@
 #' Resize Images
 #'
 #' Saves images to PNG with a specified width. As input it accepts (SVG, PDF, EPS, JPG, JPEG, TIF, TIFF, BMP, PNG)
-#' Saves to subdirectory '/resized' within input folder
+#' Saves to subdirectory '/resized' within input folder (or same directory as file if input is a single file)
 #'
-#' @param folder Character string. Path to the folder containing image files.
+#' @param folder Character string. Path to a folder containing image files, or path to a single image file.
 #' @param width Numeric vector. Target width(s) in pixels for the output PNG files.
 #'   Can be a single value (recycled for all files) or a vector matching the number
 #'   of files found.
@@ -32,6 +32,9 @@
 #'
 #' @examples
 #' \dontrun{
+#' # Resize a single image file
+#' resize_images("path/to/image.svg", width = 800)
+#'
 #' # Resize all images in a folder to 800px width
 #' resize_images("path/to/images", width = 800)
 #'
@@ -46,33 +49,53 @@ resize_images <- function(folder, width) {
 
   
 
+  # Check if input is a file or folder
+
+  if (file.exists(folder) && !dir.exists(folder)) {
+
+    # Input is a single file
+
+    files <- folder
+
+    # Output directory is the same directory as the file
+
+    outdir <- file.path(dirname(folder), "resized")
+
+  } else if (dir.exists(folder)) {
+
+    # Input is a folder
+
+    # Find files in folder
+
+    files <- list.files(
+
+      folder,
+
+      pattern = "\\.(svg|pdf|eps|jpg|jpeg|tif|tiff|bmp|png)$",
+
+      ignore.case  = TRUE,
+
+      full.names   = TRUE
+
+    )
+
+    
+
+    # Output directory is subfolder within input folder
+
+    outdir <- file.path(folder, "resized")
+
+  } else {
+
+    stop("Path does not exist or is not a valid file or folder.")
+
+  }
+
+  
+
   # Ensure output subfolder exists
 
-  outdir <- file.path(folder, "resized")
-
   if (!dir.exists(outdir)) dir.create(outdir)
-
-  
-
-  # Find files
-
-  files <- list.files(
-
-    folder,
-
-    pattern = "\\.(svg|pdf|eps|jpg|jpeg|tif|tiff|bmp|png)$",
-
-    ignore.case  = TRUE,
-
-    full.names   = TRUE
-
-  )
-
-  
-
-  
-
-  
 
   
 
@@ -90,7 +113,7 @@ resize_images <- function(folder, width) {
 
     # Print error message in red
     message.col("Error", col = "red", font = 2)
-    message.col("The folder contains ", length(files), " images, but ", length(width), " widths were provided.", col = "red")
+    message.col("Found ", length(files), " image(s), but ", length(width), " width(s) were provided.", col = "red")
     
     # List files with counter
     for (j in seq_along(files)) {

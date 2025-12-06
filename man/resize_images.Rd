@@ -7,7 +7,7 @@
 resize_images(folder, width)
 }
 \arguments{
-\item{folder}{Character string. Path to the folder containing image files.}
+\item{folder}{Character string. Path to a folder containing image files, or path to a single image file.}
 
 \item{width}{Numeric vector. Target width(s) in pixels for the output PNG files.
 Can be a single value (recycled for all files) or a vector matching the number
@@ -18,7 +18,7 @@ Invisibly returns TRUE on success.
 }
 \description{
 Saves images to PNG with a specified width. As input it accepts (SVG, PDF, EPS, JPG, JPEG, TIF, TIFF, BMP, PNG)
-Saves to subdirectory '/resized' within input folder
+Saves to subdirectory '/resized' within input folder (or same directory as file if input is a single file)
 }
 \details{
 This function:
@@ -42,6 +42,9 @@ formats are handled by \code{magick::image_read()}.
 }
 \examples{
 \dontrun{
+# Resize a single image file
+resize_images("path/to/image.svg", width = 800)
+
 # Resize all images in a folder to 800px width
 resize_images("path/to/images", width = 800)
 

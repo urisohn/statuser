@@ -62,9 +62,12 @@ plot(1:10, 1:10, type = "n")
 </details>
 
 <details>
-<summary><code>resize_images()</code>: Saves any image format as PNG, with a specified width. </summary>
+<summary><code>resize_images()</code>: Saves any image format as PNG, with a specified width. Accepts a single file or a folder.</summary>
 
 ```r
+# Resize a single image file
+   resize_images("path/to/image.svg", width = 800)
+
 # Resize all images in a folder to 800px width
    resize_images("path/to/images", width = 800)
 
