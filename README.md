@@ -61,6 +61,19 @@ text2(5, 5, "Red Text", col = "red", bg = "white")
 ```
 </details>
 
+<details>
+<summary><code>resize_images()</code>: Convert and resize image files (SVG, PDF, EPS, JPG, PNG, etc.) to PNG format with progress messages</summary>
+
+```r
+# Resize all images in a folder to 800px width
+# Prints blue progress messages: Resized "filename_800.png" (800)
+resize_images("path/to/images", width = 800)
+
+# Resize images to different widths
+resize_images("path/to/images", width = c(800, 1200, 600))
+```
+</details>
+
 ### 📈 Statistical Analyses
 
 <details>
@@ -148,6 +161,8 @@ clear()
 ## Dependencies
 
 - `mgcv` (for `scatter.gam()`)
+- `rsvg` (for `resize_images()`)
+- `magick` (for `resize_images()`)
 
 ## Author
 
@@ -160,5 +175,5 @@ GPL-3
 
 ## Version
 
-0.1.3
+0.1.4
 
