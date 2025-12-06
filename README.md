@@ -31,6 +31,16 @@ cdf.by(y, x, col = c("red", "blue"))
 </details>
 
 <details>
+<summary><code>density.by()</code>: Density plots for multiple groups in one plot</summary>
+
+```r
+y <- rnorm(100)
+x <- rep(c("A", "B"), 50)
+density.by(y, x, col = c("red", "blue"))
+```
+</details>
+
+<details>
 <summary><code>fhist()</code>: Frequency distribution without binning, with value labels</summary>
 
 ```r
