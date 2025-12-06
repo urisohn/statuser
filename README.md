@@ -62,11 +62,11 @@ text2(5, 5, "Red Text", col = "red", bg = "white")
 </details>
 
 <details>
-<summary><code>resize_images()</code>: Convert and resize image files (SVG, PDF, EPS, JPG, PNG, etc.) to PNG format with progress messages</summary>
+<summary><code>resize_images()</code>: Saves images to PNG with a specified width. As input it accepts (SVG, PDF, EPS, JPG, JPEG, TIF, TIFF, BMP, PNG). Saves to subdirectory '/resized' within input folder</summary>
 
 ```r
 # Resize all images in a folder to 800px width
-# Prints blue progress messages: Resized "filename_800.png" (800)
+# Prints blue progress messages: Resized 'filename_800.png'
 resize_images("path/to/images", width = 800)
 
 # Resize images to different widths
