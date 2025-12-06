@@ -54,10 +54,10 @@ scatter.gam(x, y)
 
 ```r
 plot(1:10, 1:10, type = "n")
-text2(2, 8, "Left", align = "left", bg = "lightblue")
-text2(5, 8, "Center", align = "center", bg = "lightgreen")
-text2(8, 8, "Right", align = "right", bg = "lightyellow")
-text2(5, 5, "Red Text", col = "red", bg = "white")
+   text2(2, 8, "Left", align = "left", bg = "lightblue")
+   text2(5, 8, "Center", align = "center", bg = "lightgreen")
+   text2(8, 8, "Right",    align = "right", bg = "lightyellow")
+   text2(5, 5, "Red Text", col = "red", bg = "white")
 ```
 </details>
 
@@ -66,11 +66,10 @@ text2(5, 5, "Red Text", col = "red", bg = "white")
 
 ```r
 # Resize all images in a folder to 800px width
-# Prints blue progress messages: Resized 'filename_800.png'
-resize_images("path/to/images", width = 800)
+   resize_images("path/to/images", width = 800)
 
 # Resize images to different widths
-resize_images("path/to/images", width = c(800, 1200, 600))
+   resize_images("path/to/images", width = c(800, 1200, 600))
 ```
 </details>
 
@@ -127,10 +126,10 @@ for (i in 1:100) {
 <summary><code>namedList()</code>: Create lists with objects without having to name them</summary>
 
 ```r
-x <- 1:5
-y <- letters[1:3]
-z <- matrix(1:4, nrow = 2)
-namedList(x, y, z)
+	x <- 1:5
+	y <- letters[1:3]
+	z <- matrix(1:4, nrow = 2)
+	namedList(x, y, z)
 ```
 </details>
 
@@ -138,7 +137,7 @@ namedList(x, y, z)
 <summary><code>convert_to_sql()</code>: Convert CSV to SQL</summary>
 
 ```r
-convert_to_sql("data.csv", "data.sql")
+	convert_to_sql("data.csv", "data.sql")
 ```
 </details>
 
@@ -147,12 +146,12 @@ convert_to_sql("data.csv", "data.sql")
 
 ```r
 # Create some objects
-x <- 1:10
-y <- rnorm(10)
-plot(x, y)
+	x <- 1:10
+	y <- rnorm(10)
+	plot(x, y)
 
 # Clear everything
-clear()
+	clear()
 ```
 </details> 
 
