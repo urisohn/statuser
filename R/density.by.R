@@ -1,7 +1,7 @@
-#' Plot Density Functions by Group
+#' Plot density of a variable, by another variable
 #'
 #' Plots density functions separately for each unique value of a grouping
-#' variable, with support for vectorized plotting parameters.
+#' variable.
 #'
 #' @param y A numeric vector of values to compute densities for, or a column name
 #'   if \code{data} is provided.
@@ -42,6 +42,14 @@
 #' \itemize{
 #'   \item A single value: applied to all groups
 #'   \item A vector: applied to groups in order of unique \code{x} values
+#' }
+#'
+#' Default colors are automatically assigned based on the number of groups:
+#' \itemize{
+#'   \item 2 groups: red4, dodgerblue
+#'   \item 3 groups: red4, dodgerblue, green4
+#'   \item 4 groups: orange1, orange3, red2, red4
+#'   \item 5+ groups: extends with additional colors
 #' }
 #'
 #' When there are exactly 2 groups, the function automatically performs:
@@ -145,7 +153,6 @@ density.by <- function(y, x, data = NULL, ...) {
     }
   
   #4. Drop missing data
-  # Drop missing data
     isnax=is.na(x)
     isnay=is.na(y)
     x=x[!isnax & !isnay]
@@ -158,34 +165,15 @@ density.by <- function(y, x, data = NULL, ...) {
     if (n.nay>0) message.col("sohn::density.by() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
   
   #5. Get unique groups
-  # Get unique groups and their order
     unique_x <- unique(x)
     n_groups <- length(unique_x)
   
   #6. Initialize return values
-  # Initialize return values for tests (when 2 groups)
     ks_test_result <- NULL
     warnings_list <- list()
   
   #7. Get default colors based on number of groups
-  # Get default colors based on number of groups
-    get_default_colors <- function(n) {
-        if (n == 2) {
-          return(c("red4", "dodgerblue"))
-        } else if (n == 3) {
-          return(c("red4", "dodgerblue", "green4"))
-        } else if (n == 4) {
-          return(c("orange1", "orange3", "red2", "red4"))
-        } else {
-          # For 5+ groups, use a combination of colors that cycle
-          # Start with the 4-group palette and add more colors
-          base_colors <- c("orange1", "orange3", "red2", "red4", 
-                           "dodgerblue", "dodgerblue4", "green4", "darkgreen",
-                           "purple", "purple4", "darkorchid", "magenta4")
-          return(base_colors[1:n])
-        }
-      }
-    default_colors <- get_default_colors(n_groups)
+    default_colors <- get.colors(n_groups) #See utils.R
   
   #8. Helper function: extract parameter value for a group
   # Helper function to extract parameter value for a group
@@ -203,9 +191,7 @@ density.by <- function(y, x, data = NULL, ...) {
       return(NULL)
     }
     
-  #9. Separate density() arguments from plotting arguments
-  # Separate density() arguments from plotting arguments
-  # density() arguments: bw, adjust, kernel, n, from, to, etc.
+  #9. Separate density() vs plotting arguments
     density_args <- c("bw", "adjust", "kernel", "n", "from", "to", "na.rm", "weights")
     density_params <- list()
     plot_params <- dots
@@ -218,7 +204,6 @@ density.by <- function(y, x, data = NULL, ...) {
     }
   
   #10. Compute densities for each group
-  # Compute densities for each group
     density_list <- list()
     y_ranges <- list()
     y_density_max <- list()
@@ -236,7 +221,6 @@ density.by <- function(y, x, data = NULL, ...) {
     }
   
   #11. Determine overall range for plotting
-  # Determine overall range for plotting
     all_x <- unlist(lapply(density_list, function(d) range(d$x)))
     all_y_density <- unlist(y_density_max)
     x_min <- min(all_x, na.rm = TRUE)
@@ -247,16 +231,13 @@ density.by <- function(y, x, data = NULL, ...) {
     y_lim_density <- c(0, y_max_density * 1.3)  # Add 30% space for legend
 
   #12. Helper function: NULL coalescing
-  # Helper function for NULL coalescing
     `%||%` <- function(x, y) if (is.null(x)) y else x
   
   #13. Plot first density to set up the plot
-  # Plot first density to set up the plot
     if (length(density_list) > 0) {
       first_density <- density_list[[1]]
     
     #14. Get parameters for first group
-    # Get parameters for first group
       col1 <- get_param("col", 1) %||% default_colors[1]
       lwd1 <- get_param("lwd", 1) %||% 4  # Default lwd=4
       lty1 <- get_param("lty", 1) %||% 1
@@ -417,7 +398,7 @@ density.by <- function(y, x, data = NULL, ...) {
                  col = "black", cex = .85, font = 1)
             
         } else if (n_groups == 3) {
-          # Mid mean: pos=3 (above)
+          # Show all three means: Low (pos=2), Mid (pos=3), High (pos=4)
           low_idx <- sorted_indices[1]
           mid_idx <- sorted_indices[2]
           high_idx <- sorted_indices[3]
@@ -427,9 +408,15 @@ density.by <- function(y, x, data = NULL, ...) {
             y_mid <- y[x == unique_x[mid_idx]]
             y_high <- y[x == unique_x[high_idx]]
             
-    
+          # Low mean segment
+            coli_low <- get_param("col", low_idx) %||% default_colors[low_idx]
+            segments(x0 = sorted_means[1], y0 = 0, x1 = sorted_means[1], y1 = y_max_segment,
+                     col = coli_low, lwd = 2)
+            text(x = sorted_means[1], y = y_max_segment, 
+                 labels = paste0("M=", round(sorted_means[1], 2)),
+                 pos = 2, col = coli_low, cex = 0.8, font = 2)
             
-          # Mid mean segment only
+          # Mid mean segment
             coli_mid <- get_param("col", mid_idx) %||% default_colors[mid_idx]
             segments(x0 = sorted_means[2], y0 = 0, x1 = sorted_means[2], y1 = y_max_segment,
                      col = coli_mid, lwd = 2)
@@ -437,7 +424,13 @@ density.by <- function(y, x, data = NULL, ...) {
                  labels = paste0("M=", round(sorted_means[2], 2)),
                  pos = 3, col = coli_mid, cex = 0.8, font = 2)
             
-             
+          # High mean segment
+            coli_high <- get_param("col", high_idx) %||% default_colors[high_idx]
+            segments(x0 = sorted_means[3], y0 = 0, x1 = sorted_means[3], y1 = y_max_segment,
+                     col = coli_high, lwd = 2, lty = 2)
+            text(x = sorted_means[3], y = y_max_segment, 
+                 labels = paste0("M=", round(sorted_means[3], 2)),
+                 pos = 4, col = coli_high, cex = 0.8, font = 2)
           
           }
         }
@@ -490,12 +483,14 @@ density.by <- function(y, x, data = NULL, ...) {
           usr <- par("usr")
           x_range <- usr[2] - usr[1]
           y_range <- usr[4] - usr[3]
-        # Format KS p-value (format.pvalue with include_p=TRUE gives "p = .05")
-          ks_p_formatted <- format.pvalue(ks_test$p.value, include_p = TRUE)
-        # Format KS results: "Kolmogorov-Smirnov\nD = xx\np = p"
-        # format.pvalue already includes "p = ", so we use it directly
-          ks_values <- paste0("Kolmogorov-Smirnov\nD = ", ks_d, "\n", ks_p_formatted)
-        # Position in bottom right corner
+        #  KS result 
+          #p-value
+            ks_p_formatted <- format.pvalue(ks_test$p.value, include_p = TRUE)
+            
+          #Full
+            ks_values <- paste0("Kolmogorov-Smirnov\nD = ", ks_d, "\n", ks_p_formatted)
+            
+          #Print it
           text(x = usr[2] - 0.02 * x_range, y = usr[3] + 0.02 * y_range, 
                labels = ks_values,
                adj = c(1, 0), cex = 0.8, font = 1)

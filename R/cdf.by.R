@@ -45,6 +45,14 @@
 #'   \item A vector: applied to groups in order of unique \code{x} values
 #' }
 #'
+#' Default colors are automatically assigned based on the number of groups:
+#' \itemize{
+#'   \item 2 groups: red4, dodgerblue
+#'   \item 3 groups: red4, dodgerblue, green4
+#'   \item 4 groups: orange1, orange3, red2, red4
+#'   \item 5+ groups: extends with additional colors
+#' }
+#'
 #' When there are exactly 2 groups, the function automatically performs:
 #' \itemize{
 #'   \item Kolmogorov-Smirnov test for distribution equality
@@ -140,23 +148,7 @@ cdf.by <- function(y, x, data = NULL, ...) {
   warnings_list <- list()
   
   # Get default colors based on number of groups
-  get_default_colors <- function(n) {
-    if (n == 2) {
-      return(c("red4", "dodgerblue"))
-    } else if (n == 3) {
-      return(c("red4", "dodgerblue", "green4"))
-    } else if (n == 4) {
-      return(c("orange1", "orange3", "red2", "red4"))
-    } else {
-      # For 5+ groups, use a combination of colors that cycle
-      # Start with the 4-group palette and add more colors
-      base_colors <- c("orange1", "orange3", "red2", "red4", 
-                       "dodgerblue", "dodgerblue4", "green4", "darkgreen",
-                       "purple", "purple4", "darkorchid", "magenta4")
-      return(base_colors[1:n])
-    }
-  }
-  default_colors <- get_default_colors(n_groups)
+  default_colors <- get.colors(n_groups)
   
   # Helper function to extract parameter value for a group
   get_param <- function(param_name, group_idx) {

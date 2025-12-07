@@ -26,7 +26,8 @@ Functions I often use and are not (sufficiently?) available in existing packages
 ```r
 y <- rnorm(100)
 x <- rep(c("A", "B"), 50)
-cdf.by(y, x, col = c("red", "blue"))
+cdf.by(y, x)  # Uses default colors (red4, dodgerblue for 2 groups)
+cdf.by(y, x, col = c("red", "blue"))  # Custom colors
 ```
 </details>
 
@@ -36,7 +37,9 @@ cdf.by(y, x, col = c("red", "blue"))
 ```r
 y <- rnorm(100)
 x <- rep(c("A", "B"), 50)
-density.by(y, x, col = c("red", "blue"))
+density.by(y, x)  # Uses default colors (red4, dodgerblue for 2 groups)
+density.by(y, x, col = c("red", "blue"))  # Custom colors
+density.by(y, x, show.means = FALSE)  # Hide mean segments
 ```
 </details>
 
