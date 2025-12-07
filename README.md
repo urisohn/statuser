@@ -21,7 +21,7 @@ Functions I often use and are not (sufficiently?) available in existing packages
 ### 📊 Graphing
 
 <details>
-<summary><code>cdf.by()</code>: CDF plots for multiple variables in one plot</summary>
+<summary><code>cdf.by()</code>: CDF for multiple groups in one plot</summary>
 
 ```r
 y <- rnorm(100)
@@ -32,7 +32,7 @@ cdf.by(y, x, col = c("red", "blue"))  # Custom colors
 </details>
 
 <details>
-<summary><code>density.by()</code>: Density plots for multiple groups in one plot</summary>
+<summary><code>density.by()</code>: Density for multiple groups in one plot</summary>
 
 ```r
 y <- rnorm(100)
@@ -63,7 +63,7 @@ scatter.gam(x, y)
 </details>
 
 <details>
-<summary><code>text2()</code>: text() wrapper with intuitive text-alignment & background color</summary>
+<summary><code>text2()</code>: Adds to text(): align='center' , bg='yellow'
 
 ```r
 plot(1:10, 1:10, type = "n")
@@ -75,7 +75,7 @@ plot(1:10, 1:10, type = "n")
 </details>
 
 <details>
-<summary><code>resize_images()</code>: Saves any image format as PNG, with a specified width. Accepts a single file or a folder.</summary>
+<summary><code>resize_images()</code>: Saves any image (or all in folder) as PNG with set width.</summary>
 
 ```r
 # Resize a single image file
