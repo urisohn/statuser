@@ -170,12 +170,12 @@ plot_freq <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, a
           
           axis(2, at = y_ticks, labels = y_labels, las = 1)
         } else {
-          # Original behavior for frequency mode
-          y_max_rounded <- round(y_max_plot)
-          y_mid <- round(y_max_rounded / 2)
+          # Use pretty() to generate nice tick intervals for frequency mode
+          freq_range <- c(0, y_max_plot)
+          y_ticks <- pretty(freq_range, n = 5)
+          # Only keep ticks that are >= 0 and <= y_max_plot (with small tolerance for rounding)
+          y_ticks <- y_ticks[y_ticks >= 0 & y_ticks <= y_max_plot + 0.1]
           
-          # Draw tickmarks at 0, midpoint, and maximum (all integers)
-          y_ticks <- c(0, y_mid, y_max_rounded)
           axis(2, at = y_ticks, las = 1)
         }
       }
@@ -366,13 +366,12 @@ plot_freq <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, a
           
           axis(2, at = y_ticks, labels = y_labels, las = 1)
         } else {
-          # Original behavior for frequency mode
-          # Calculate midpoint and round all values to integers (since these are counts)
-          y_max_rounded <- round(y_max_plot)
-          y_mid <- round(y_max_rounded / 2)
+          # Use pretty() to generate nice tick intervals for frequency mode
+          freq_range <- c(0, y_max_plot)
+          y_ticks <- pretty(freq_range, n = 5)
+          # Only keep ticks that are >= 0 and <= y_max_plot (with small tolerance for rounding)
+          y_ticks <- y_ticks[y_ticks >= 0 & y_ticks <= y_max_plot + 0.1]
           
-          # Draw tickmarks at 0, midpoint, and maximum (all integers)
-          y_ticks <- c(0, y_mid, y_max_rounded)
           axis(2, at = y_ticks, las = 1)
         }
       }
