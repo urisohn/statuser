@@ -33,7 +33,7 @@
 #'
 
 #' @export
-plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, add=FALSE,  ...) {
+plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, value.labels=TRUE, add=FALSE,  ...) {
   # Capture x variable name for x-axis label (before potentially overwriting)
   x_name <- deparse(substitute(x))
   
@@ -56,6 +56,12 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, value.labels
   if ("col" %in% names(dots)) {
     col <- dots$col
     dots$col <- NULL
+  }
+  
+  # Extract 'width' from dots if passed via ... and remove it from dots
+  if ("width" %in% names(dots)) {
+    width <- dots$width
+    dots$width <- NULL
   }
   
   # Handle 'by' grouping if specified
@@ -188,41 +194,41 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, value.labels
       }
     }
     
-    # Calculate offset for side-by-side bars (touching with exactly 0 gap)
-    # To make bars touch exactly, we need to position them so their edges meet
-    # The offset is calculated based on bar width in user coordinates
-    # Get plot dimensions to convert lwd (points) to user coordinates
-    usr <- par("usr")
-    pin <- par("pin")  # plot dimensions in inches
-    x_range <- usr[2] - usr[1]
-    
-    # Convert lwd from points to inches, then to user coordinates
-    # 1 point = 1/72 inch
-    lwd_inches <- lwd / 72
-    lwd_user <- lwd_inches * (x_range / pin[1])
-    
-    # For bars to touch exactly: distance between centers = bar width
-    # For 2 groups: offset = lwd_user / 2 (so bars at -offset and +offset touch)
-    # For 3 groups: offset = lwd_user / 2 (so adjacent bars touch)
-    offset_amount <- lwd_user / 2
-    
-    # Calculate offsets for each group (centered around x value)
-    # For 2 groups: bars at -offset and +offset (distance = 2*offset = lwd_user)
-    # For 3 groups: bars at -offset, 0, +offset (adjacent bars distance = offset = lwd_user/2)
-    if (n_groups == 2) {
-      offsets <- c(-offset_amount, offset_amount)
-    } else if (n_groups == 3) {
-      offsets <- c(-offset_amount, 0, offset_amount)
+    # Calculate bar width if not provided
+    if (is.null(width)) {
+      if (length(all_xs) > 1) {
+        min_spacing <- min(diff(sort(all_xs)))
+        width <- min_spacing * 0.2  # 20% of minimum spacing
+      } else {
+        width <- 0.15  # fallback
+      }
     }
     
-    # Draw segments for each group (side by side)
+    # Calculate offsets for each group so bars touch exactly
+    # For 2 groups: bars at -width/2 and +width/2 (touching at center)
+    # For 3 groups: bars at -width, 0, +width (each bar is width wide, touching)
+    if (n_groups == 2) {
+      offsets <- c(-width/2, width/2)
+    } else if (n_groups == 3) {
+      offsets <- c(-width, 0, width)
+    }
+    
+    # Draw polygons for each group (side by side, touching exactly)
     for (i in 1:n_groups) {
       gf <- group_freqs[[i]]
       non_zero <- gf$fs > 0
       if (any(non_zero)) {
-        x_positions <- gf$xs[non_zero] + offsets[i]
-        segments(x0 = x_positions, x1 = x_positions, y0 = 0, y1 = gf$fs[non_zero], 
-                 lwd = lwd, col = group_cols[i], lend = 1)
+        for (j in which(non_zero)) {
+          x_val <- gf$xs[j]
+          freq_val <- gf$fs[j]
+          x_center <- x_val + offsets[i]
+          x_left <- x_center - width/2
+          x_right <- x_center + width/2
+          
+          polygon(x = c(x_left, x_right, x_right, x_left),
+                  y = c(0, 0, freq_val, freq_val),
+                  col = group_cols[i], border = group_cols[i])
+        }
       }
     }
     
@@ -377,13 +383,31 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, value.labels
       }
   }
     
-  # Identify non-zero frequencies (only draw segments and labels for these)
+  # Calculate bar width if not provided (for non-grouped case)
+  if (is.null(width)) {
+    if (length(xs) > 1) {
+      min_spacing <- min(diff(sort(xs)))
+      width <- min_spacing * 0.2  # 20% of minimum spacing
+    } else {
+      width <- 0.15  # fallback
+    }
+  }
+  
+  # Identify non-zero frequencies (only draw polygons and labels for these)
     non_zero <- fs > 0
   
-  # Draw segments for each value (only non-zero frequencies)
+  # Draw polygons for each value (only non-zero frequencies)
     if (any(non_zero)) {
-      segments(x0 = xs[non_zero], x1 = xs[non_zero], y0 = 0, y1 = fs[non_zero], 
-               lwd = lwd, col = col, lend = 1)
+      for (j in which(non_zero)) {
+        x_val <- xs[j]
+        freq_val <- fs[j]
+        x_left <- x_val - width/2
+        x_right <- x_val + width/2
+        
+        polygon(x = c(x_left, x_right, x_right, x_left),
+                y = c(0, 0, freq_val, freq_val),
+                col = col, border = col)
+      }
     }
     
   # Add value labels if requested
