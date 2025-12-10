@@ -33,7 +33,7 @@
 #'
 
 #' @export
-plot_freq <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, add=FALSE, by=NULL, ...) {
+plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, add=FALSE,  ...) {
   # Capture x variable name for x-axis label (before potentially overwriting)
   x_name <- deparse(substitute(x))
   
@@ -52,6 +52,12 @@ plot_freq <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, a
     dots$by <- NULL
   }
   
+  # Extract 'col' from dots if passed via ... and remove it from dots
+  if ("col" %in% names(dots)) {
+    col <- dots$col
+    dots$col <- NULL
+  }
+  
   # Handle 'by' grouping if specified
   if (!is.null(by)) {
     # Validate by argument
@@ -65,15 +71,16 @@ plot_freq <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, a
       stop("'by' must have 2 or 3 unique values")
     }
     
-    # Default colors for groups
-    group_cols <- c(adjustcolor('#FF0000', alpha.f = 0.5), adjustcolor('#0000FF', alpha.f = 0.5))
-    if (n_groups == 3) {
-      group_cols <- c(group_cols, adjustcolor('green', alpha.f = 0.5))
+    # Use provided colors if valid, otherwise use default colors for groups
+    if (length(col) == n_groups && is.character(col)) {
+      group_cols <- col
+    } else {
+      group_cols <- sohn:::get.colors(n_groups)
     }
     
     # Compute frequencies for each group
-    all_xs <- sort(unique(x))
-    group_freqs <- list()
+      all_xs <- sort(unique(x))
+      group_freqs <- list()
     
     for (i in 1:n_groups) {
       group_x <- x[by == unique_by[i]]
@@ -181,50 +188,55 @@ plot_freq <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, a
       }
     }
     
-    # Draw segments for each group
+    # Calculate offset for side-by-side bars (touching with exactly 0 gap)
+    # To make bars touch exactly, we need to position them so their edges meet
+    # The offset is calculated based on bar width in user coordinates
+    # Get plot dimensions to convert lwd (points) to user coordinates
+    usr <- par("usr")
+    pin <- par("pin")  # plot dimensions in inches
+    x_range <- usr[2] - usr[1]
+    
+    # Convert lwd from points to inches, then to user coordinates
+    # 1 point = 1/72 inch
+    lwd_inches <- lwd / 72
+    lwd_user <- lwd_inches * (x_range / pin[1])
+    
+    # For bars to touch exactly: distance between centers = bar width
+    # For 2 groups: offset = lwd_user / 2 (so bars at -offset and +offset touch)
+    # For 3 groups: offset = lwd_user / 2 (so adjacent bars touch)
+    offset_amount <- lwd_user / 2
+    
+    # Calculate offsets for each group (centered around x value)
+    # For 2 groups: bars at -offset and +offset (distance = 2*offset = lwd_user)
+    # For 3 groups: bars at -offset, 0, +offset (adjacent bars distance = offset = lwd_user/2)
+    if (n_groups == 2) {
+      offsets <- c(-offset_amount, offset_amount)
+    } else if (n_groups == 3) {
+      offsets <- c(-offset_amount, 0, offset_amount)
+    }
+    
+    # Draw segments for each group (side by side)
     for (i in 1:n_groups) {
       gf <- group_freqs[[i]]
       non_zero <- gf$fs > 0
       if (any(non_zero)) {
-        segments(x0 = gf$xs[non_zero], x1 = gf$xs[non_zero], y0 = 0, y1 = gf$fs[non_zero], 
+        x_positions <- gf$xs[non_zero] + offsets[i]
+        segments(x0 = x_positions, x1 = x_positions, y0 = 0, y1 = gf$fs[non_zero], 
                  lwd = lwd, col = group_cols[i], lend = 1)
       }
     }
     
-    # Add value labels with frequencies
+    # Add value labels with frequencies (colored by group)
     if (value.labels) {
-      # For each x value, find which groups have non-zero frequencies
+      # For each x value and group, add label if frequency > 0
       for (j in 1:length(all_xs)) {
         x_val <- all_xs[j]
-        group_fs_at_x <- sapply(group_freqs, function(gf) gf$fs[j])
-        non_zero_groups <- which(group_fs_at_x > 0)
-        
-        if (length(non_zero_groups) > 0) {
-          # Sort groups by frequency at this x value
-          sorted_idx <- non_zero_groups[order(group_fs_at_x[non_zero_groups], decreasing = TRUE)]
-          
-          # Show highest frequency at pos=3 (above)
-          if (length(sorted_idx) >= 1) {
-            highest_idx <- sorted_idx[1]
-            highest_freq <- group_freqs[[highest_idx]]$fs[j]
-            text(x = x_val, y = highest_freq, labels = highest_freq, 
-                 cex = 0.7, pos = 3, col = group_cols[highest_idx])
-          }
-          
-          # Show lowest frequency at pos=1 (below)
-          if (length(sorted_idx) >= 2) {
-            lowest_idx <- sorted_idx[length(sorted_idx)]
-            lowest_freq <- group_freqs[[lowest_idx]]$fs[j]
-            text(x = x_val, y = lowest_freq, labels = lowest_freq, 
-                 cex = 0.7, pos = 1, col = 'white')
-          }
-          
-          # For 3 groups, show middle frequency at the bar height
-          if (length(sorted_idx) == 3) {
-            middle_idx <- sorted_idx[2]
-            middle_freq <- group_freqs[[middle_idx]]$fs[j]
-            text(x = x_val, y = middle_freq, labels = middle_freq, 
-                 cex = 0.7, pos = NULL, col = group_cols[middle_idx])
+        for (i in 1:n_groups) {
+          freq_val <- group_freqs[[i]]$fs[j]
+          if (freq_val > 0) {
+            x_label_pos <- x_val + offsets[i]
+            text(x = x_label_pos, y = freq_val, labels = freq_val, 
+                 cex = 0.7, pos = 3, col = group_cols[i])
           }
         }
       }
@@ -232,29 +244,17 @@ plot_freq <- function(x, freq=TRUE, col='dodgerblue',lwd=9, value.labels=TRUE, a
     
     # Add legend showing groups and colors
     if (!add) {
-      # Create legend labels and colors
-      legend_labels <- as.character(unique_by)
+      # Calculate sample sizes for each group
+      group_ns <- sapply(1:n_groups, function(i) {
+        length(x[by == unique_by[i]])
+      })
+      
+      # Create legend labels with sample sizes
+      legend_labels <- paste0(as.character(unique_by), " (N=", group_ns, ")")
       legend_cols <- group_cols[1:n_groups]
       
-      # Add "both" entry if there are 2 groups (showing mixed color)
-      if (n_groups == 2) {
-        # Calculate mixed color for "both" (red + blue = purple/magenta)
-        # When two semi-transparent colors overlap, they mix
-        # Red (#FF0000) + Blue (#0000FF) = Magenta/Purple
-        both_color <- adjustcolor('#FF00FF', alpha.f = 0.5)  # Magenta at 0.5 alpha
-        legend_labels <- c(legend_labels, "both")
-        legend_cols <- c(legend_cols, both_color)
-      } else if (n_groups == 3) {
-        # For 3 groups, "both" could represent all three overlapping
-        # Mix of red, blue, and green creates a grayish/brown color
-        # Using a neutral color to represent the mix
-        both_color <- adjustcolor('#808080', alpha.f = 0.5)  # Gray at 0.5 alpha
-        legend_labels <- c(legend_labels, "both")
-        legend_cols <- c(legend_cols, both_color)
-      }
-      
       # Add legend
-      legend("topright", legend = legend_labels, col = legend_cols, 
+      legend("topleft", legend = legend_labels, col = legend_cols, 
              lwd = lwd, bty = "n")
     }
     
