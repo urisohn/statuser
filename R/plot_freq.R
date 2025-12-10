@@ -40,30 +40,6 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
   # Extract additional arguments
   dots <- list(...)
   
-  # Extract 'add' from dots if passed via ... and remove it from dots
-  if ("add" %in% names(dots)) {
-    add <- dots$add
-    dots$add <- NULL
-  }
-  
-  # Extract 'by' from dots if passed via ... and remove it from dots
-  if ("by" %in% names(dots)) {
-    by <- dots$by
-    dots$by <- NULL
-  }
-  
-  # Extract 'col' from dots if passed via ... and remove it from dots
-  if ("col" %in% names(dots)) {
-    col <- dots$col
-    dots$col <- NULL
-  }
-  
-  # Extract 'width' from dots if passed via ... and remove it from dots
-  if ("width" %in% names(dots)) {
-    width <- dots$width
-    dots$width <- NULL
-  }
-  
   # Handle 'by' grouping if specified
   if (!is.null(by)) {
     # Validate by argument
@@ -84,22 +60,21 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
       group_cols <- sohn:::get.colors(n_groups)
     }
     
-    # Compute frequencies for each group
-      all_xs <- sort(unique(x))
-      group_freqs <- list()
+    # Compute frequencies using cross-tabulation
+    all_xs <- sort(unique(x))
+    freq_table <- table(x, by)
     
+    # Convert to list format for each group
+    group_freqs <- list()
     for (i in 1:n_groups) {
-      group_x <- x[by == unique_by[i]]
-      freq_table <- table(group_x)
-      group_xs <- as.numeric(names(freq_table))
-      group_fs <- as.numeric(freq_table)
+      # Extract frequencies for this group, ensuring all x values are included
+      group_fs <- numeric(length(all_xs))
+      # Match table row names (x values) to all_xs
+      table_xs <- as.numeric(rownames(freq_table))
+      idx <- match(table_xs, all_xs)
+      group_fs[idx] <- freq_table[, i]
       
-      # Create full frequency vector for all x values (0 for missing)
-      full_fs <- numeric(length(all_xs))
-      idx <- match(group_xs, all_xs)
-      full_fs[idx] <- group_fs
-      
-      group_freqs[[i]] <- list(xs = all_xs, fs = full_fs)
+      group_freqs[[i]] <- list(xs = all_xs, fs = group_fs)
     }
     
     # Find overall max frequency for ylim
