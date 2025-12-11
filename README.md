@@ -49,6 +49,16 @@ plot_density(y, x, show.means = FALSE)  # Hide mean segments
 ```r
 x <- c(1, 1, 2, 2, 2, 5, 5)
 plot_freq(x)
+
+# Grouped frequency plot
+df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
+plot_freq(value, by = group, data = df)
+
+# Show percentages instead of frequencies
+plot_freq(value, by = group, data = df, freq = FALSE)
+
+# Customize legend and labels
+plot_freq(value, by = group, data = df, legend.title = "Group", col.text = "black")
 ```
 </details>
 
@@ -90,6 +100,26 @@ plot(1:10, 1:10, type = "n")
 </details>
 
 ### 📈 Statistical Analyses
+
+<details>
+<summary><code>table2()</code>: Enhanced table function with variable name display and proportion calculations</summary>
+
+```r
+df <- data.frame(
+  group = c("A", "A", "B", "B", "A"),
+  status = c("X", "Y", "X", "Y", "X")
+)
+
+# Table with variable names in dimnames
+table2(df$group, df$status)
+
+# Compute proportions
+table2(df$group, df$status, prop = "all")    # Overall proportions
+table2(df$group, df$status, prop = "row")    # Row proportions
+table2(df$group, df$status, prop = "column") # Column proportions
+# Or use numeric: prop = 0, 1, or 2
+```
+</details>
 
 <details>
 <summary><code>simplify()</code>: Simplify statistical test output (e.g., t-tests) for cleaner, more readable results</summary>

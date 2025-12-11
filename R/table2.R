@@ -1,8 +1,8 @@
-#' Enhanced table function with variable name display
+#' Enhanced table() by showing variable name and allowing proportions as results
 #'
 #' Identical to base R's \code{table()}, except that when tabulating two variables
-#' from a dataframe, the variable names are displayed in the row/column names.
-#' Also includes a \code{prop} argument for computing proportions.
+#' from a dataframe, the variable names are displayed in the row/column names, and that
+#' \code{prop} argument allows reporting proportions, bypassing need for \code{prop.table(table())}
 #'
 #' @param ... One or more objects which can be interpreted as factors (including
 #'   character strings), or a list (or data frame) whose components can be so
