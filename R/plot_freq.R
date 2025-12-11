@@ -187,7 +187,7 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
       if (!"ylab" %in% names(dots) && !freq) dots$ylab <- "% of Observations"
       
       # Set default main title if not provided
-      if (!"main" %in% names(dots)) dots$main <- paste("Distribution of", x_name)
+      if (!"main" %in% names(dots)) dots$main <- paste0("Distribution of '", x_name, "'")
       
       # Set default ylim to start at 0 if not provided
       if (!"ylim" %in% names(dots)) {
