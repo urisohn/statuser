@@ -3,12 +3,13 @@
 #' Creates a frequency plot showing the frequency of every observed value,
 #' displaying the full range from minimum to maximum value.
 #'
-#' @param x A numeric vector of values to plot frequencies for.
+#' @param x A numeric vector of values to plot frequencies for, or a column name (character string) if \code{data} is provided.
 #' @param col Color for the bars. 
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param value.labels Logical. If TRUE, displays frequencies on top of each line. 
 #' @param add Logical. If TRUE, adds to an existing plot instead of creating a new one. 
-#' @param by A grouping variable (with 2 or 3 unique values). If specified, frequencies are computed separately for each group and plotted with different colors. 
+#' @param by A grouping variable (with 2 or 3 unique values). If specified, frequencies are computed separately for each group and plotted with different colors. Can be a vector or a column name (character string) if \code{data} is provided.
+#' @param data Optional data frame containing the variables \code{x} and optionally \code{by}.
 #' @param ... Pass on any argument accepted by \code{plot()} e.g., \code{xlab='x-axis'} , \code{main='Distribution of X'}
 #'
 #' @return Invisibly returns a data frame with values and their frequencies.
@@ -31,14 +32,73 @@
 #' plot_freq(x, col = "dodgerblue")
 #' plot_freq(x + 1, col = "red", add = TRUE)
 #'
+#' # Using a data frame
+#' df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
+#' plot_freq(x = "value", data = df)
+#' plot_freq(x = value, by = group, data = df)  # unquoted column names also work
+#'
 
 #' @export
-plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, value.labels=TRUE, add=FALSE,  ...) {
-  # Capture x variable name for x-axis label (before potentially overwriting)
-  x_name <- deparse(substitute(x))
+plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, data=NULL, ...) {
+  # Capture x and by variable names (before potentially overwriting)
+  x_name_raw <- deparse(substitute(x))
+  # Remove quotes if present (handles both x = "col" and x = col)
+  x_name_raw <- gsub('^"|"$', '', x_name_raw)
+  x_name <- if (grepl("\\$", x_name_raw)) {
+    strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
+  } else {
+    x_name_raw
+  }
+  
+  # Handle by: capture name if provided
+  by_name_raw <- NULL
+  if (!is.null(by)) {
+    if (is.character(by) && length(by) == 1) {
+      # by was passed as a character string (e.g., by = "group")
+      by_name_raw <- by
+    } else {
+      # by was passed as an unquoted name or vector
+      by_name_raw <- deparse(substitute(by))
+      by_name_raw <- gsub('^"|"$', '', by_name_raw)
+    }
+  }
   
   # Extract additional arguments
   dots <- list(...)
+  
+  # Handle data frame if provided
+  if (!is.null(data)) {
+    if (!is.data.frame(data)) {
+      stop("'data' must be a data frame")
+    }
+    
+    # Extract x column from data frame
+    if (!x_name_raw %in% names(data)) {
+      stop(sprintf("Column '%s' not found in data", x_name_raw))
+    }
+    x <- data[[x_name_raw]]
+    
+    # Extract by column from data frame if provided
+    if (!is.null(by)) {
+      # Check if by_name_raw looks like a column name (not a vector expression)
+      # Simple heuristic: if it contains parentheses, brackets, or operators, it's likely a vector expression
+      if (grepl("[()\\[\\]\\+\\-\\*/]", by_name_raw)) {
+        # by appears to be a vector expression, use it as-is
+        # (This handles cases like by = c(1,2,3) when data is provided)
+      } else {
+        # by appears to be a column name, extract from data
+        if (!by_name_raw %in% names(data)) {
+          stop(sprintf("Column '%s' not found in data", by_name_raw))
+        }
+        by <- data[[by_name_raw]]
+      }
+    }
+  }
+  
+  # Validate that x is a numeric vector
+  if (!is.numeric(x) || !is.vector(x)) {
+    stop(sprintf("'x' must be a numeric vector, and '%s' is not", x_name_raw))
+  }
   
   # Handle 'by' grouping if specified
   if (!is.null(by)) {
@@ -66,6 +126,8 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
     
     # Convert to list format for each group
     group_freqs <- list()
+    group_freqs_original <- list()  # Store original frequencies for return value
+    total <- length(x)  # Total sample size
     for (i in 1:n_groups) {
       # Extract frequencies for this group, ensuring all x values are included
       group_fs <- numeric(length(all_xs))
@@ -74,10 +136,19 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
       idx <- match(table_xs, all_xs)
       group_fs[idx] <- freq_table[, i]
       
+      # Store original frequencies for return value
+      group_freqs_original[[i]] <- list(xs = all_xs, fs = group_fs)
+      
+      # Convert to percentages if requested (relative to this group's sample size)
+      if (freq == FALSE) {
+        group_total <- sum(group_fs)  # Sample size for this group
+        group_fs <- (group_fs / group_total) * 100
+      }
+      
       group_freqs[[i]] <- list(xs = all_xs, fs = group_fs)
     }
     
-    # Find overall max frequency for ylim
+    # Find overall max frequency for ylim (already in percentages if freq=FALSE)
     max_fs <- max(sapply(group_freqs, function(gf) max(gf$fs, na.rm = TRUE)), na.rm = TRUE)
     
     # Only set up plot if not adding to existing plot
@@ -127,6 +198,10 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
       user_provided_yaxt <- "yaxt" %in% names(dots)
       if (!user_provided_yaxt) dots$yaxt <- "n"
       
+      # Track if user provided xaxt - if not, we'll draw custom axis with all x values
+      user_provided_xaxt <- "xaxt" %in% names(dots)
+      if (!user_provided_xaxt) dots$xaxt <- "n"
+      
       # Plot the frequencies (empty plot frame)
       plot_args <- c(list(x = all_xs, y = rep(0, length(all_xs))), dots)
       do.call(plot, plot_args)
@@ -135,28 +210,32 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
       tot <- length(x)
       mtext(paste0("(N=", tot, ")"), side = 3, line = 0.35, font = 3)
       
+      # Draw custom x-axis with all x values (if we suppressed default)
+      if (!user_provided_xaxt) {
+        axis(1, at = all_xs, las = 1)
+      }
+      
       # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
       if (!user_provided_yaxt) {
         # Use max_fs for tick calculation (actual data range, not expanded ylim)
+        # max_fs is already in percentages if freq=FALSE
         y_max_plot <- max_fs
+        if ("ylim" %in% names(dots)) {
+          y_max_plot <- dots$ylim[2]
+        }
         
         if (freq == FALSE) {
           # When showing percentages, use pretty() to generate reasonable tick marks
-          total <- length(x)
-          y_max_pct <- (y_max_plot / total) * 100
-          
-          # Use pretty() to generate nice tick intervals (typically 4-5 ticks)
-          pct_range <- c(0, y_max_pct)
+          # max_fs is already in percentages
+          pct_range <- c(0, y_max_plot)
           pct_ticks <- pretty(pct_range, n = 5)
-          pct_ticks <- pct_ticks[pct_ticks >= 0 & pct_ticks <= y_max_pct + 0.1]
-          
-          # Convert percentage ticks back to raw frequencies for positioning
-          y_ticks <- (pct_ticks / 100) * total
+          pct_ticks <- pct_ticks[pct_ticks >= 0 & pct_ticks <= y_max_plot + 0.1]
           
           # Create labels with % sign
           y_labels <- paste0(pct_ticks, "%")
           
-          axis(2, at = y_ticks, labels = y_labels, las = 1)
+          # Ticks are positioned at percentage values (since group_freqs$fs is in percentages)
+          axis(2, at = pct_ticks, labels = y_labels, las = 1)
         } else {
           # Use pretty() to generate nice tick intervals for frequency mode
           freq_range <- c(0, y_max_plot)
@@ -216,7 +295,13 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
           freq_val <- group_freqs[[i]]$fs[j]
           if (freq_val > 0) {
             x_label_pos <- x_val + offsets[i]
-            text(x = x_label_pos, y = freq_val, labels = freq_val, 
+            # Format label based on freq parameter
+            if (freq == FALSE) {
+              label_text <- paste0(round(freq_val, 0), "%")
+            } else {
+              label_text <- freq_val
+            }
+            text(x = x_label_pos, y = freq_val, labels = label_text, 
                  cex = 0.7, pos = 3, col = group_cols[i])
           }
         }
@@ -239,8 +324,8 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
              lwd = lwd, bty = "n")
     }
     
-    # Return frequencies invisibly (combined across groups)
-    combined_fs <- rowSums(sapply(group_freqs, function(gf) gf$fs))
+    # Return frequencies invisibly (combined across groups, using original frequencies)
+    combined_fs <- rowSums(sapply(group_freqs_original, function(gf) gf$fs))
     return(invisible(data.frame(value = all_xs, frequency = combined_fs)))
   }
   
@@ -248,13 +333,15 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
   freq_table <- table(x)
   xs <- as.numeric(names(freq_table))
   fs <- as.numeric(freq_table)
+  fs_original <- fs  # Store original frequencies for return value
   fsp=fs
   
+  # Convert frequencies to percentages if requested
+  total <- sum(fs)
   if (freq==FALSE)
   {
-    
-    fsp   = paste0(round(100*(fs/sum(fs)),0),"%")
-    
+    fs <- (fs / total) * 100  # Convert to percentages
+    fsp <- paste0(round(fs, 0),"%")
   }
     
   # Only set up plot if not adding to existing plot
@@ -305,6 +392,10 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
           # Track if user provided yaxt - if not, we'll draw custom axis
             user_provided_yaxt <- "yaxt" %in% names(dots)
             if (!user_provided_yaxt) dots$yaxt <- "n"
+            
+          # Track if user provided xaxt - if not, we'll draw custom axis with all x values
+            user_provided_xaxt <- "xaxt" %in% names(dots)
+            if (!user_provided_xaxt) dots$xaxt <- "n"
     #########################################################
     
               
@@ -314,12 +405,17 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
         do.call(plot, plot_args)
       
     # Calculate total sample size and add it under the main title
-        tot <- sum(fs)
+        tot <- total  # Use the original total (before percentage conversion)
         mtext(paste0("(N=", tot, ")"), side = 3, line = 0.35, font = 3)
+        
+    # Draw custom x-axis with all x values (if we suppressed default)
+      if (!user_provided_xaxt) {
+        axis(1, at = xs, las = 1)
+      }
             
     # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
       if (!user_provided_yaxt) {
-        # Get y-axis range
+        # Get y-axis range (fs is now in percentages if freq=FALSE)
         y_max <- max(fs, na.rm = TRUE)
         if ("ylim" %in% names(dots)) {
           y_max_plot <- dots$ylim[2]
@@ -329,23 +425,17 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
         
         if (freq == FALSE) {
           # When showing percentages, use pretty() to generate reasonable tick marks
-          total <- sum(fs)
-          y_max_pct <- (y_max_plot / total) * 100
-          
-          # Use pretty() to generate nice tick intervals (typically 4-5 ticks)
-          # pretty() will choose appropriate intervals (e.g., 0, 5, 10, 15, 20 or 0, 10, 20, 30, etc.)
-          pct_range <- c(0, y_max_pct)
+          # fs is already in percentages, so y_max_plot is also in percentages
+          pct_range <- c(0, y_max_plot)
           pct_ticks <- pretty(pct_range, n = 5)
-          # Only keep ticks that are >= 0 and <= y_max_pct (with small tolerance for rounding)
-          pct_ticks <- pct_ticks[pct_ticks >= 0 & pct_ticks <= y_max_pct + 0.1]
-          
-          # Convert percentage ticks back to raw frequencies for positioning
-          y_ticks <- (pct_ticks / 100) * total
+          # Only keep ticks that are >= 0 and <= y_max_plot (with small tolerance for rounding)
+          pct_ticks <- pct_ticks[pct_ticks >= 0 & pct_ticks <= y_max_plot + 0.1]
           
           # Create labels with % sign
           y_labels <- paste0(pct_ticks, "%")
           
-          axis(2, at = y_ticks, labels = y_labels, las = 1)
+          # Ticks are positioned at percentage values (since fs is in percentages)
+          axis(2, at = pct_ticks, labels = y_labels, las = 1)
         } else {
           # Use pretty() to generate nice tick intervals for frequency mode
           freq_range <- c(0, y_max_plot)
@@ -391,8 +481,8 @@ plot_freq <- function(x,by=NULL, freq=TRUE, col='dodgerblue',lwd=9, width=NULL, 
            cex = 0.7, pos = 3)
     }
     
-  # Return frequencies invisibly
-  invisible(data.frame(value = xs, frequency = fs))
+  # Return frequencies invisibly (using original frequencies, not percentages)
+  invisible(data.frame(value = xs, frequency = fs_original))
 }
 
 # Alias for backward compatibility
