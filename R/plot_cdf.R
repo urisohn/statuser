@@ -5,9 +5,9 @@
 #' plotting parameters.
 #'
 #' @param y A numeric vector of values to compute ECDFs for, or a column name
-#'   if \code{data} is provided.
+#'   (character string or unquoted) if \code{data} is provided.
 #' @param x A vector (factor, character, or numeric) used to group the data,
-#'   or a column name if \code{data} is provided.
+#'   or a column name (character string or unquoted) if \code{data} is provided.
 #' @param data An optional data frame containing the variables \code{y} and \code{x}.
 #' @param ... Additional arguments passed to plotting functions. Can be scalars
 #'   (applied to all groups) or vectors (applied element-wise to each group).
@@ -82,12 +82,15 @@
 #' # Using data frame
 #' df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
 #' plot_cdf(value, group, data = df)
+#' plot_cdf("value", "group", data = df)  # quoted column names also work
 #' plot_cdf(value, group, data = df, col = c("red", "blue"))
 #'
 #' @export
 plot_cdf <- function(y, x, data = NULL, ...) {
   # Capture y name for xlab (before potentially overwriting y)
   y_name_raw <- deparse(substitute(y))
+  # Remove quotes if present (handles both y = "col" and y = col)
+  y_name_raw <- gsub('^"|"$', '', y_name_raw)
   y_name <- if (grepl("\\$", y_name_raw)) {
     strsplit(y_name_raw, "\\$")[[1]][length(strsplit(y_name_raw, "\\$")[[1]])]
   } else {
@@ -96,6 +99,8 @@ plot_cdf <- function(y, x, data = NULL, ...) {
   
   # Capture x name for legend title (before potentially overwriting x)
   x_name_raw <- deparse(substitute(x))
+  # Remove quotes if present (handles both x = "col" and x = col)
+  x_name_raw <- gsub('^"|"$', '', x_name_raw)
   x_name <- if (grepl("\\$", x_name_raw)) {
     strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
   } else {
@@ -122,6 +127,11 @@ plot_cdf <- function(y, x, data = NULL, ...) {
     
     y <- data[[y_name_raw]]
     x <- data[[x_name_raw]]
+  }
+  
+  # Validate that y is a numeric vector
+  if (!is.numeric(y) || !is.vector(y)) {
+    stop(sprintf("'y' must be a numeric vector, and '%s' is not", y_name_raw))
   }
   
   # Drop missing data
