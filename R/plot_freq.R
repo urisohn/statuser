@@ -10,6 +10,9 @@
 #' @param add Logical. If TRUE, adds to an existing plot instead of creating a new one. 
 #' @param by A grouping variable (with 2 or 3 unique values). If specified, frequencies are computed separately for each group and plotted with different colors. Can be a vector or a column name (character string) if \code{data} is provided.
 #' @param data Optional data frame containing the variables \code{x} and optionally \code{by}.
+#' @param show.legend Logical. If TRUE (default), displays a legend when \code{by} is specified. If FALSE, no legend is shown.
+#' @param legend.title Character string. Title for the legend when \code{by} is specified. If NULL (default), no title is shown.
+#' @param col.text Color for the value labels. If not specified, uses \code{col} for non-grouped plots or group colors for grouped plots.
 #' @param ... Pass on any argument accepted by \code{plot()} e.g., \code{xlab='x-axis'} , \code{main='Distribution of X'}
 #'
 #' @return Invisibly returns a data frame with values and their frequencies.
@@ -39,7 +42,7 @@
 #'
 
 #' @export
-plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, data=NULL, ...) {
+plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, data=NULL, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   # Capture x and by variable names (before potentially overwriting)
   x_name_raw <- deparse(substitute(x))
   # Remove quotes if present (handles both x = "col" and x = col)
@@ -145,6 +148,11 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     all_xs <- sort(unique(x))
     freq_table <- table(x, by)
     
+    # Get column names from table (these are the unique values of by in table order)
+    table_by_cols <- colnames(freq_table)
+    # Match table columns to unique_by order to ensure correct group assignment
+    col_indices <- match(unique_by, table_by_cols)
+    
     # Convert to list format for each group
     group_freqs <- list()
     group_freqs_original <- list()  # Store original frequencies for return value
@@ -153,9 +161,15 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
       # Extract frequencies for this group, ensuring all x values are included
       group_fs <- numeric(length(all_xs))
       # Match table row names (x values) to all_xs
-      table_xs <- as.numeric(rownames(freq_table))
+      # Handle both numeric and character/factor x values
+      if (is.numeric(x)) {
+        table_xs <- as.numeric(rownames(freq_table))
+      } else {
+        table_xs <- rownames(freq_table)
+      }
       idx <- match(table_xs, all_xs)
-      group_fs[idx] <- freq_table[, i]
+      # Use the correct column index that matches unique_by[i]
+      group_fs[idx] <- freq_table[, col_indices[i]]
       
       # Store original frequencies for return value
       group_freqs_original[[i]] <- list(xs = all_xs, fs = group_fs)
@@ -187,7 +201,7 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
       if (!"ylab" %in% names(dots) && !freq) dots$ylab <- "% of Observations"
       
       # Set default main title if not provided
-      if (!"main" %in% names(dots)) dots$main <- paste0("Distribution of '", x_name, "'")
+      if (!"main" %in% names(dots)) dots$main <- paste0("Distribution of ", x_name, "")
       
       # Set default ylim to start at 0 if not provided
       if (!"ylim" %in% names(dots)) {
@@ -322,32 +336,69 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
             } else {
               label_text <- freq_val
             }
+            # Use col.text if provided, otherwise use group color
+            label_color <- if (!is.null(col.text)) col.text else group_cols[i]
             text(x = x_label_pos, y = freq_val, labels = label_text, 
-                 cex = 0.7, pos = 3, col = group_cols[i])
+                 cex = 0.8, pos = 3, col = label_color)
           }
         }
       }
     }
     
     # Add legend showing groups and colors
-    if (!add) {
+    if (!add && show.legend) {
       # Calculate sample sizes for each group
       group_ns <- sapply(1:n_groups, function(i) {
         length(x[by == unique_by[i]])
       })
       
-      # Create legend labels with sample sizes
-      legend_labels <- paste0(as.character(unique_by), " (N=", group_ns, ")")
+      # Create legend labels with sample sizes, aligned so N=xxx is at same position
+      group_names <- as.character(unique_by)
+      # Calculate text width needed for alignment
+      # Measure the width of group names plus some padding
+      temp_cex <- 1.2  # Match the legend cex
+      text_widths <- strwidth(group_names, cex = temp_cex, units = "user")
+      max_name_width <- max(text_widths)
+      # Calculate width needed for the full label format: "name (N=xxx)"
+      # We'll set text.width to accommodate the longest name plus "(N=xxx)" part
+      sample_n_text <- paste0(" (N=", max(group_ns), ")")
+      sample_n_width <- strwidth(sample_n_text, cex = temp_cex, units = "user")
+      total_text_width <- max_name_width + sample_n_width
+      
+      # Format labels with padding to align N=xxx
+      padded_labels <- sapply(1:n_groups, function(i) {
+        name_width <- text_widths[i]
+        padding_needed <- max_name_width - name_width
+        # Estimate number of spaces needed (using space width)
+        space_width <- strwidth(" ", cex = temp_cex, units = "user")
+        n_spaces <- max(1, round(padding_needed / space_width))
+        paste0(group_names[i], strrep(" ", n_spaces), " (N=", group_ns[i], ")")
+      })
+      legend_labels <- padded_labels
       legend_cols <- group_cols[1:n_groups]
       
-      # Add legend
-      legend("topleft", legend = legend_labels, col = legend_cols, 
-             lwd = lwd, bty = "n")
+      # Add legend with text.width to ensure consistent alignment
+      legend_args <- list("topleft", legend = legend_labels, fill = legend_cols, 
+                          bty = "n", inset = 0.05, cex=1.2, text.width = total_text_width)
+      if (!is.null(legend.title)) {
+        legend_args$title <- legend.title
+        legend_args$title.font <- 2
+      }
+      do.call(legend, legend_args)
     }
     
-    # Return frequencies invisibly (combined across groups, using original frequencies)
-    combined_fs <- rowSums(sapply(group_freqs_original, function(gf) gf$fs))
-    return(invisible(data.frame(value = all_xs, frequency = combined_fs)))
+    # Return frequencies or percentages invisibly (full table with separate columns for each group)
+    # Build data frame with value column and one column per group
+    result_df <- data.frame(value = all_xs, stringsAsFactors = FALSE)
+    for (i in 1:n_groups) {
+      # Use percentages if freq=FALSE, otherwise use frequencies
+      if (freq == FALSE) {
+        result_df[[as.character(unique_by[i])]] <- group_freqs[[i]]$fs
+      } else {
+        result_df[[as.character(unique_by[i])]] <- group_freqs_original[[i]]$fs
+      }
+    }
+    return(invisible(result_df))
   }
   
   # Calculate frequencies for each unique value (only if by is not used)
@@ -498,12 +549,20 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     
   # Add value labels if requested
     if (value.labels == TRUE && any(non_zero)) {
+      # Use col.text if provided, otherwise use col
+      label_color <- if (!is.null(col.text)) col.text else col
       text(x = xs[non_zero], y = fs[non_zero], labels = fsp[non_zero], 
-           cex = 0.7, pos = 3)
+           cex = 0.7, pos = 3, col = label_color)
     }
     
-  # Return frequencies invisibly (using original frequencies, not percentages)
-  invisible(data.frame(value = xs, frequency = fs_original))
+  # Return frequencies or percentages invisibly
+  if (freq == FALSE) {
+    # Return percentages
+    invisible(data.frame(value = xs, percentage = fs))
+  } else {
+    # Return frequencies
+    invisible(data.frame(value = xs, frequency = fs_original))
+  }
 }
 
 # Alias for backward compatibility

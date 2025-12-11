@@ -14,6 +14,9 @@ plot_freq(
   value.labels = TRUE,
   add = FALSE,
   data = NULL,
+  show.legend = TRUE,
+  legend.title = NULL,
+  col.text = NULL,
   ...
 )
 }
@@ -31,6 +34,12 @@ plot_freq(
 \item{add}{Logical. If TRUE, adds to an existing plot instead of creating a new one.}
 
 \item{data}{Optional data frame containing the variables \code{x} and optionally \code{by}.}
+
+\item{show.legend}{Logical. If TRUE (default), displays a legend when \code{by} is specified. If FALSE, no legend is shown.}
+
+\item{legend.title}{Character string. Title for the legend when \code{by} is specified. If NULL (default), no title is shown.}
+
+\item{col.text}{Color for the value labels. If not specified, uses \code{col} for non-grouped plots or group colors for grouped plots.}
 
 \item{...}{Pass on any argument accepted by \code{plot()} e.g., \code{xlab='x-axis'} , \code{main='Distribution of X'}}
 }
