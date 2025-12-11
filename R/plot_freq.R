@@ -50,15 +50,21 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     x_name_raw
   }
   
-  # Handle by: capture name if provided
+  # Handle by: capture name BEFORE evaluating by (to handle unquoted column names)
+  by_expr <- substitute(by)
   by_name_raw <- NULL
-  if (!is.null(by)) {
-    if (is.character(by) && length(by) == 1) {
+  # Check if by was actually provided (not just using default NULL)
+  # If by_expr is NULL (the value), by was not provided or was explicitly NULL
+  # If by_expr is a symbol, character, or expression, by was provided
+  by_was_provided <- !is.null(by_expr)
+  
+  if (by_was_provided) {
+    if (is.character(by_expr) && length(by_expr) == 1) {
       # by was passed as a character string (e.g., by = "group")
-      by_name_raw <- by
+      by_name_raw <- by_expr
     } else {
-      # by was passed as an unquoted name or vector
-      by_name_raw <- deparse(substitute(by))
+      # by was passed as an unquoted name or will be evaluated as a vector
+      by_name_raw <- deparse(by_expr)
       by_name_raw <- gsub('^"|"$', '', by_name_raw)
     }
   }
@@ -79,12 +85,17 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     x <- data[[x_name_raw]]
     
     # Extract by column from data frame if provided
-    if (!is.null(by)) {
+    if (by_was_provided) {
       # Check if by_name_raw looks like a column name (not a vector expression)
       # Simple heuristic: if it contains parentheses, brackets, or operators, it's likely a vector expression
       if (grepl("[()\\[\\]\\+\\-\\*/]", by_name_raw)) {
-        # by appears to be a vector expression, use it as-is
-        # (This handles cases like by = c(1,2,3) when data is provided)
+        # by appears to be a vector expression, try to evaluate it
+        # This handles cases like by = c(1,2,3) when data is provided
+        tryCatch({
+          by <- eval(by_expr, envir = parent.frame())
+        }, error = function(e) {
+          stop(sprintf("Could not evaluate 'by' expression '%s'", by_name_raw))
+        })
       } else {
         # by appears to be a column name, extract from data
         if (!by_name_raw %in% names(data)) {
@@ -92,6 +103,16 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
         }
         by <- data[[by_name_raw]]
       }
+    } else {
+      # by was not provided, set to NULL
+      by <- NULL
+    }
+  } else {
+    # No data frame provided, by should already be evaluated (or NULL)
+    # If by was provided as an unquoted name and doesn't exist, R will error here
+    # which is the expected behavior
+    if (!by_was_provided) {
+      by <- NULL
     }
   }
   
