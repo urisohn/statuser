@@ -9,6 +9,11 @@
 #' @param x A vector (factor, character, or numeric) used to group the data,
 #'   or a column name (character string or unquoted) if \code{data} is provided.
 #' @param data An optional data frame containing the variables \code{y} and \code{x}.
+#' @param show.ks Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
+#'   when there are exactly 2 groups. If FALSE, KS test results are not displayed.
+#' @param show.quantiles Logical. If TRUE (default), shows horizontal lines and results
+#'   at 25th, 50th, and 75th percentiles when there are exactly 2 groups. If FALSE,
+#'   quantile lines and results are not displayed.
 #' @param ... Additional arguments passed to plotting functions. Can be scalars
 #'   (applied to all groups) or vectors (applied element-wise to each group).
 #'   Common parameters include \code{col}, \code{lwd}, \code{lty}, \code{pch},
@@ -86,7 +91,7 @@
 #' plot_cdf(value, group, data = df, col = c("red", "blue"))
 #'
 #' @export
-plot_cdf <- function(y, x, data = NULL, ...) {
+plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
   # Capture y name for xlab (before potentially overwriting y)
   y_name_raw <- deparse(substitute(y))
   # Remove quotes if present (handles both y = "col" and y = col)
@@ -98,17 +103,21 @@ plot_cdf <- function(y, x, data = NULL, ...) {
   }
   
   # Capture x name for legend title (before potentially overwriting x)
-  x_name_raw <- deparse(substitute(x))
-  # Remove quotes if present (handles both x = "col" and x = col)
-  x_name_raw <- gsub('^"|"$', '', x_name_raw)
-  x_name <- if (grepl("\\$", x_name_raw)) {
-    strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
-  } else {
-    x_name_raw
-  }
+    x_name_raw <- deparse(substitute(x))
+    # Remove quotes if present (handles both x = "col" and x = col)
+    x_name_raw <- gsub('^"|"$', '', x_name_raw)
+    x_name <- if (grepl("\\$", x_name_raw)) {
+      strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
+    } else {
+      x_name_raw
+    }
   
   # Extract plotting parameters from ...
-  dots <- list(...)
+    dots <- list(...)
+    
+    # Remove show.ks and show.quantiles from dots if passed (they're formal parameters)
+    dots$show.ks <- NULL
+    dots$show.quantiles <- NULL
   
   # Handle data frame if provided
   if (!is.null(data)) {
@@ -311,14 +320,17 @@ plot_cdf <- function(y, x, data = NULL, ...) {
           }
         )
         ks_test_result <- ks_test
-        ks_d <- round(ks_test$statistic, 3)
-        ks_p <- format.pvalue(ks_test$p.value, include_p = TRUE)
         
-        # Add horizontal lines at 25%, 50%, and 75% of cumulative probability
+        # Quantile probabilities (used for both computation and display)
         quantile_probs <- c(0.25, 0.50, 0.75)
-        abline(h = quantile_probs, lty = 2, col = "gray80")
+        
+        # Add horizontal lines at 25%, 50%, and 75% of cumulative probability (only if show.quantiles is TRUE)
+        if (show.quantiles) {
+          abline(h = quantile_probs, lty = 2, col = "gray80")
+        }
         
         # Quantile regression tests at 25th, 50th, and 75th percentiles
+        # Always compute quantile regressions (for return value), but only display if show.quantiles is TRUE
         if (requireNamespace("quantreg", quietly = TRUE)) {
         # Show message about independence assumption (only once per session)
         if (is.null(getOption("sohn.plot_cdf.message.shown"))) {
@@ -329,13 +341,15 @@ plot_cdf <- function(y, x, data = NULL, ...) {
         # Create data frame for quantile regression
         df_qr <- data.frame(y = y, x_group = as.numeric(x == unique_x[2]))
         
-        # Calculate quantiles for each group
-        q1_25 <- quantile(y1, probs = 0.25, na.rm = TRUE)
-        q1_50 <- quantile(y1, probs = 0.50, na.rm = TRUE)
-        q1_75 <- quantile(y1, probs = 0.75, na.rm = TRUE)
-        q2_25 <- quantile(y2, probs = 0.25, na.rm = TRUE)
-        q2_50 <- quantile(y2, probs = 0.50, na.rm = TRUE)
-        q2_75 <- quantile(y2, probs = 0.75, na.rm = TRUE)
+        # Calculate quantiles for each group (only needed if show.quantiles is TRUE for display)
+        if (show.quantiles) {
+          q1_25 <- quantile(y1, probs = 0.25, na.rm = TRUE)
+          q1_50 <- quantile(y1, probs = 0.50, na.rm = TRUE)
+          q1_75 <- quantile(y1, probs = 0.75, na.rm = TRUE)
+          q2_25 <- quantile(y2, probs = 0.25, na.rm = TRUE)
+          q2_50 <- quantile(y2, probs = 0.50, na.rm = TRUE)
+          q2_75 <- quantile(y2, probs = 0.75, na.rm = TRUE)
+        }
         
         # Get ECDF functions for finding intersections
         ecdf1 <- ecdf_list[[1]]
@@ -361,6 +375,7 @@ plot_cdf <- function(y, x, data = NULL, ...) {
                 }
               }
             )
+            # Store model first (before summary, so it's stored even if summary fails)
             qr_summary <- withCallingHandlers(
               summary(qr_model, se = "iid"),
               warning = function(w) {
@@ -392,85 +407,92 @@ plot_cdf <- function(y, x, data = NULL, ...) {
         x_range <- usr[2] - usr[1]
         y_range <- usr[4] - usr[3]
         
-        # Add p-values just above the horizontal lines
-        for (i in seq_along(quantile_probs)) {
-          text(x = usr[1] + 0.02 * x_range, y = quantile_probs[i] + 0.02, 
-               labels = quantile_pvals[i],
-               adj = c(0, 0.5), cex = 0.8, font = 2)
-        }
-        
-        # Add value labels next to CDF lines
-        # Position labels based on which CDF is to the left/right at each quantile
-        # Use adj to control alignment and add offset to separate labels
-        usr <- par("usr")
-        x_range <- usr[2] - usr[1]
-        label_offset <- 0.05 / 3 * x_range  # ~1.67% of plot width for separation
-        
-        # 25th percentile
-        if (q1_25 < q2_25) {
-          # Group 1 is to the left, right-align its label and offset left
-          text(x = q1_25 - label_offset, y = 0.25 + 0.02, labels = round(q1_25, 2),
-               adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
-          # Group 2 is to the right, left-align its label and offset right
-          text(x = q2_25 + label_offset, y = 0.25 + 0.02, labels = round(q2_25, 2),
-               adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
-        } else {
-          # Group 2 is to the left, right-align its label and offset left
-          text(x = q2_25 - label_offset, y = 0.25 + 0.02, labels = round(q2_25, 2),
-               adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
-          # Group 1 is to the right, left-align its label and offset right
-          text(x = q1_25 + label_offset, y = 0.25 + 0.02, labels = round(q1_25, 2),
-               adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
-        }
-        
-        # 50th percentile
-        if (q1_50 < q2_50) {
-          # Group 1 is to the left, right-align its label and offset left
-          text(x = q1_50 - label_offset, y = 0.50 + 0.02, labels = round(q1_50, 2),
-               adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
-          # Group 2 is to the right, left-align its label and offset right
-          text(x = q2_50 + label_offset, y = 0.50 + 0.02, labels = round(q2_50, 2),
-               adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
-        } else {
-          # Group 2 is to the left, right-align its label and offset left
-          text(x = q2_50 - label_offset, y = 0.50 + 0.02, labels = round(q2_50, 2),
-               adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
-          # Group 1 is to the right, left-align its label and offset right
-          text(x = q1_50 + label_offset, y = 0.50 + 0.02, labels = round(q1_50, 2),
-               adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
-        }
-        
-        # 75th percentile
-        if (q1_75 < q2_75) {
-          # Group 1 is to the left, right-align its label and offset left
-          text(x = q1_75 - label_offset, y = 0.75 + 0.02, labels = round(q1_75, 2),
-               adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
-          # Group 2 is to the right, left-align its label and offset right
-          text(x = q2_75 + label_offset, y = 0.75 + 0.02, labels = round(q2_75, 2),
-               adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
-        } else {
-          # Group 2 is to the left, right-align its label and offset left
-          text(x = q2_75 - label_offset, y = 0.75 + 0.02, labels = round(q2_75, 2),
-               adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
-          # Group 1 is to the right, left-align its label and offset right
-          text(x = q1_75 + label_offset, y = 0.75 + 0.02, labels = round(q1_75, 2),
-               adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
+        # Add p-values just above the horizontal lines (only if show.quantiles is TRUE)
+        if (show.quantiles) {
+          for (i in seq_along(quantile_probs)) {
+            text(x = usr[1] + 0.02 * x_range, y = quantile_probs[i] + 0.02, 
+                 labels = quantile_pvals[i],
+                 adj = c(0, 0.5), cex = 0.8, font = 2)
+          }
+          
+          # Add value labels next to CDF lines
+          # Position labels based on which CDF is to the left/right at each quantile
+          # Use adj to control alignment and add offset to separate labels
+          usr <- par("usr")
+          x_range <- usr[2] - usr[1]
+          label_offset <- 0.05 / 3 * x_range  # ~1.67% of plot width for separation
+          
+          # 25th percentile
+          if (q1_25 < q2_25) {
+            # Group 1 is to the left, right-align its label and offset left
+            text(x = q1_25 - label_offset, y = 0.25 + 0.02, labels = round(q1_25, 2),
+                 adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
+            # Group 2 is to the right, left-align its label and offset right
+            text(x = q2_25 + label_offset, y = 0.25 + 0.02, labels = round(q2_25, 2),
+                 adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
+          } else {
+            # Group 2 is to the left, right-align its label and offset left
+            text(x = q2_25 - label_offset, y = 0.25 + 0.02, labels = round(q2_25, 2),
+                 adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
+            # Group 1 is to the right, left-align its label and offset right
+            text(x = q1_25 + label_offset, y = 0.25 + 0.02, labels = round(q1_25, 2),
+                 adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
+          }
+          
+          # 50th percentile
+          if (q1_50 < q2_50) {
+            # Group 1 is to the left, right-align its label and offset left
+            text(x = q1_50 - label_offset, y = 0.50 + 0.02, labels = round(q1_50, 2),
+                 adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
+            # Group 2 is to the right, left-align its label and offset right
+            text(x = q2_50 + label_offset, y = 0.50 + 0.02, labels = round(q2_50, 2),
+                 adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
+          } else {
+            # Group 2 is to the left, right-align its label and offset left
+            text(x = q2_50 - label_offset, y = 0.50 + 0.02, labels = round(q2_50, 2),
+                 adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
+            # Group 1 is to the right, left-align its label and offset right
+            text(x = q1_50 + label_offset, y = 0.50 + 0.02, labels = round(q1_50, 2),
+                 adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
+          }
+          
+          # 75th percentile
+          if (q1_75 < q2_75) {
+            # Group 1 is to the left, right-align its label and offset left
+            text(x = q1_75 - label_offset, y = 0.75 + 0.02, labels = round(q1_75, 2),
+                 adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
+            # Group 2 is to the right, left-align its label and offset right
+            text(x = q2_75 + label_offset, y = 0.75 + 0.02, labels = round(q2_75, 2),
+                 adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
+          } else {
+            # Group 2 is to the left, right-align its label and offset left
+            text(x = q2_75 - label_offset, y = 0.75 + 0.02, labels = round(q2_75, 2),
+                 adj = c(1, 0.5), cex = 0.8, font = 2, col = legend_cols[2])
+            # Group 1 is to the right, left-align its label and offset right
+            text(x = q1_75 + label_offset, y = 0.75 + 0.02, labels = round(q1_75, 2),
+                 adj = c(0, 0.5), cex = 0.8, font = 2, col = legend_cols[1])
+          }
         }
       }
       
-      # Add KS test results in bottom right corner
-        usr <- par("usr")
-        x_range <- usr[2] - usr[1]
-        y_range <- usr[4] - usr[3]
-      # Format KS p-value (format.pvalue with include_p=TRUE gives "p = .05")
-        ks_p_formatted <- format.pvalue(ks_test$p.value, include_p = TRUE)
-      # Format KS results: "Kolmogorov-Smirnov\nD = xx\np = p"
-      # format.pvalue already includes "p = ", so we use it directly
-        ks_values <- paste0("Kolmogorov-Smirnov\nD = ", ks_d, "\n", ks_p_formatted)
-      # Position in bottom right corner
-        text(x = usr[2] - 0.02 * x_range, y = usr[3] + 0.02 * y_range, 
-             labels = ks_values,
-             adj = c(1, 0), cex = 0.8, font = 1)
+      # Add KS test results in bottom right corner (only if show.ks is TRUE)
+        if (show.ks) {
+          ks_d <- round(ks_test$statistic, 3)
+          ks_p <- format.pvalue(ks_test$p.value, include_p = TRUE)
+          
+          usr <- par("usr")
+          x_range <- usr[2] - usr[1]
+          y_range <- usr[4] - usr[3]
+          # Format KS p-value (format.pvalue with include_p=TRUE gives "p = .05")
+          ks_p_formatted <- format.pvalue(ks_test$p.value, include_p = TRUE)
+          # Format KS results: "Kolmogorov-Smirnov\nD = xx\np = p"
+          # format.pvalue already includes "p = ", so we use it directly
+          ks_values <- paste0("Kolmogorov-Smirnov\nD = ", ks_d, "\n", ks_p_formatted)
+          # Position in bottom right corner
+          text(x = usr[2] - 0.02 * x_range, y = usr[3] + 0.02 * y_range, 
+               labels = ks_values,
+               adj = c(1, 0), cex = 0.8, font = 1)
+        }
     }
   }
   

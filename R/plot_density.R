@@ -11,6 +11,10 @@
 #' @param show.means Logical. If TRUE (default), shows vertical segments at mean values
 #'   for 2-3 groups. For 2 groups, low mean uses pos=2 and high mean uses pos=4.
 #'   For 3 groups, mid mean uses pos=3. For 4+ groups, vertical segments are not shown.
+#' @param show.t Logical. If TRUE (default), shows points at means, vertical segments,
+#'   mean labels, and t-test results. If FALSE, none of these are displayed.
+#' @param show.ks Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
+#'   when there are exactly 2 groups. If FALSE, KS test results are not displayed.
 #' @param ... Additional arguments passed to plotting functions. Can be scalars
 #'   (applied to all groups) or vectors (applied element-wise to each group).
 #'   Common parameters include \code{col}, \code{lwd}, \code{lty}, \code{pch},
@@ -83,7 +87,7 @@
 #' plot_density(value, group, data = df, col = c("red", "blue"))
 #'
 #' @export
-plot_density <- function(y, x, data = NULL, ...) {
+plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) {
   #OUTLINE
   #1. Capture variable names for labels
   #2. Extract and handle parameters
@@ -133,7 +137,7 @@ plot_density <- function(y, x, data = NULL, ...) {
   # Extract plotting parameters from ...
     dots <- list(...)
     
-    # Extract show.means parameter
+    # Extract show.means parameter (from dots, as it's not a formal parameter)
     show_means <- if ("show.means" %in% names(dots)) dots$show.means else TRUE
     dots$show.means <- NULL  # Remove from dots so it doesn't get passed to plot functions
   
@@ -278,6 +282,8 @@ plot_density <- function(y, x, data = NULL, ...) {
         default_ylim[2]=default_ylim[2]*1.15
       } else {
         default_ylim <- plot_params$ylim
+        # Ensure ylim always starts at 0
+        default_ylim[1] <- 0
       }
     
     # Set default xlim if not provided
@@ -302,6 +308,7 @@ plot_density <- function(y, x, data = NULL, ...) {
                       cex.main = cex_main,
                       xlim = default_xlim,
                       ylim = default_ylim,
+                      yaxs = "i",  # Prevent padding below 0
                       font.lab = 2, cex.lab = 1.2, las = 1)
     if (!is.null(pch1)) plot_args$pch <- pch1
     
@@ -332,23 +339,25 @@ plot_density <- function(y, x, data = NULL, ...) {
       }
     
     #18. Add points at y=0 and x=mean
-      # Add points at y=0 and x=mean for each group
-      for (i in seq_along(density_list)) {
-        group_val <- unique_x[i]
-        y_group <- y[x == group_val]
-        group_mean <- mean(y_group, na.rm = TRUE)
-        
-        # Get color for this group
-        coli <- get_param("col", i) %||% default_colors[i]
-        
-        # Add point at (mean, 0)
-        points(x = group_mean, y = 0, pch = 16, col = coli)
+      # Add points at y=0 and x=mean for each group (only if show.t is TRUE)
+      if (show.t) {
+        for (i in seq_along(density_list)) {
+          group_val <- unique_x[i]
+          y_group <- y[x == group_val]
+          group_mean <- mean(y_group, na.rm = TRUE)
+          
+          # Get color for this group
+          coli <- get_param("col", i) %||% default_colors[i]
+          
+          # Add point at (mean, 0)
+          points(x = group_mean, y = 0, pch = 16, col = coli)
+        }
       }
     
     #19. Report means and t-test
       
-      # Add vertical segments at mean values
-        if (show_means && n_groups >= 2 && n_groups <= 3) {
+      # Add vertical segments at mean values (only if show.t and show.means are TRUE)
+        if (show.t && show_means && n_groups >= 2 && n_groups <= 3) {
           # Calculate all means
           all_means <- numeric(n_groups)
           for (i in seq_along(density_list)) {
@@ -486,24 +495,27 @@ plot_density <- function(y, x, data = NULL, ...) {
           }
         )
         ks_test_result <- ks_test
-        ks_d <- round(ks_test$statistic, 3)
-        ks_p <- format.pvalue(ks_test$p.value, include_p = TRUE)
         
-        # Add KS test results in bottom right corner
+        # Add KS test results in bottom right corner (only if show.ks is TRUE)
+        if (show.ks) {
+          ks_d <- round(ks_test$statistic, 3)
+          ks_p <- format.pvalue(ks_test$p.value, include_p = TRUE)
+          
           usr <- par("usr")
           x_range <- usr[2] - usr[1]
           y_range <- usr[4] - usr[3]
-        #  KS result 
+          #  KS result 
           #p-value
-            ks_p_formatted <- format.pvalue(ks_test$p.value, include_p = TRUE)
-            
+          ks_p_formatted <- format.pvalue(ks_test$p.value, include_p = TRUE)
+          
           #Full
-            ks_values <- paste0("Kolmogorov-Smirnov\nD = ", ks_d, "\n", ks_p_formatted)
-            
+          ks_values <- paste0("Kolmogorov-Smirnov\nD = ", ks_d, "\n", ks_p_formatted)
+          
           #Print it
           text(x = usr[2] - 0.02 * x_range, y = usr[3] + 0.02 * y_range, 
                labels = ks_values,
                adj = c(1, 0), cex = 0.8, font = 1)
+        }
       }
   }
   
