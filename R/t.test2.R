@@ -218,25 +218,30 @@ t.test2 <- function(..., digits = 3) {
       formula <- eval(call_args[[2]], envir = calling_env)
       data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
       
+      # Extract variables from formula (with or without data argument)
       if (!is.null(data_arg)) {
         # Extract variables from formula and data
         y_var <- eval(formula[[2]], envir = data_arg)
         group_var <- eval(formula[[3]], envir = data_arg)
+      } else {
+        # No data argument - evaluate in calling environment
+        y_var <- eval(formula[[2]], envir = calling_env)
+        group_var <- eval(formula[[3]], envir = calling_env)
+      }
+      
+      # Calculate standard errors for each group and get group values for column names
+      unique_groups <- sort(unique(group_var))
+      if (length(unique_groups) == 2) {
+        g1_data <- y_var[group_var == unique_groups[1]]
+        g2_data <- y_var[group_var == unique_groups[2]]
         
-        # Calculate standard errors for each group and get group values for column names
-        unique_groups <- sort(unique(group_var))
-        if (length(unique_groups) == 2) {
-          g1_data <- y_var[group_var == unique_groups[1]]
-          g2_data <- y_var[group_var == unique_groups[2]]
-          
-          # TASK 5: Calculate standard errors (sd / sqrt(n))
-          se1 <- sd(g1_data, na.rm = TRUE) / sqrt(length(g1_data))
-          se2 <- sd(g2_data, na.rm = TRUE) / sqrt(length(g2_data))
-          
-          # TASK 4: Use group values as column names (e.g., "low", "high")
-          col1_name <- as.character(unique_groups[1])
-          col2_name <- as.character(unique_groups[2])
-        }
+        # TASK 5: Calculate standard errors (sd / sqrt(n))
+        se1 <- sd(g1_data, na.rm = TRUE) / sqrt(length(g1_data))
+        se2 <- sd(g2_data, na.rm = TRUE) / sqrt(length(g2_data))
+        
+        # TASK 4: Use group values as column names (e.g., "a", "b")
+        col1_name <- as.character(unique_groups[1])
+        col2_name <- as.character(unique_groups[2])
       }
     } else {
       # TASK 4 & 5: Standard syntax - Extract variable names for column names and calculate SEs
@@ -308,6 +313,8 @@ t.test2 <- function(..., digits = 3) {
   # TASK 6: DISPLAY OUTPUT - Print simplified t-test results
   # Use simplify_ttest helper function to print console output
   # Pass the calling environment so simplify_ttest can access original data for better formatting
+  # Add flag to show simple group names (just "a" instead of "When by==a")
+  tt_result$show_simple_groups <- TRUE
   simplify_ttest(tt_result, digits = digits, calling_env = calling_env)
   
   # TASK 7: BUILD DATAFRAME - Create dataframe with dynamic column names based on variables/groups
