@@ -20,6 +20,8 @@
 #'     \item \code{prop=2} or \code{prop="column"}: Proportions by columns (each column sums to 1)
 #'   }
 #'   If \code{NULL} (default), returns frequency counts.
+#' @param digits Number of decimal places to display when \code{prop} is specified.
+#'   Default is 3. Only applies when \code{prop} is not \code{NULL}.
 #'
 #' @return A contingency table (an object of class "table") with enhanced
 #'   dimnames when variables come from a dataframe. If \code{prop} is specified,
@@ -51,11 +53,12 @@
 #' table2(df$group, df$status, prop = 1)  # Row proportions
 #' table2(df$group, df$status, prop = 2)  # Column proportions
 #' table2(df$group, df$status, prop = "row")  # Row proportions (character)
+#' table2(df$group, df$status, prop = 1, digits = 2)  # Row proportions with 2 decimals
 #'
 #' @export
 table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN), 
                   useNA = c("no", "ifany", "always"), 
-                  dnn = NULL, deparse.level = 1, prop = NULL) {
+                  dnn = NULL, deparse.level = 1, prop = NULL, digits = 3) {
   
   # FUNCTION OUTLINE:
   # 1. Validate and process useNA and exclude arguments
@@ -186,6 +189,8 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
       # Overall proportions: divide by sum of all cells
       total_sum <- sum(result, na.rm = TRUE)
       result <- result / total_sum
+      # Round to specified number of digits
+      result <- round(result, digits = digits)
       prop_type <- "overall proportions"
       
       # Add row and column with marginal proportions, 100% only in bottom right
@@ -196,6 +201,7 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
         
         # Calculate column totals (marginal proportions for columns)
         col_totals <- colSums(result, na.rm = TRUE)
+        col_totals <- round(col_totals, digits = digits)
         
         # TASK 8: Add summary row with column marginal proportions
         summary_row <- matrix(col_totals, nrow = 1, ncol = n_cols)
@@ -204,9 +210,10 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
         
         # Calculate row totals (marginal proportions for rows)
         row_totals <- rowSums(result[1:n_rows, , drop = FALSE], na.rm = TRUE)
+        row_totals <- round(row_totals, digits = digits)
         
         # TASK 8: Add summary column with row marginal proportions
-        summary_col <- matrix(c(row_totals, 1.0), nrow = n_rows + 1, ncol = 1)
+        summary_col <- matrix(c(row_totals, round(1.0, digits = digits)), nrow = n_rows + 1, ncol = 1)
         # Bottom right corner is 1.0 (100%) - sum of all proportions
         result <- cbind(result, summary_col)
         dimn[[2]] <- c(dimn[[2]], "Total")  # Add "Total" to column labels
@@ -219,6 +226,8 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
       # Avoid division by zero
       row_sums[row_sums == 0] <- 1
       result <- result / row_sums
+      # Round to specified number of digits
+      result <- round(result, digits = digits)
       prop_type <- "row proportions"
       
       # TASK 8: Add column with 100% for each row
@@ -237,6 +246,8 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
       # Avoid division by zero
       col_sums[col_sums == 0] <- 1
       result <- sweep(result, 2, col_sums, "/")
+      # Round to specified number of digits
+      result <- round(result, digits = digits)
       prop_type <- "column proportions"
       
       # TASK 8: Add row with 100% for each column
@@ -250,8 +261,7 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
       }
     }
     
-    # Show message
-    message.col("sohn::table2() computed ",prop_type, col = "blue")
+    
   }
   
   # TASK 9: Return the enhanced table object
