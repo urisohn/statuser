@@ -1,6 +1,6 @@
 # sohn
 
-Miscellaneous R functions for papers & blogposts by Uri Simonsohn.
+Miscellaneous R functions for papers, blogposts, & teaching by Uri Simonsohn.
 
 ## Installation
 
