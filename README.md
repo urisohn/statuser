@@ -141,17 +141,6 @@ t.test2(xs ~ by)  # Columns: a, b, a-b, SE_a-b, etc.
 ```
 </details>
 
-<details>
-<summary><code>simplify()</code>: Simplify statistical test output (e.g., t-tests) for cleaner, more readable results</summary>
-
-```r
-men <- rnorm(100, mean = 5, sd = 1)
-women <- rnorm(100, mean = 4.8, sd = 1)
-result <- t.test(men, women)
-simplify(result)
-```
-</details>
-
 ### ✨ Formatting
 
 <details>
