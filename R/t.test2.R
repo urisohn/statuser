@@ -343,6 +343,8 @@ t.test2 <- function(..., digits = 3) {
     tt_result$y_var <- extracted_y_var
     tt_result$group_var <- extracted_group_var
   }
+  # Pass se_diff for console display
+  tt_result$se_diff <- se_diff
   simplify_ttest(tt_result, digits = digits, calling_env = calling_env)
   
   # TASK 7: BUILD DATAFRAME - Create dataframe with dynamic column names based on variables/groups

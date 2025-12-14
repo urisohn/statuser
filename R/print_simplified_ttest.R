@@ -54,6 +54,10 @@ print.simplified_ttest <- function(x, ...) {
           if (!is.null(x$diff)) {
             cat("   Diff: ", g1, " - ", g2, " = ", 
                 format(round(x$diff, digits), nsmall = digits), "\n", sep = "")
+            # Show SE(Diff) if available
+            if (!is.null(x$se_diff) && !is.na(x$se_diff)) {
+              cat("   SE(Diff): ", format(round(x$se_diff, digits), nsmall = digits), "\n", sep = "")
+            }
           }
         } else {
           # Show "When cond==0" format
@@ -67,6 +71,10 @@ print.simplified_ttest <- function(x, ...) {
             cat("   Diff: (", x$group_var_name, "==", g1, 
                 ") - (", x$group_var_name, "==", g2, 
                 ") = ", format(round(x$diff, digits), nsmall = digits), "\n", sep = "")
+            # Show SE(Diff) if available
+            if (!is.null(x$se_diff) && !is.na(x$se_diff)) {
+              cat("   SE(Diff): ", format(round(x$se_diff, digits), nsmall = digits), "\n", sep = "")
+            }
           }
         }
       }
@@ -83,6 +91,10 @@ print.simplified_ttest <- function(x, ...) {
         if (!is.null(x$diff)) {
           cat("   Diff: (group 1) - (group 2) = ", 
               format(round(x$diff, digits), nsmall = digits), "\n", sep = "")
+          # Show SE(Diff) if available
+          if (!is.null(x$se_diff) && !is.na(x$se_diff)) {
+            cat("   SE(Diff): ", format(round(x$se_diff, digits), nsmall = digits), "\n", sep = "")
+          }
         }
       }
     }
@@ -102,6 +114,10 @@ print.simplified_ttest <- function(x, ...) {
       cat("   ", x$x.name, ": ", format(round(x$estimate[1], digits), nsmall = digits), "\n", sep = "")
       cat("   ", x$y.name, ": ", format(round(x$estimate[2], digits), nsmall = digits), "\n", sep = "")
       cat("   ", x$x.name, "-", x$y.name, ": ", format(round(x$diff, digits), nsmall = digits), "\n", sep = "")
+      # Show SE(Diff) if available
+      if (!is.null(x$se_diff) && !is.na(x$se_diff)) {
+        cat("   SE(Diff): ", format(round(x$se_diff, digits), nsmall = digits), "\n", sep = "")
+      }
       
       # Confidence interval for difference
       if (!is.null(x$conf.int)) {
