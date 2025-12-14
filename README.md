@@ -122,22 +122,22 @@ table2(df$group, df$status, prop = "column") # Column proportions
 </details>
 
 <details>
-<summary><code>t.test2()</code>: Enhanced t-test function that returns results as a dataframe with variable-named columns</summary>
+<summary><code>t.test2()</code>: Enhanced t-test function that returns results as a dataframe with variable-named columns, including confidence intervals</summary>
 
 ```r
 # Two-sample t-test
 men <- rnorm(100, mean = 5, sd = 1)
 women <- rnorm(100, mean = 4.8, sd = 1)
-t.test2(men, women)  # Returns dataframe with columns: men, women, men-women, SE_men-women, t, df, p.value, method, se_men, se_women
+t.test2(men, women)  # Returns dataframe with columns: men, women, men-women, SE_men-women, conf.intL, conf.intH, t, df, p.value, method, se_men, se_women
 
 # Formula syntax
 data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
-t.test2(y ~ group, data = data)  # Columns: A, B, A-B, SE_A-B, t, df, p.value, method, se_A, se_B
+t.test2(y ~ group, data = data)  # Columns: A, B, A-B, SE_A-B, conf.intL, conf.intH, t, df, p.value, method, se_A, se_B
 
 # Formula syntax without data argument
 xs <- c(x1, x2)
 by <- rep(c('a', 'b'), c(length(x1), length(x2)))
-t.test2(xs ~ by)  # Columns: a, b, a-b, SE_a-b, t, df, p.value, method, se_a, se_b
+t.test2(xs ~ by)  # Columns: a, b, a-b, SE_a-b, conf.intL, conf.intH, t, df, p.value, method, se_a, se_b
 ```
 </details>
 
