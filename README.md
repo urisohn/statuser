@@ -122,7 +122,7 @@ table2(df$group, df$status, prop = "column") # Column proportions
 </details>
 
 <details>
-<summary><code>t.test2()</code>: Enhances base t.test: (1) console shows all key results (e.g., diff of mean!), (2) output is dataframe, not list</summary>
+<summary><code>t.test2()</code>: Enhances base t.test: (1) console shows mean diff & var names, (2) output is dataframe, not list</summary>
 
 ```r
 # Data for example
