@@ -13,4 +13,5 @@ Imports:
     mgcv,
     rsvg,
     magick,
-    labelled
+    labelled,
+    rlang

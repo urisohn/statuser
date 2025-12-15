@@ -1,23 +1,22 @@
-#' Descriptive statistics by group (or full dataset)
+#' Describe a variable, optionally by groups
 #'
-#' Computes descriptive statistics for a variable, optionally grouped by another variable.
-#' Returns a dataframe with one row per group (or one row for the full dataset if no group is specified).
+#' Computes mean, SD, number of missing observations, mode, 2nd mode, median, and quantiles
+#' Returns a dataframe with one row per group
 #'
 #' @param y A numeric vector of values, or a column name (character string or unquoted) if \code{data} is provided.
-#' @param group Optional grouping variable, or a column name (character string or unquoted) if \code{data} is provided.
-#'   If not provided, statistics are computed for the full dataset.
-#' @param data Optional data frame containing the variables \code{y} and optionally \code{group}.
-#' @param decimals Number of decimal places to display for numeric statistics. Default is 3.
+#' @param group Optional grouping variable, if not provided  computed for the full data
+#' @param data Optional data frame containing the variable(s).
+#' @param decimals Number of decimal to round to. Default is 3.
 #'
 #' @return A data frame with one row per group (or one row if no group is specified) containing:
 #'   \itemize{
-#'     \item \code{group}: Group identifier (or "All" if no grouping)
+#'     \item \code{group}: Group identifier
 #'     \item \code{n}: Number of observations
 #'     \item \code{mean}: Mean
 #'     \item \code{sd}: Standard deviation
 #'     \item \code{se}: Standard error
 #'     \item \code{median}: Median
-#'     \item \code{NA_total}: Number of missing (NA) observations
+#'     \item \code{NA_total}: Number of observations with missing (NA) values
 #'     \item \code{mode}: Most frequent value
 #'     \item \code{freq_mode}: Frequency of mode
 #'     \item \code{mode2}: 2nd most frequent value
@@ -58,7 +57,7 @@
 var_by <- function(y, group = NULL, data = NULL, decimals = 3) {
   
   # Function outline:
-  # 1. Capture variable names using non-standard evaluation
+  # 1. Capture variable expressions using rlang
   # 2. Extract variables from data frame if provided
   # 3. Validate that y is numeric
   # 4. Define helper function to compute statistics for a vector
@@ -67,74 +66,69 @@ var_by <- function(y, group = NULL, data = NULL, decimals = 3) {
   # 7. Add descriptive labels to columns using labelled package
   # 8. Return result dataframe
   
-  # 1. Capture variable names before evaluation
-    y_expr <- substitute(y)
-    y_name_raw <- deparse(y_expr)
-    y_name_raw <- gsub('^"|"$', '', y_name_raw)
+  # 1. Capture variable expressions using rlang
+  y_quo <- rlang::enquo(y)
+  group_was_provided <- !missing(group)
+  group_quo <- if (group_was_provided) rlang::enquo(group) else NULL
+  
+  # Get variable names for error messages
+  y_name <- rlang::as_name(y_quo)
+  group_name <- if (group_was_provided) rlang::as_name(group_quo) else NULL
+  
+  # 2. Extract variables from data frame if provided
+  if (!is.null(data)) {
+    if (!is.data.frame(data)) {
+      stop("'data' must be a data frame")
+    }
     
-  # Handle group: capture name BEFORE evaluating
-    group_expr <- substitute(group)
-    group_name_raw <- NULL
-  # Check if group was actually provided (not just using default NULL)
-    group_was_provided <- !is.null(group_expr) && !missing(group)
+    # Evaluate y in data context
+    y <- tryCatch({
+      rlang::eval_tidy(y_quo, data = data)
+    }, error = function(e) {
+      stop(sprintf("Column '%s' not found in data: %s", y_name, e$message))
+    })
+    
+    # Evaluate group in data context if provided
+    if (group_was_provided) {
+      group <- tryCatch({
+        rlang::eval_tidy(group_quo, data = data)
+      }, error = function(e) {
+        stop(sprintf("Column '%s' not found in data: %s", group_name, e$message))
+      })
+    } else {
+      group <- NULL
+    }
+  } else {
+    # No data frame provided - evaluate in calling environment
+    y <- tryCatch({
+      rlang::eval_tidy(y_quo)
+    }, error = function(e) {
+      stop(sprintf("Could not evaluate 'y': %s", e$message))
+    })
     
     if (group_was_provided) {
-      if (is.character(group_expr) && length(group_expr) == 1) {
-        group_name_raw <- group_expr
-      } else {
-        group_name_raw <- deparse(group_expr)
-        group_name_raw <- gsub('^"|"$', '', group_name_raw)
-      }
-    }
-  
-    
-    
-  # 2. Extract variables from data frame if provided
-    if (!is.null(data)) {
-      if (!is.data.frame(data)) {
-        stop("'data' must be a data frame")
-      }
+      group <- tryCatch({
+        rlang::eval_tidy(group_quo)
+      }, error = function(e) {
+        stop(sprintf("Could not evaluate 'group': %s", e$message))
+      })
       
-      # Extract y column from data frame
-      if (!y_name_raw %in% names(data)) {
-        stop(sprintf("Column '%s' not found in data", y_name_raw))
-      }
-      y <- data[[y_name_raw]]
-      
-      # Extract group column from data frame if provided
-      if (group_was_provided) {
-        if (!group_name_raw %in% names(data)) {
-          stop(sprintf("Column '%s' not found in data", group_name_raw))
-        }
-        group <- data[[group_name_raw]]
-      } else {
+      # Validate group exists and has correct length
+      if (is.null(group)) {
         group <- NULL
+      } else if (length(group) != length(y)) {
+        stop(sprintf("'group' must have the same length as 'y' (got %d, expected %d)", 
+                     length(group), length(y)))
       }
     } else {
-      # No data frame provided - evaluate group if provided
-      if (group_was_provided) {
-        group <- tryCatch({
-          eval(group_expr, envir = parent.frame())
-        }, error = function(e) {
-          stop(sprintf("Could not evaluate 'group': %s", e$message))
-        })
-        
-        # Validate group exists and has correct length
-        if (is.null(group)) {
-          group <- NULL
-        } else if (length(group) != length(y)) {
-          stop(sprintf("'group' must have the same length as 'y' (got %d, expected %d)", 
-                       length(group), length(y)))
-        }
-      } else {
-        group <- NULL
-      }
+      group <- NULL
     }
+  }
   
   # 3. Validate that y is numeric
-      if (!is.numeric(y)) {
-        stop(sprintf("'y' must be numeric, but '%s' is not", y_name_raw))
-      }
+  if (!is.numeric(y)) {
+    stop(sprintf("'y' must be numeric, but '%s' is not", y_name))
+  }
     
     
   
