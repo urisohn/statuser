@@ -8,10 +8,10 @@
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param value.labels Logical. If TRUE, displays frequencies on top of each line. 
 #' @param add Logical. If TRUE, adds to an existing plot instead of creating a new one. 
-#' @param by A grouping variable (with 2 or 3 unique values). If specified, frequencies are computed separately for each group and plotted with different colors. Can be a vector or a column name (character string) if \code{data} is provided.
-#' @param data Optional data frame containing the variables \code{x} and optionally \code{by}.
-#' @param show.legend Logical. If TRUE (default), displays a legend when \code{by} is specified. If FALSE, no legend is shown.
-#' @param legend.title Character string. Title for the legend when \code{by} is specified. If NULL (default), no title is shown.
+#' @param group A grouping variable (with 2 or 3 unique values). If specified, frequencies are computed separately for each group and plotted with different colors. Can be a vector or a column name (character string) if \code{data} is provided.
+#' @param data Optional data frame containing the variables \code{x} and optionally \code{group}.
+#' @param show.legend Logical. If TRUE (default), displays a legend when \code{group} is specified. If FALSE, no legend is shown.
+#' @param legend.title Character string. Title for the legend when \code{group} is specified. If NULL (default), no title is shown.
 #' @param col.text Color for the value labels. If not specified, uses \code{col} for non-grouped plots or group colors for grouped plots.
 #' @param ... Pass on any argument accepted by \code{plot()} e.g., \code{xlab='x-axis'} , \code{main='Distribution of X'}
 #'
@@ -38,12 +38,12 @@
 #' # Using a data frame
 #' df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
 #' plot_freq(x = "value", data = df)
-#' plot_freq(x = value, by = group, data = df)  # unquoted column names also work
+#' plot_freq(x = value, group = group, data = df)  # unquoted column names also work
 #'
 
 #' @export
-plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, data=NULL, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
-  # Capture x and by variable names (before potentially overwriting)
+plot_freq <- function(x, group=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, data=NULL, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+  # Capture x and group variable names (before potentially overwriting)
   x_name_raw <- deparse(substitute(x))
   # Remove quotes if present (handles both x = "col" and x = col)
   x_name_raw <- gsub('^"|"$', '', x_name_raw)
@@ -53,22 +53,22 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     x_name_raw
   }
   
-  # Handle by: capture name BEFORE evaluating by (to handle unquoted column names)
-  by_expr <- substitute(by)
-  by_name_raw <- NULL
-  # Check if by was actually provided (not just using default NULL)
-  # If by_expr is NULL (the value), by was not provided or was explicitly NULL
-  # If by_expr is a symbol, character, or expression, by was provided
-  by_was_provided <- !is.null(by_expr)
+  # Handle group: capture name BEFORE evaluating group (to handle unquoted column names)
+  group_expr <- substitute(group)
+  group_name_raw <- NULL
+  # Check if group was actually provided (not just using default NULL)
+  # If group_expr is NULL (the value), group was not provided or was explicitly NULL
+  # If group_expr is a symbol, character, or expression, group was provided
+  group_was_provided <- !is.null(group_expr)
   
-  if (by_was_provided) {
-    if (is.character(by_expr) && length(by_expr) == 1) {
-      # by was passed as a character string (e.g., by = "group")
-      by_name_raw <- by_expr
+  if (group_was_provided) {
+    if (is.character(group_expr) && length(group_expr) == 1) {
+      # group was passed as a character string (e.g., group = "group")
+      group_name_raw <- group_expr
     } else {
-      # by was passed as an unquoted name or will be evaluated as a vector
-      by_name_raw <- deparse(by_expr)
-      by_name_raw <- gsub('^"|"$', '', by_name_raw)
+      # group was passed as an unquoted name or will be evaluated as a vector
+      group_name_raw <- deparse(group_expr)
+      group_name_raw <- gsub('^"|"$', '', group_name_raw)
     }
   }
   
@@ -87,35 +87,35 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     }
     x <- data[[x_name_raw]]
     
-    # Extract by column from data frame if provided
-    if (by_was_provided) {
-      # Check if by_name_raw looks like a column name (not a vector expression)
+    # Extract group column from data frame if provided
+    if (group_was_provided) {
+      # Check if group_name_raw looks like a column name (not a vector expression)
       # Simple heuristic: if it contains parentheses, brackets, or operators, it's likely a vector expression
-      if (grepl("[()\\[\\]\\+\\-\\*/]", by_name_raw)) {
-        # by appears to be a vector expression, try to evaluate it
-        # This handles cases like by = c(1,2,3) when data is provided
+      if (grepl("[()\\[\\]\\+\\-\\*/]", group_name_raw)) {
+        # group appears to be a vector expression, try to evaluate it
+        # This handles cases like group = c(1,2,3) when data is provided
         tryCatch({
-          by <- eval(by_expr, envir = parent.frame())
+          group <- eval(group_expr, envir = parent.frame())
         }, error = function(e) {
-          stop(sprintf("Could not evaluate 'by' expression '%s'", by_name_raw))
+          stop(sprintf("Could not evaluate 'group' expression '%s'", group_name_raw))
         })
       } else {
-        # by appears to be a column name, extract from data
-        if (!by_name_raw %in% names(data)) {
-          stop(sprintf("Column '%s' not found in data", by_name_raw))
+        # group appears to be a column name, extract from data
+        if (!group_name_raw %in% names(data)) {
+          stop(sprintf("Column '%s' not found in data", group_name_raw))
         }
-        by <- data[[by_name_raw]]
+        group <- data[[group_name_raw]]
       }
     } else {
-      # by was not provided, set to NULL
-      by <- NULL
+      # group was not provided, set to NULL
+      group <- NULL
     }
   } else {
-    # No data frame provided, by should already be evaluated (or NULL)
-    # If by was provided as an unquoted name and doesn't exist, R will error here
+    # No data frame provided, group should already be evaluated (or NULL)
+    # If group was provided as an unquoted name and doesn't exist, R will error here
     # which is the expected behavior
-    if (!by_was_provided) {
-      by <- NULL
+    if (!group_was_provided) {
+      group <- NULL
     }
   }
   
@@ -124,17 +124,17 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     stop(sprintf("'x' must be a numeric vector, and '%s' is not", x_name_raw))
   }
   
-  # Handle 'by' grouping if specified
-  if (!is.null(by)) {
-    # Validate by argument
-    if (length(by) != length(x)) {
-      stop("'by' must have the same length as 'x'")
+  # Handle 'group' grouping if specified
+  if (!is.null(group)) {
+    # Validate group argument
+    if (length(group) != length(x)) {
+      stop("'group' must have the same length as 'x'")
     }
     
-    unique_by <- unique(by)
+    unique_by <- unique(group)
     n_groups <- length(unique_by)
     if (n_groups < 2 || n_groups > 3) {
-      stop("'by' must have 2 or 3 unique values")
+      stop("'group' must have 2 or 3 unique values")
     }
     
     # Use provided colors if valid, otherwise use default colors for groups
@@ -146,9 +146,9 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     
     # Compute frequencies using cross-tabulation
     all_xs <- sort(unique(x))
-    freq_table <- table(x, by)
+    freq_table <- table(x, group)
     
-    # Get column names from table (these are the unique values of by in table order)
+    # Get column names from table (these are the unique values of group in table order)
     table_by_cols <- colnames(freq_table)
     # Match table columns to unique_by order to ensure correct group assignment
     col_indices <- match(unique_by, table_by_cols)
@@ -349,7 +349,7 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     if (!add && show.legend) {
       # Calculate sample sizes for each group
       group_ns <- sapply(1:n_groups, function(i) {
-        length(x[by == unique_by[i]])
+        length(x[group == unique_by[i]])
       })
       
       # Create legend labels with sample sizes, aligned so N=xxx is at same position
@@ -401,7 +401,7 @@ plot_freq <- function(x, by=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL
     return(invisible(result_df))
   }
   
-  # Calculate frequencies for each unique value (only if by is not used)
+  # Calculate frequencies for each unique value (only if group is not used)
   freq_table <- table(x)
   xs <- as.numeric(names(freq_table))
   fs <- as.numeric(freq_table)

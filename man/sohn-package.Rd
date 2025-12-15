@@ -26,6 +26,8 @@ This package contains various utility functions organized into the following cat
 \section{Statistical Analyses}{
 
 \itemize{
+  \item \code{\link{t.test2}}: Enhanced t-test function returning dataframes
+  \item \code{\link{var_by}}: Descriptive statistics by group (or full dataset)
 }
 }
 

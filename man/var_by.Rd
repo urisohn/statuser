@@ -10,7 +10,7 @@ var_by(y, group = NULL, data = NULL, decimals = 3)
 \item{y}{A numeric vector of values, or a column name (character string or unquoted) if \code{data} is provided.}
 
 \item{group}{Optional grouping variable, or a column name (character string or unquoted) if \code{data} is provided.
-  If not provided, statistics are computed for the full dataset.}
+If not provided, statistics are computed for the full dataset.}
 
 \item{data}{Optional data frame containing the variables \code{y} and optionally \code{group}.}
 
@@ -25,7 +25,12 @@ A data frame with one row per group (or one row if no group is specified) contai
     \item \code{sd}: Standard deviation
     \item \code{se}: Standard error
     \item \code{median}: Median
-    \item \code{q1, q5, q10, q90, q95, q99}: Quantiles (1st, 5th, 10th, 90th, 95th, 99th percentiles)
+    \item \code{NA_total}: Number of missing (NA) observations
+    \item \code{mode}: Most frequent value
+    \item \code{freq_mode}: Frequency of mode
+    \item \code{mode2}: 2nd most frequent value
+    \item \code{freq_mode2}: Frequency of 2nd mode
+    \item \code{q5, q10, q90, q95}: Quantiles (5th, 10th, 90th, 95th percentiles)
     \item \code{min}: Minimum
     \item \code{max}: Maximum
   }
@@ -39,7 +44,9 @@ This function computes descriptive statistics similar to \code{psych::describeBy
 \itemize{
   \item Returns a single dataframe with one row per group (instead of a list)
   \item Excludes kurtosis, skewness, and range
-  \item Includes specific quantiles: 1, 5, 10, 90, 95, 99
+  \item Includes specific quantiles: 5, 10, 90, 95
+  \item Includes count of missing (NA) observations
+  \item Includes mode statistics (most frequent value and 2nd most frequent value with their frequencies)
   \item Adds descriptive labels to all columns using the \code{labelled} package
 }
 }

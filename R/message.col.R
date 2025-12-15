@@ -47,7 +47,11 @@ message.col <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = T
     blue = "34",
     magenta = "35",
     cyan = "36",
-    white = "37"
+    white = "37",
+    gray = "90",
+    grey = "90",
+    darkgray = "90",
+    darkgrey = "90"
   )
   
   # Find matching ANSI color - check if color starts with any known ANSI color name

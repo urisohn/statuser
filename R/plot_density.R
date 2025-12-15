@@ -5,9 +5,9 @@
 #'
 #' @param y A numeric vector of values to compute densities for, or a column name
 #'   (character string or unquoted) if \code{data} is provided.
-#' @param x A vector (factor, character, or numeric) used to group the data,
+#' @param group A vector (factor, character, or numeric) used to group the data,
 #'   or a column name (character string or unquoted) if \code{data} is provided.
-#' @param data An optional data frame containing the variables \code{y} and \code{x}.
+#' @param data An optional data frame containing the variables \code{y} and \code{group}.
 #' @param show.means Logical. If TRUE (default), shows vertical segments at mean values
 #'   for 2-3 groups. For 2 groups, low mean uses pos=2 and high mean uses pos=4.
 #'   For 3 groups, mid mean uses pos=3. For 4+ groups, vertical segments are not shown.
@@ -34,18 +34,18 @@
 #' @details
 #' This function:
 #' \itemize{
-#'   \item Splits \code{y} by unique values of \code{x}
+#'   \item Splits \code{y} by unique values of \code{group}
 #'   \item Computes a density estimate for each group
 #'   \item Plots all densities on the same graph
 #'   \item Handles plotting parameters: scalars apply to all groups, vectors
-#'     apply element-wise to groups (in order of unique \code{x} values)
+#'     apply element-wise to groups (in order of unique \code{group} values)
 #' }
 #'
 #' The densities are plotted as smooth curves. Parameters like
 #' \code{col}, \code{lwd}, \code{lty}, and \code{pch} can be specified as:
 #' \itemize{
 #'   \item A single value: applied to all groups
-#'   \item A vector: applied to groups in order of unique \code{x} values
+#'   \item A vector: applied to groups in order of unique \code{group} values
 #' }
 #'
 #' Default colors are automatically assigned based on the number of groups:
@@ -65,20 +65,20 @@
 #' @examples
 #' # Basic usage
 #' y <- rnorm(100)
-#' x <- rep(c("A", "B", "C"), c(30, 40, 30))
-#' plot_density(y, x)
+#' group <- rep(c("A", "B", "C"), c(30, 40, 30))
+#' plot_density(y, group)
 #'
 #' # With custom colors (scalar - same for all)
-#' plot_density(y, x, col = "blue")
+#' plot_density(y, group, col = "blue")
 #'
 #' # With custom colors (vector - different for each group)
-#' plot_density(y, x, col = c("red", "green", "blue"))
+#' plot_density(y, group, col = c("red", "green", "blue"))
 #'
 #' # Multiple parameters
-#' plot_density(y, x, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+#' plot_density(y, group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
 #'
 #' # With line type
-#' plot_density(y, x, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+#' plot_density(y, group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
 #'
 #' # Using data frame
 #' df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
@@ -87,7 +87,7 @@
 #' plot_density(value, group, data = df, col = c("red", "blue"))
 #'
 #' @export
-plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) {
+plot_density <- function(y, group, data = NULL, show.t = TRUE, show.ks = TRUE, ...) {
   #OUTLINE
   #1. Capture variable names for labels
   #2. Extract and handle parameters
@@ -123,14 +123,14 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
       y_name_raw
     }
   
-  # Capture x name for legend title (before potentially overwriting x)
-    x_name_raw <- deparse(substitute(x))
-    # Remove quotes if present (handles both x = "col" and x = col)
-    x_name_raw <- gsub('^"|"$', '', x_name_raw)
-    x_name <- if (grepl("\\$", x_name_raw)) {
-      strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
+  # Capture group name for legend title (before potentially overwriting group)
+    group_name_raw <- deparse(substitute(group))
+    # Remove quotes if present (handles both group = "col" and group = col)
+    group_name_raw <- gsub('^"|"$', '', group_name_raw)
+    group_name <- if (grepl("\\$", group_name_raw)) {
+      strsplit(group_name_raw, "\\$")[[1]][length(strsplit(group_name_raw, "\\$")[[1]])]
     } else {
-      x_name_raw
+      group_name_raw
     }
   
   #2. Extract and handle parameters
@@ -153,12 +153,12 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
         if (!y_name_raw %in% names(data)) {
           stop(sprintf("Column '%s' not found in data", y_name_raw))
         }
-        if (!x_name_raw %in% names(data)) {
-          stop(sprintf("Column '%s' not found in data", x_name_raw))
+        if (!group_name_raw %in% names(data)) {
+          stop(sprintf("Column '%s' not found in data", group_name_raw))
         }
         
         y <- data[[y_name_raw]]
-        x <- data[[x_name_raw]]
+        group <- data[[group_name_raw]]
     }
   
   # Validate that y is a numeric vector
@@ -167,19 +167,19 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
   }
   
   #4. Drop missing data
-    isnax=is.na(x)
+    isnagroup=is.na(group)
     isnay=is.na(y)
-    x=x[!isnax & !isnay]
-    y=y[!isnax & !isnay]
+    group=group[!isnagroup & !isnay]
+    y=y[!isnagroup & !isnay]
     
-    n.nax = sum(isnax)
+    n.nagroup = sum(isnagroup)
     n.nay = sum(isnay)
     
-    if (n.nax>0) message.col("sohn::plot_density() says: dropped ",n.nax," observations with missing '",x_name_raw,"' values",col='red4')
+    if (n.nagroup>0) message.col("sohn::plot_density() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
     if (n.nay>0) message.col("sohn::plot_density() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
   
   #5. Get unique groups
-    unique_x <- unique(x)
+    unique_x <- unique(group)
     n_groups <- length(unique_x)
   
   #6. Initialize return values
@@ -224,7 +224,7 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
     
     for (i in seq_along(unique_x)) {
       group_val <- unique_x[i]
-      y_group <- y[x == group_val]
+      y_group <- y[group == group_val]
       if (length(y_group) > 0) {
         # Compute density with any density-specific arguments
         density_obj <- do.call(density, c(list(x = y_group), density_params))
@@ -262,7 +262,7 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
     # Build plot arguments
     # Set main title if not provided
       if (!"main" %in% names(plot_params)) {
-        main_title <- paste0("Comparing Distribution of '", y_name, "' by '", x_name, "'")
+        main_title <- paste0("Comparing Distribution of '", y_name, "' by '", group_name, "'")
       } else {
         main_title <- plot_params$main
       }
@@ -343,7 +343,7 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
       if (show.t) {
         for (i in seq_along(density_list)) {
           group_val <- unique_x[i]
-          y_group <- y[x == group_val]
+          y_group <- y[group == group_val]
           group_mean <- mean(y_group, na.rm = TRUE)
           
           # Get color for this group
@@ -362,7 +362,7 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
           all_means <- numeric(n_groups)
           for (i in seq_along(density_list)) {
             group_val <- unique_x[i]
-            y_group <- y[x == group_val]
+            y_group <- y[group == group_val]
             all_means[i] <- mean(y_group, na.rm = TRUE)
           }
         
@@ -380,8 +380,8 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
             high_idx <- sorted_indices[2]
             
           # Get data for both groups
-            y_low <- y[x == unique_x[low_idx]]
-            y_high <- y[x == unique_x[high_idx]]
+            y_low <- y[group == unique_x[low_idx]]
+            y_high <- y[group == unique_x[high_idx]]
             
           # Perform t-test
             t_test <- t.test(y_low, y_high)
@@ -423,9 +423,9 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
           high_idx <- sorted_indices[3]
           
           # Get data for all groups
-            y_low <- y[x == unique_x[low_idx]]
-            y_mid <- y[x == unique_x[mid_idx]]
-            y_high <- y[x == unique_x[high_idx]]
+            y_low <- y[group == unique_x[low_idx]]
+            y_mid <- y[group == unique_x[mid_idx]]
+            y_high <- y[group == unique_x[high_idx]]
             
           # Low mean segment
             coli_low <- get_param("col", low_idx) %||% default_colors[low_idx]
@@ -469,7 +469,7 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
         group_n <- length(y_group)
         
         # Format: group_name\nN=sample_size
-        legend_labels[i] <- paste0(x_name, "='", as.character(group_val), "'\n",
+        legend_labels[i] <- paste0(group_name, "='", as.character(group_val), "'\n",
                                    "N=", group_n)
       }
       
@@ -481,8 +481,8 @@ plot_density <- function(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...) 
     # If exactly 2 groups, perform KS test
       if (n_groups == 2) {
         # Get data for both groups
-        y1 <- y[x == unique_x[1]]
-        y2 <- y[x == unique_x[2]]
+        y1 <- y[group == unique_x[1]]
+        y2 <- y[group == unique_x[2]]
         
         # Kolmogorov-Smirnov test (capture warnings about ties)
         ks_test <- withCallingHandlers(

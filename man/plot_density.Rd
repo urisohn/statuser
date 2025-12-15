@@ -4,16 +4,16 @@
 \alias{plot_density}
 \title{Plot density of a variable, by another variable}
 \usage{
-plot_density(y, x, data = NULL, show.t = TRUE, show.ks = TRUE, ...)
+plot_density(y, group, data = NULL, show.t = TRUE, show.ks = TRUE, ...)
 }
 \arguments{
 \item{y}{A numeric vector of values to compute densities for, or a column name
 (character string or unquoted) if \code{data} is provided.}
 
-\item{x}{A vector (factor, character, or numeric) used to group the data,
+\item{group}{A vector (factor, character, or numeric) used to group the data,
 or a column name (character string or unquoted) if \code{data} is provided.}
 
-\item{data}{An optional data frame containing the variables \code{y} and \code{x}.}
+\item{data}{An optional data frame containing the variables \code{y} and \code{group}.}
 
 \item{show.t}{Logical. If TRUE (default), shows points at means, vertical segments,
 mean labels, and t-test results. If FALSE, none of these are displayed.}
@@ -49,18 +49,18 @@ variable.
 \details{
 This function:
 \itemize{
-  \item Splits \code{y} by unique values of \code{x}
+  \item Splits \code{y} by unique values of \code{group}
   \item Computes a density estimate for each group
   \item Plots all densities on the same graph
   \item Handles plotting parameters: scalars apply to all groups, vectors
-    apply element-wise to groups (in order of unique \code{x} values)
+    apply element-wise to groups (in order of unique \code{group} values)
 }
 
 The densities are plotted as smooth curves. Parameters like
 \code{col}, \code{lwd}, \code{lty}, and \code{pch} can be specified as:
 \itemize{
   \item A single value: applied to all groups
-  \item A vector: applied to groups in order of unique \code{x} values
+  \item A vector: applied to groups in order of unique \code{group} values
 }
 
 Default colors are automatically assigned based on the number of groups:
@@ -80,20 +80,20 @@ When there are exactly 2 groups, the function automatically performs:
 \examples{
 # Basic usage
 y <- rnorm(100)
-x <- rep(c("A", "B", "C"), c(30, 40, 30))
-plot_density(y, x)
+group <- rep(c("A", "B", "C"), c(30, 40, 30))
+plot_density(y, group)
 
 # With custom colors (scalar - same for all)
-plot_density(y, x, col = "blue")
+plot_density(y, group, col = "blue")
 
 # With custom colors (vector - different for each group)
-plot_density(y, x, col = c("red", "green", "blue"))
+plot_density(y, group, col = c("red", "green", "blue"))
 
 # Multiple parameters
-plot_density(y, x, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+plot_density(y, group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
 
 # With line type
-plot_density(y, x, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+plot_density(y, group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
 
 # Using data frame
 df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))

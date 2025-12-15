@@ -17,7 +17,12 @@
 #'     \item \code{sd}: Standard deviation
 #'     \item \code{se}: Standard error
 #'     \item \code{median}: Median
-#'     \item \code{q1, q5, q10, q90, q95, q99}: Quantiles (1st, 5th, 10th, 90th, 95th, 99th percentiles)
+#'     \item \code{NA_total}: Number of missing (NA) observations
+#'     \item \code{mode}: Most frequent value
+#'     \item \code{freq_mode}: Frequency of mode
+#'     \item \code{mode2}: 2nd most frequent value
+#'     \item \code{freq_mode2}: Frequency of 2nd mode
+#'     \item \code{q5, q10, q90, q95}: Quantiles (5th, 10th, 90th, 95th percentiles)
 #'     \item \code{min}: Minimum
 #'     \item \code{max}: Maximum
 #'   }
@@ -27,7 +32,9 @@
 #' \itemize{
 #'   \item Returns a single dataframe with one row per group (instead of a list)
 #'   \item Excludes kurtosis, skewness, and range
-#'   \item Includes specific quantiles: 1, 5, 10, 90, 95, 99
+#'   \item Includes specific quantiles: 5, 10, 90, 95
+#'   \item Includes count of missing (NA) observations
+#'   \item Includes mode statistics (most frequent value and 2nd most frequent value with their frequencies)
 #'   \item Adds descriptive labels to all columns using the \code{labelled} package
 #' }
 #'
@@ -125,41 +132,72 @@ var_by <- function(y, group = NULL, data = NULL, decimals = 3) {
   
   # Helper function to compute statistics for a vector
   compute_stats <- function(x) {
+    na_count <- sum(is.na(x))
     x <- x[!is.na(x)]  # Remove NAs
     n <- length(x)
     
+    # Calculate mode statistics
+    mode_val <- NA_real_
+    freq_mode <- NA_integer_
+    mode2nd_val <- NA_real_
+    freq_mode2nd <- NA_integer_
+    
+    if (n > 0) {
+      # Count frequencies
+      freq_table <- table(x)
+      freq_sorted <- sort(freq_table, decreasing = TRUE)
+      
+      if (length(freq_sorted) > 0) {
+        # Mode (most frequent value)
+        mode_val <- as.numeric(names(freq_sorted)[1])
+        freq_mode <- as.integer(freq_sorted[1])
+        
+        # 2nd mode (2nd most frequent value)
+        if (length(freq_sorted) > 1) {
+          mode2nd_val <- as.numeric(names(freq_sorted)[2])
+          freq_mode2nd <- as.integer(freq_sorted[2])
+        }
+      }
+    }
+    
     if (n == 0) {
       return(list(
-        n = 0,
+        n = as.integer(0),
         mean = NA_real_,
         sd = NA_real_,
         se = NA_real_,
         median = NA_real_,
-        q1 = NA_real_,
+        na = as.integer(na_count),
+        mode = as.numeric(mode_val),
+        freq_mode = as.integer(freq_mode),
+        mode2 = as.numeric(mode2nd_val),
+        freq_mode2 = as.integer(freq_mode2nd),
         q5 = NA_real_,
         q10 = NA_real_,
         q90 = NA_real_,
         q95 = NA_real_,
-        q99 = NA_real_,
         min = NA_real_,
         max = NA_real_
       ))
     }
     
     list(
-      n = n,
-      mean = mean(x),
-      sd = sd(x),
-      se = sd(x) / sqrt(n),
-      median = median(x),
-      q1 = quantile(x, 0.01, names = FALSE),
-      q5 = quantile(x, 0.05, names = FALSE),
-      q10 = quantile(x, 0.10, names = FALSE),
-      q90 = quantile(x, 0.90, names = FALSE),
-      q95 = quantile(x, 0.95, names = FALSE),
-      q99 = quantile(x, 0.99, names = FALSE),
-      min = min(x),
-      max = max(x)
+      n = as.integer(n),
+      mean = as.numeric(mean(x)),
+      sd = as.numeric(sd(x)),
+      se = as.numeric(sd(x) / sqrt(n)),
+      median = as.numeric(median(x)),
+      na = as.integer(na_count),
+      mode = as.numeric(mode_val),
+      freq_mode = as.integer(freq_mode),
+      mode2 = as.numeric(mode2nd_val),
+      freq_mode2 = as.integer(freq_mode2nd),
+      q5 = as.numeric(quantile(x, 0.05, names = FALSE)),
+      q10 = as.numeric(quantile(x, 0.10, names = FALSE)),
+      q90 = as.numeric(quantile(x, 0.90, names = FALSE)),
+      q95 = as.numeric(quantile(x, 0.95, names = FALSE)),
+      min = as.numeric(min(x)),
+      max = as.numeric(max(x))
     )
   }
   
@@ -174,12 +212,15 @@ var_by <- function(y, group = NULL, data = NULL, decimals = 3) {
       sd = stats$sd,
       se = stats$se,
       median = stats$median,
-      q1 = stats$q1,
+      NA_total = stats$na,
+      mode = stats$mode,
+      freq_mode = stats$freq_mode,
+      mode2 = stats$mode2,
+      freq_mode2 = stats$freq_mode2,
       q5 = stats$q5,
       q10 = stats$q10,
       q90 = stats$q90,
       q95 = stats$q95,
-      q99 = stats$q99,
       min = stats$min,
       max = stats$max,
       stringsAsFactors = FALSE
@@ -204,12 +245,15 @@ var_by <- function(y, group = NULL, data = NULL, decimals = 3) {
         sd = stats$sd,
         se = stats$se,
         median = stats$median,
-        q1 = stats$q1,
+        NA_total = stats$na,
+      mode = stats$mode,
+      freq_mode = stats$freq_mode,
+      mode2 = stats$mode2,
+      freq_mode2 = stats$freq_mode2,
         q5 = stats$q5,
         q10 = stats$q10,
         q90 = stats$q90,
         q95 = stats$q95,
-        q99 = stats$q99,
         min = stats$min,
         max = stats$max,
         stringsAsFactors = FALSE
@@ -219,8 +263,8 @@ var_by <- function(y, group = NULL, data = NULL, decimals = 3) {
     result_df <- do.call(rbind, result_list)
   }
   
-  # Round numeric columns (except n, which is an integer) to specified decimals
-  numeric_cols <- c("mean", "sd", "se", "median", "q1", "q5", "q10", "q90", "q95", "q99", "min", "max")
+  # Round numeric columns (except n, NA_total, freq_mode, and freq_mode2, which are integers) to specified decimals
+  numeric_cols <- c("mean", "sd", "se", "median", "mode", "mode2", "q5", "q10", "q90", "q95", "min", "max")
   for (col in numeric_cols) {
     if (col %in% names(result_df)) {
       result_df[[col]] <- round(result_df[[col]], digits = decimals)
@@ -228,24 +272,34 @@ var_by <- function(y, group = NULL, data = NULL, decimals = 3) {
   }
   
   # Add descriptive labels to columns using labelled package
-  labelled::var_label(result_df) <- list(
+  label_list <- list(
     group = "Group identifier",
     n = "Number of observations",
     mean = "Mean",
     sd = "Standard deviation",
     se = "Standard error",
     median = "Median (50th percentile)",
-    q1 = "1st percentile",
+    NA_total = "Number of observations with missing values (NA)",
+    mode = "Most frequent value",
+    freq_mode = "Frequency of mode",
+    mode2 = "2nd most frequent value",
+    freq_mode2 = "Frequency of 2nd mode",
     q5 = "5th percentile",
     q10 = "10th percentile",
     q90 = "90th percentile",
     q95 = "95th percentile",
-    q99 = "99th percentile",
     min = "Minimum value",
     max = "Maximum value"
   )
   
+  # Only assign labels for columns that exist in result_df
+  label_list <- label_list[names(label_list) %in% names(result_df)]
+  
+  labelled::var_label(result_df) <- label_list
+  
   rownames(result_df) <- NULL
+  
+  # Return result_df (will print if called directly, won't print if assigned)
   return(result_df)
 }
 

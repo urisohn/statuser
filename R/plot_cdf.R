@@ -6,9 +6,9 @@
 #'
 #' @param y A numeric vector of values to compute ECDFs for, or a column name
 #'   (character string or unquoted) if \code{data} is provided.
-#' @param x A vector (factor, character, or numeric) used to group the data,
+#' @param group A vector (factor, character, or numeric) used to group the data,
 #'   or a column name (character string or unquoted) if \code{data} is provided.
-#' @param data An optional data frame containing the variables \code{y} and \code{x}.
+#' @param data An optional data frame containing the variables \code{y} and \code{group}.
 #' @param show.ks Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
 #'   when there are exactly 2 groups. If FALSE, KS test results are not displayed.
 #' @param show.quantiles Logical. If TRUE (default), shows horizontal lines and results
@@ -36,18 +36,18 @@
 #' @details
 #' This function:
 #' \itemize{
-#'   \item Splits \code{y} by unique values of \code{x}
+#'   \item Splits \code{y} by unique values of \code{group}
 #'   \item Computes an ECDF for each group
 #'   \item Plots all ECDFs on the same graph
 #'   \item Handles plotting parameters: scalars apply to all groups, vectors
-#'     apply element-wise to groups (in order of unique \code{x} values)
+#'     apply element-wise to groups (in order of unique \code{group} values)
 #' }
 #'
 #' The ECDFs are plotted as step functions with vertical lines. Parameters like
 #' \code{col}, \code{lwd}, \code{lty}, and \code{pch} can be specified as:
 #' \itemize{
 #'   \item A single value: applied to all groups
-#'   \item A vector: applied to groups in order of unique \code{x} values
+#'   \item A vector: applied to groups in order of unique \code{group} values
 #' }
 #'
 #' Default colors are automatically assigned based on the number of groups:
@@ -69,20 +69,20 @@
 #' @examples
 #' # Basic usage
 #' y <- rnorm(100)
-#' x <- rep(c("A", "B", "C"), c(30, 40, 30))
-#' plot_cdf(y, x)
+#' group <- rep(c("A", "B", "C"), c(30, 40, 30))
+#' plot_cdf(y, group)
 #'
 #' # With custom colors (scalar - same for all)
-#' plot_cdf(y, x, col = "blue")
+#' plot_cdf(y, group, col = "blue")
 #'
 #' # With custom colors (vector - different for each group)
-#' plot_cdf(y, x, col = c("red", "green", "blue"))
+#' plot_cdf(y, group, col = c("red", "green", "blue"))
 #'
 #' # Multiple parameters
-#' plot_cdf(y, x, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+#' plot_cdf(y, group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
 #'
 #' # With line type and point character
-#' plot_cdf(y, x, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+#' plot_cdf(y, group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
 #'
 #' # Using data frame
 #' df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
@@ -91,7 +91,7 @@
 #' plot_cdf(value, group, data = df, col = c("red", "blue"))
 #'
 #' @export
-plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
+plot_cdf <- function(y, group, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
   # Capture y name for xlab (before potentially overwriting y)
   y_name_raw <- deparse(substitute(y))
   # Remove quotes if present (handles both y = "col" and y = col)
@@ -102,14 +102,14 @@ plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, .
     y_name_raw
   }
   
-  # Capture x name for legend title (before potentially overwriting x)
-    x_name_raw <- deparse(substitute(x))
-    # Remove quotes if present (handles both x = "col" and x = col)
-    x_name_raw <- gsub('^"|"$', '', x_name_raw)
-    x_name <- if (grepl("\\$", x_name_raw)) {
-      strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
+  # Capture group name for legend title (before potentially overwriting group)
+    group_name_raw <- deparse(substitute(group))
+    # Remove quotes if present (handles both group = "col" and group = col)
+    group_name_raw <- gsub('^"|"$', '', group_name_raw)
+    group_name <- if (grepl("\\$", group_name_raw)) {
+      strsplit(group_name_raw, "\\$")[[1]][length(strsplit(group_name_raw, "\\$")[[1]])]
     } else {
-      x_name_raw
+      group_name_raw
     }
   
   # Extract plotting parameters from ...
@@ -130,12 +130,12 @@ plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, .
     if (!y_name_raw %in% names(data)) {
       stop(sprintf("Column '%s' not found in data", y_name_raw))
     }
-    if (!x_name_raw %in% names(data)) {
-      stop(sprintf("Column '%s' not found in data", x_name_raw))
+    if (!group_name_raw %in% names(data)) {
+      stop(sprintf("Column '%s' not found in data", group_name_raw))
     }
     
     y <- data[[y_name_raw]]
-    x <- data[[x_name_raw]]
+    group <- data[[group_name_raw]]
   }
   
   # Validate that y is a numeric vector
@@ -144,19 +144,19 @@ plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, .
   }
   
   # Drop missing data
-  isnax=is.na(x)
+  isnagroup=is.na(group)
   isnay=is.na(y)
-  x=x[!isnax & !isnay]
-  y=y[!isnax & !isnay]
+  group=group[!isnagroup & !isnay]
+  y=y[!isnagroup & !isnay]
   
-  n.nax = sum(isnax)
+  n.nagroup = sum(isnagroup)
   n.nay = sum(isnay)
   
-  if (n.nax>0) message.col("sohn::plot_cdf() says: dropped ",n.nax," observations with missing '",x_name_raw,"' values",col='red4')
+  if (n.nagroup>0) message.col("sohn::plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
   if (n.nay>0) message.col("sohn::plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
   
   # Get unique groups and their order
-  unique_x <- unique(x)
+  unique_x <- unique(group)
   n_groups <- length(unique_x)
   
   # Initialize return values for tests (when 2 groups)
@@ -190,7 +190,7 @@ plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, .
   
   for (i in seq_along(unique_x)) {
     group_val <- unique_x[i]
-    y_group <- y[x == group_val]
+    y_group <- y[group == group_val]
     if (length(y_group) > 0) {
       ecdf_list[[i]] <- ecdf(y_group)
       y_ranges[[i]] <- range(y_group)
@@ -225,7 +225,7 @@ plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, .
     # Build plot arguments
     # Set main title if not provided
       if (!"main" %in% names(dots)) {
-        main_title <- paste0("Comparing Distribution of '", y_name, "' by '", x_name, "'")
+        main_title <- paste0("Comparing Distribution of '", y_name, "' by '", group_name, "'")
       } else {
         main_title <- dots$main
       }
@@ -301,13 +301,13 @@ plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, .
     legend_ltys <- sapply(1:length(ecdf_list), function(i) get_param("lty", i) %||% 1)
     legend("top", legend = as.character(unique_x), 
            col = legend_cols, lwd = legend_lwds, lty = legend_ltys,
-           horiz = TRUE, bty = "n", title = x_name)
+           horiz = TRUE, bty = "n", title = group_name)
     
     # If exactly 2 groups, perform KS test and quantile regression tests
       if (n_groups == 2) {
         # Get data for both groups
-        y1 <- y[x == unique_x[1]]
-        y2 <- y[x == unique_x[2]]
+        y1 <- y[group == unique_x[1]]
+        y2 <- y[group == unique_x[2]]
         
         # Kolmogorov-Smirnov test (capture warnings about ties)
         ks_test <- withCallingHandlers(
@@ -339,7 +339,7 @@ plot_cdf <- function(y, x, data = NULL, show.ks = TRUE, show.quantiles = TRUE, .
         }
         
         # Create data frame for quantile regression
-        df_qr <- data.frame(y = y, x_group = as.numeric(x == unique_x[2]))
+        df_qr <- data.frame(y = y, x_group = as.numeric(group == unique_x[2]))
         
         # Calculate quantiles for each group (only needed if show.quantiles is TRUE for display)
         if (show.quantiles) {
