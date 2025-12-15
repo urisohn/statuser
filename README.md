@@ -122,6 +122,34 @@ table2(df$group, df$status, prop = "column") # Column proportions
 </details>
 
 <details>
+<summary><code>desc_var()</code>: Comprehensive descriptive statistics that returns a clean dataframe (not a list like psych::describeBy)</summary>
+
+```r
+# Why use desc_var() instead of psych::describeBy()?
+# - Returns a single dataframe (not a list) - easier to export, filter, merge
+# - Includes useful quantiles (5th, 10th, 90th, 95th percentiles)
+# - Shows mode statistics (most frequent values) - useful for discrete data
+# - Counts missing values automatically
+# - Columns are labeled for easy interpretation
+
+# With grouping - compare groups side-by-side
+df <- data.frame(score = rnorm(100), condition = rep(c("Control", "Treatment"), 50))
+desc_var(score, condition, data = df)
+
+# Without grouping - get stats for full dataset
+desc_var(score, data = df)
+
+# Direct vectors (no data frame needed)
+scores <- rnorm(100)
+groups <- rep(c("A", "B"), 50)
+desc_var(scores, groups)
+
+# Custom decimal places for cleaner output
+desc_var(score, condition, data = df, decimals = 2)
+```
+</details>
+
+<details>
 <summary><code>t.test2()</code>: Enhances base t.test: (1) console shows mean diff & var names, (2) output is dataframe, not list</summary>
 
 ```r
