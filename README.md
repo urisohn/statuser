@@ -122,48 +122,119 @@ table2(df$group, df$status, prop = "column") # Column proportions
 </details>
 
 <details>
-<summary><code>desc_var()</code>: Descriptive statistics by group (or full dataset)</summary>
-
-```r
-# With grouping
-df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
-desc_var(y, group, data = df)
-
-# Without grouping (full dataset)
-desc_var(y, data = df)
-
-# Direct vectors
-y <- rnorm(100)
-group <- rep(c("A", "B"), 50)
-desc_var(y, group)
-
-# With custom decimal places
-desc_var(y, group, data = df, decimals = 2)
-```
-</details>
-
-<details>
-<summary><code>desc_var()</code>: Descriptive statistics by group (or full dataset)</summary>
-
-```r
-# With grouping
-df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
-desc_var(y, group, data = df)
-
-# Without grouping (full dataset)
-desc_var(y, data = df)
-
-# Direct vectors
-y <- rnorm(100)
-group <- rep(c("A", "B"), 50)
-desc_var(y, group)
-
-# With custom decimal places
-desc_var(y, group, data = df, decimals = 2)
-```
-</details>
-
-<details>
 <summary><code>t.test2()</code>: Enhances base t.test: (1) console shows mean diff & var names, (2) output is dataframe, not list</summary>
 
+```r
+# Data for example
+	men <- rnorm(100, mean = 5, sd = 1)
+	women <- rnorm(100, mean = 4.8, sd = 1)
+
+# t.test() is harder to interpret, does not show difference of means(!) or indicate which mean is subtraced from which
+
+	t.test(men, women) 
+	t.test2(men, women)
+
+# Formula syntax
+	data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+	t2 = t.test2(y ~ group, data = data)  # Columns: A, B, A-B, SE_A-B, conf.intL, conf.intH, t, df, p.value, method, se_A, se_B
+	t2
+
+# Formula syntax without data argument
+	x1=rnorm(100)
+	x2=rnorm(100)
+	y <- c(x1, x2)
+	condition <- rep(c('A', 'B'), c(length(x1), length(x2)))
+	t.test2(y ~ condition)  
 ```
+</details>
+
+### ✨ Formatting
+
+<details>
+<summary><code>format_pvalue()</code>: Format p-values for clean display in figures and tables (e.g., p<.0001)</summary>
+
+```r
+format_pvalue(0.05)
+format_pvalue(0.0001, include_p = TRUE)
+```
+</details>
+
+<details>
+<summary><code>message.col()</code>: Print colored messages to console</summary>
+
+```r
+message.col("This is a red message", col = "red", font = 2)
+message.col("This is a cyan message", col = "cyan")
+```
+</details>
+
+### 🔄 Simulations
+
+<details>
+<summary><code>counter()</code>: Show # of simulations run so far inside a monte carlo loop</summary>
+
+```r
+for (i in 1:100) {
+  # Your simulation code here
+  Sys.sleep(0.1)  # Simulate work
+  counter(i)  # Report progress
+}
+```
+</details>
+
+### 🗂️ Data Management
+
+<details>
+<summary><code>namedList()</code>: Create lists with objects without having to name them</summary>
+
+```r
+	x <- 1:5
+	y <- letters[1:3]
+	z <- matrix(1:4, nrow = 2)
+	namedList(x, y, z)
+```
+</details>
+
+<details>
+<summary><code>convert_to_sql()</code>: Convert CSV to SQL</summary>
+
+```r
+	convert_to_sql("data.csv", "data.sql")
+```
+</details>
+
+<details>
+<summary><code>clear()</code>: Clear environment, console, and all graphics devices</summary>
+
+```r
+# Create some objects
+	x <- 1:10
+	y <- rnorm(10)
+	plot(x, y)
+
+# Clear everything
+	clear()
+```
+</details> 
+
+
+
+## Dependencies
+
+- `mgcv` (for `scatter.gam()`)
+- `rsvg` (for `resize_images()`)
+- `magick` (for `resize_images()`)
+
+## Author
+
+**Uri Simonsohn**  
+Email: urisohn@gmail.com
+
+## License
+
+GPL-3
+
+## Version
+
+0.1.4
+
