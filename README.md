@@ -63,6 +63,37 @@ plot_freq(value, by = group, data = df, legend.title = "Group", col.text = "blac
 </details>
 
 <details>
+<summary><code>plot_gam()</code>: Plot GAM model predictions with optional distribution plot</summary>
+
+```r
+library(mgcv)
+# Fit a GAM model
+data(mtcars)
+model <- gam(mpg ~ s(hp) + s(wt) + factor(cyl), data = mtcars)
+
+# Basic plot
+plot_gam(model, "hp")
+
+# With distribution plot below (auto-selects plot_freq or plot_density)
+plot_gam(model, "hp", plot2 = "auto")
+
+# Always use frequency plot
+plot_gam(model, "hp", plot2 = "freq")
+
+# Always use density plot
+plot_gam(model, "hp", plot2 = "density")
+
+# Customize colors for main plot and bottom plot
+plot_gam(model, "hp", plot2 = "auto", 
+         col = "blue4", bg = adjustcolor('dodgerblue', .2),  # Main plot colors
+         col2 = "steelblue", bg2 = "gray95")  # Bottom plot colors
+
+# Hold other variables at different quantile
+plot_gam(model, "hp", quantile.others = 25)
+```
+</details>
+
+<details>
 <summary><code>scatter.gam()</code>: Scatter plots with GAM smooth lines</summary>
 
 ```r
@@ -235,7 +266,7 @@ message.col("This is a cyan message", col = "cyan")
 
 ## Dependencies
 
-- `mgcv` (for `scatter.gam()`)
+- `mgcv` (for `scatter.gam()` and `plot_gam()`)
 - `rsvg` (for `resize_images()`)
 - `magick` (for `resize_images()`)
 
