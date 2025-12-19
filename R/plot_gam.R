@@ -1,7 +1,7 @@
-#' Plot GAM Model Predictions
+#' Plot GAM Model 
 #'
-#' Creates a plot of predicted values from a GAM model for a specified predictor
-#' variable, with other variables held at their quantile values (default: median).
+#' Plots fitted GAM values for focal predictor,
+#' keeping any other predictors in thhe model at a specified quantile  (default: median)
 #'
 #' @param model A GAM model object fitted using \code{mgcv::gam()}.
 #' @param predictor Character string specifying the name of the predictor variable
@@ -80,10 +80,11 @@ plot_gam <- function(model, predictor, quantile.others = 50,
   formula_char <- paste(deparse(model_formula), collapse = " ")
   # Check for factor( in the formula (factor is lowercase in R)
   if (grepl("\\bfactor\\s*\\(", formula_char, ignore.case = FALSE)) {
-    stop("The model formula contains factor() calls. Please convert variables to factors before fitting the model.\n",
-         "Example: Instead of gam(y ~ factor(x), data = df), do:\n",
-         "  df$x <- factor(df$x)\n",
-         "  gam(y ~ x, data = df)")
+    stop("A variable in the GAM formula was included with 'factor()'.\n ",
+         " Please, instead, convert that variable to factor  before running the GAM model\n",
+         "\n  Example: Instead of gam(y ~ factor(x), data = df), do:\n",
+         "    df$x <- factor(df$x)\n",
+         "    gam(y ~ x, data = df)")
   }
   
   # Validate quantile.others
@@ -226,7 +227,7 @@ plot_gam <- function(model, predictor, quantile.others = 50,
   if (!"ylab" %in% names(dots)) dots$ylab <- response_var
   
   # Set default main title if not provided
-  main_title_text <- if ("main" %in% names(dots)) dots$main else paste0("GAM Predicting ", response_var, " with ", predictor)
+  main_title_text <- if ("main" %in% names(dots)) dots$main else paste0("GAM Predicting '", response_var, "' with '", predictor,"'")
   
   # Extract model formula for subtitle (will be added after plot)
   model_formula_text <- paste(deparse(formula(model)), collapse = " ")
