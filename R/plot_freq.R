@@ -45,6 +45,8 @@
 plot_freq <- function(x, group=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, data=NULL, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   # Capture x and group variable names (before potentially overwriting)
   x_name_raw <- deparse(substitute(x))
+  # Collapse in case deparse returns multiple strings (for long expressions)
+  x_name_raw <- paste(x_name_raw, collapse = " ")
   # Remove quotes if present (handles both x = "col" and x = col)
   x_name_raw <- gsub('^"|"$', '', x_name_raw)
   x_name <- if (grepl("\\$", x_name_raw)) {

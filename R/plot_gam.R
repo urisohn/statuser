@@ -1,23 +1,22 @@
 #' Plot GAM Model 
 #'
 #' Plots fitted GAM values for focal predictor,
-#' keeping any other predictors in thhe model at a specified quantile  (default: median)
+#' keeping any other predictors in the model at a specified quantile  (default: median)
 #'
 #' @param model A GAM model object fitted using \code{mgcv::gam()}.
 #' @param predictor Character string specifying the name of the predictor variable
 #'   to plot on the x-axis.
-#' @param quantile.others Numeric value between 1 and 99 specifying the quantile
-#'   at which to hold all other variables constant. Default is 50 (median).
+#' @param quantile.others Number between 1 and 99 for quantile
+#'   at which all other predictors are held constant. Default is 50 (median).
 #' @param col Color for the prediction line. Default is "blue4".
 #' @param bg Background color for the confidence band. Default is
 #'   \code{adjustcolor('dodgerblue', .2)}.
-#' @param plot2 Character string specifying how to plot the distribution of the
-#'   predictor variable below the main plot. Options: \code{'auto'} (default,
-#'   auto-select based on number of unique values), \code{'freq'} (always use
-#'   \code{plot_freq()}), \code{'density'} (always use \code{plot_density()}),
-#'   or \code{'none'} (no distribution plot). When \code{'auto'}, uses
-#'   \code{plot_freq()} if there are 30 or fewer unique values, otherwise uses
-#'   \code{plot_density()}.
+#' @param plot2 How to plot the distribution in the lower plot. Options: \code{'auto'} (default,
+#'   auto-select based on number of unique values), \code{'freq'} (always plot frequencies),
+#'   \code{'density'} (always plot the density) or \code{'none'} (neither). When \code{'auto'}, 
+#'   plots frequencies with predictor has less than 30 unique values, density otherwise.
+#' @param col2 Color for the lines/bars in the bottom distribution plot. Default is "dodgerblue"
+#' @param bg2 Background color for the bottom distribution plot. Default is "gray90".
 #' @param ... Additional arguments passed to \code{plot()} and \code{lines()}.
 #'
 #' @return Invisibly returns a list containing:
@@ -63,7 +62,7 @@
 #' @export
 plot_gam <- function(model, predictor, quantile.others = 50, 
                      col = "blue4", bg = adjustcolor('dodgerblue', .2), 
-                     plot2 = 'auto', ...) {
+                     plot2 = 'auto', col2 = NULL, bg2 = "gray90", ...) {
   # Check if model is from mgcv::gam()
   if (!inherits(model, "gam")) {
     stop("'model' must be a GAM model object fitted using mgcv::gam()")
@@ -375,19 +374,24 @@ plot_gam <- function(model, predictor, quantile.others = 50,
            font.lab = 2,  # Bold font to match GAM plot ylab
            cex.lab = ylab_cex)  # Match size of GAM plot ylab
       
-      # Draw gray90 background covering the entire plot area
+      # Draw background covering the entire plot area
       usr <- par("usr")
-      rect(usr[1], usr[3], usr[2], usr[4], col = "gray90", border = NA)
+      rect(usr[1], usr[3], usr[2], usr[4], col = bg2, border = NA)
       
       # Redraw border box on top of background
       box()
       
       # Use plot_freq() with add=TRUE to overlay on the background
-      plot_freq(x = predictor_data, 
-                xlab = predictor,  # Predictor variable name
-                main = "",
-                xlim = xlim_dist,
-                add = TRUE)
+      # Set col2 if provided, otherwise use plot_freq default
+      plot_freq_args <- list(x = predictor_data, 
+                             xlab = predictor,  # Predictor variable name
+                             main = "",
+                             xlim = xlim_dist,
+                             add = TRUE)
+      if (!is.null(col2)) {
+        plot_freq_args$col <- col2
+      }
+      do.call(plot_freq, plot_freq_args)
       
       # Draw axes after plot_freq (since add=TRUE doesn't draw axes)
       axis(1)  # x-axis
@@ -418,15 +422,17 @@ plot_gam <- function(model, predictor, quantile.others = 50,
            font.lab = 2,  # Bold font to match GAM plot ylab
            cex.lab = ylab_cex)  # Match size of GAM plot ylab
       
-      # Draw gray90 background covering the entire plot area
+      # Draw background covering the entire plot area
       usr <- par("usr")
-      rect(usr[1], usr[3], usr[2], usr[4], col = "gray90", border = NA)
+      rect(usr[1], usr[3], usr[2], usr[4], col = bg2, border = NA)
       
       # Redraw border box on top of background
       box()
       
       # Manually plot the density curve
-      lines(density_obj, col = "dodgerblue", lwd = 4)
+      # Use col2 if provided, otherwise default to "dodgerblue"
+      density_col <- if (!is.null(col2)) col2 else "dodgerblue"
+      lines(density_obj, col = density_col, lwd = 4)
       
       # Add axes
       axis(1)  # x-axis
