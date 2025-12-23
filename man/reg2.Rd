@@ -4,7 +4,7 @@
 \alias{reg2}
 \title{Two-Line Interrupted Regression}
 \usage{
-reg2(f, xc, graph = 1, family = "gaussian")
+reg2(f, xc, graph = 1, family = "gaussian", data = NULL)
 }
 \arguments{
 \item{f}{A formula object specifying the model (e.g., y ~ x1 + x2 + x3).
@@ -16,6 +16,8 @@ The first predictor is the one on which the u-shape is tested.}
 
 \item{family}{Character string specifying the family for the GLM model.
 Default is "gaussian" for OLS regression. Use "binomial" for probit models.}
+
+\item{data}{A data frame containing the variables in the formula.}
 }
 \value{
 A list containing:

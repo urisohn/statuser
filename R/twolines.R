@@ -146,7 +146,7 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "")
     }
     
     # Now run it
-    gams <- gam(as.formula(gam.f), data = data, family = link)  # so this is a general additive model with the main specification entered
+    gams <- mgcv::gam(as.formula(gam.f), data = data, family = link)  # so this is a general additive model with the main specification entered
     # but we make the first predictor, the one that will be tested for having a u-shaped effect
     # be estimated with a completely flexible functional form.
   
@@ -165,7 +165,6 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "")
       data.obs <- na.omit(data.obs)
       
       # Create data where xu is at sample means to get residuals based on rest of models to act as yobs
-      # Recall: columns 1 & 2 have y and u(x) in obs.data
       data.xufixed <- data.obs
       data.xufixed[[x.f]] <- mean(data.obs[[x.f]])   # Note, the 1st predictor is always the one hypothesized to be u-shaped
       # replace it with the mean value of the predictor
@@ -207,7 +206,8 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "")
     # using quadratic regression to know if we are looking for max or min
     xu2 <- xu^2                                                  # Square x term, xu is the 1st predictor
     # Create data frame for quadratic regression
-    qdata <- data.frame(yu = yu, xu = xu, xu2 = xu2)
+    qdata <- data.frame(xu = xu, xu2 = xu2)
+    qdata[[y.f]] <- yu
     if (var.count > 2) {
       # Add covariates
       for (var in all.vars(f)[-(1:2)]) {
@@ -216,14 +216,14 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "")
       lmq.f <- update(nox.f, ~ xu + xu2 + .)           # Add to function with covariates (put first, before covariates)
     }
     if (var.count == 2) {
-      lmq.f <- yu ~ xu + xu2
+      lmq.f <- as.formula(paste0(y.f, " ~ xu + xu2"))
     }
-    lmq <- lm(lmq.f, data = qdata)               # Estimate the quadratic regression
-    bqs <- lmq$coefficients                            # Get the point estimates
-    bx1 <- bqs[2]                                     # point estimate for effect of x
-    bx2 <- bqs[3]                                      # point estimate for effect of x^2
-    x0 <- min(xu)                                      # lowest x-value
-    s0 <- bx1 + 2 * bx2 * x0                                 # estimated slope at the lowest x-value
+    lmq <- lm(lmq.f, data = qdata)            # Estimate the quadratic regression
+    bqs <- lmq$coefficients                   # Get the point estimates
+    bx1 <- bqs[2]                             # point estimate for effect of x
+    bx2 <- bqs[3]                             # point estimate for effect of x^2
+    x0 <- min(xu)                             # lowest x-value
+    s0 <- bx1 + 2 * bx2 * x0                  # estimated slope at the lowest x-value
     if (s0 > 0) {
       shape <- 'inv-ushape'                   # if the quadratic is increasing at the lowest point, the could be inverted u-shape
     }
@@ -425,17 +425,17 @@ reg2 <- function(f, xc, graph = 1, family = "gaussian", data = NULL) {
   
   #7. Compute robust standard errors (HC3, fallback to HC1 if needed)
     # Compute robust standard errors
-    rob1 <- coeftest(glm1, vcov = vcovHC(glm1, "HC3"))
-    rob2 <- coeftest(glm2, vcov = vcovHC(glm2, "HC3"))
+    rob1 <- lmtest::coeftest(glm1, vcov = sandwich::vcovHC(glm1, "HC3"))
+    rob2 <- lmtest::coeftest(glm2, vcov = sandwich::vcovHC(glm2, "HC3"))
     
     # Sometimes HC3 gives NA values (for very sparse or extreme data), check and if that's the case change method
     msg <- ""
     if (is.na(rob1[2, 4])) {
-      rob1 <- coeftest(glm1, vcov = vcovHC(glm1, "HC1"))
+      rob1 <- lmtest::coeftest(glm1, vcov = sandwich::vcovHC(glm1, "HC1"))
       msg <- paste0(msg, "\nFor line 1 the heteroskedastic standard errors HC3 resulted in an error thus we used HC1 instead.")
     }
     if (is.na(rob2[2, 4])) {
-      rob2 <- coeftest(glm2, vcov = vcovHC(glm2, "HC1"))
+      rob2 <- lmtest::coeftest(glm2, vcov = sandwich::vcovHC(glm2, "HC1"))
       msg <- paste0(msg, "\nFor line 2 the heteroskedastic standard errors HC3 resulted in an error thus we used HC1 instead.")
     }
   
@@ -470,11 +470,11 @@ reg2 <- function(f, xc, graph = 1, family = "gaussian", data = NULL) {
       # Estimate smoother
       if (var.count > 2) {
         gam.f <- paste0(format(nox.f), "+", sx.f)   # add the modified smoother version of x into the formula
-        gams <- gam(as.formula(gam.f), data = data, family = family)  # now actually run the smoother
+        gams <- mgcv::gam(as.formula(gam.f), data = data, family = family)  # now actually run the smoother
       }
       
       if (var.count == 2) {
-        gams <- gam(as.formula(paste0(y.f, " ~", sx.f)), data = data, family = family)  # now actually run the smoother
+        gams <- mgcv::gam(as.formula(paste0(y.f, " ~", sx.f)), data = data, family = family)  # now actually run the smoother
       }
       
       # Get dots of raw data
@@ -492,7 +492,6 @@ reg2 <- function(f, xc, graph = 1, family = "gaussian", data = NULL) {
         data.obs <- na.omit(data.obs)
         
         # Create data where u(x) is at sample means to get residuals based on rest of models to act as yobs
-        # Recall: columns 1 & 2 have y and u(x) in obs.data
         data.xufixed <- data.obs
         data.xufixed[[x.f]] <- mean(data.obs[[x.f]])   # Note, the 1st predictor is always the one hypothesized to be u-shaped
         # replace it with the mean value of the predictor
