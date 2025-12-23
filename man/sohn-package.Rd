@@ -39,13 +39,6 @@ This package contains various utility functions organized into the following cat
 }
 }
 
-\section{Simulations}{
-
-\itemize{
-  \item \code{\link{counter}}: Adaptive progress reporter for simulations
-}
-}
-
 \section{Data Management}{
 
 \itemize{
