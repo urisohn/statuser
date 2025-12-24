@@ -329,7 +329,7 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "",
       
       # Combine all details into a single message
           msg <- paste0(
-            "Explaining why ", x.f, " = ", xcn, " is used as the breakpoint\n",
+            "Explaining why ", x.f, " = ", xcn, " is used as the breakpoint\n\n",
             "Most extreme value of fitted '", y.f, "' with GAM obtained at '", x.f, "' = ", round(x.most, 2), "\n",
             "Local range of values considered for breakpoint '", x.f, "': [", round(min(xflat), 2), ", ", round(max(xflat), 2), "]\n",
             "t-values for two lines at '", x.f, "' = ", round(x.most, 2), ":\n",
@@ -342,7 +342,7 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "",
           )
           message2(msg, col = "blue4")
       
-      message2("\nNote: you may turn off this message with calculations, by setting `quiet=TRUE`", col = "red4")
+      message2("\nNote: you may turn off this message by setting `quiet=TRUE`", col = "red4")
       
     }
   
