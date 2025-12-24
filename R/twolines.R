@@ -322,14 +322,14 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "",
     # Print Robin Hood details (unless quiet = TRUE)
     if (!quiet) {
       message2("Robin Hood details", col = "blue4", font = 2)
-      message2("Most extreme value of fitted 'y' with GAM obtained at 'x' = ", round(x.most, 2), col = "blue4")
-      message2("Local range of values considered for breakpoint 'x': [", round(min(xflat), 2), ", ", round(max(xflat), 2), "]", col = "blue4")
-      message2("t-values for two lines at 'x' = ", round(x.most, 2), ":", col = "blue4")
+      message2("Most extreme value of fitted '", y.f, "' with GAM obtained at '", x.f, "' = ", round(x.most, 2), col = "blue4")
+      message2("Local range of values considered for breakpoint '", x.f, "': [", round(min(xflat), 2), ", ", round(max(xflat), 2), "]", col = "blue4")
+      message2("t-values for two lines at '", x.f, "' = ", round(x.most, 2), ":", col = "blue4")
       message2("   t1 = ", round(z1, 2), col = "blue4")
       message2("   t2 = ", round(z2, 2), col = "blue4")
       qp <- z2 / (z1 + z2)
       message2("  We compute t2/(t1+t2) = ", round(qp, 2),  col = "blue4")
-      message2(" 'x' value at that quantile of range is the Robin Hood cutoff: x = ", round(as.numeric(xc), 2), col = "blue4")
+      message2("  We compute quantile(", x.f, ", round(qp, 2)) = ", round(as.numeric(xc), 2), " and set that as the breakpoint." col = "blue4")
       message2("\nNote: you may turn off this message with calculations, by setting `quiet=TRUE`",col='red4')
       
     }
