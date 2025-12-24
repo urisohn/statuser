@@ -106,11 +106,6 @@
 #'
 #' @export
 plot_cdf <- function(y, group, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
-  # Capture data name for error messages (before potentially overwriting)
-  data_name <- deparse(substitute(data))
-  # Remove quotes if present
-  data_name <- gsub('^"|"$', '', data_name)
-  
   # Extract plotting parameters from ...
     dots <- list(...)
     
@@ -118,109 +113,15 @@ plot_cdf <- function(y, group, data = NULL, show.ks = TRUE, show.quantiles = TRU
     dots$show.ks <- NULL
     dots$show.quantiles <- NULL
   
-  # Check if y is a formula
-  is_formula <- inherits(y, "formula")
-  
-  if (is_formula) {
-    # Formula syntax: y ~ group
-    # Extract variable names from formula
-    formula_vars <- all.vars(y)
-    if (length(formula_vars) != 2) {
-      stop("Formula must have exactly two variables: response ~ group")
-    }
-    
-    y_var_name <- formula_vars[1]
-    group_var_name <- formula_vars[2]
-    
-    # Get calling environment for evaluating variables
-    calling_env <- parent.frame()
-    
-    if (!is.null(data)) {
-      # Data provided: extract from data frame
-      if (!is.data.frame(data)) {
-        stop("'data' must be a data frame")
-      }
-      
-      # Check if variables exist in data
-      if (!y_var_name %in% names(data)) {
-        stop(sprintf("Variable \"%s\" not found in dataset \"%s\"", y_var_name, data_name))
-      }
-      if (!group_var_name %in% names(data)) {
-        stop(sprintf("Variable \"%s\" not found in dataset \"%s\"", group_var_name, data_name))
-      }
-      
-      # Extract variables from data
-      y <- data[[y_var_name]]
-      group <- data[[group_var_name]]
-    } else {
-      # No data: check if variables exist before evaluating
-      y_exists <- exists(y_var_name, envir = calling_env, inherits = TRUE)
-      group_exists <- exists(group_var_name, envir = calling_env, inherits = TRUE)
-      
-      if (!y_exists && !group_exists) {
-        stop(sprintf("plot_cdf(): Could not find variables '%s' and '%s'", y_var_name, group_var_name), call. = FALSE)
-      } else if (!y_exists) {
-        stop(sprintf("plot_cdf(): Could not find variable '%s'", y_var_name), call. = FALSE)
-      } else if (!group_exists) {
-        stop(sprintf("plot_cdf(): Could not find variable '%s'", group_var_name), call. = FALSE)
-      }
-      
-      # Variables exist, now evaluate them
-      y <- eval(as.name(y_var_name), envir = calling_env)
-      group <- eval(as.name(group_var_name), envir = calling_env)
-    }
-    
-    # Set names for labels and raw names (used in error messages)
-    y_name <- y_var_name
-    group_name <- group_var_name
-    y_name_raw <- y_var_name
-    group_name_raw <- group_var_name
-  } else {
-    # Standard syntax: y, group
-    # Capture y name for xlab (before potentially overwriting y)
-    y_name_raw <- deparse(substitute(y))
-    # Remove quotes if present (handles both y = "col" and y = col)
-    y_name_raw <- gsub('^"|"$', '', y_name_raw)
-    y_name <- if (grepl("\\$", y_name_raw)) {
-      strsplit(y_name_raw, "\\$")[[1]][length(strsplit(y_name_raw, "\\$")[[1]])]
-    } else {
-      y_name_raw
-    }
-    
-    # Capture group name for legend title (before potentially overwriting group)
-      group_name_raw <- deparse(substitute(group))
-      # Remove quotes if present (handles both group = "col" and group = col)
-      group_name_raw <- gsub('^"|"$', '', group_name_raw)
-      group_name <- if (grepl("\\$", group_name_raw)) {
-        strsplit(group_name_raw, "\\$")[[1]][length(strsplit(group_name_raw, "\\$")[[1]])]
-      } else {
-        group_name_raw
-      }
-    
-    # Handle data frame if provided
-    if (!is.null(data)) {
-      if (!is.data.frame(data)) {
-        stop("'data' must be a data frame")
-      }
-      
-      # Extract columns from data frame
-      # Use raw names for column lookup (they may include df$ prefix)
-      if (!y_name_raw %in% names(data)) {
-        stop(sprintf("Column \"%s\" not found in dataset \"%s\"", y_name_raw, data_name))
-      }
-      if (!group_name_raw %in% names(data)) {
-        stop(sprintf("Column \"%s\" not found in dataset \"%s\"", group_name_raw, data_name))
-      }
-      
-      y <- data[[y_name_raw]]
-      group <- data[[group_name_raw]]
-    }
-  }
-  
-  # Validate that y is a numeric vector
-  if (!is.numeric(y) || !is.vector(y)) {
-    stop(sprintf("'y' must be a numeric vector, and '%s' is not", y_name_raw))
-  }
+  # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
+  validated <- validate_plot(y, group, data, func_name = "plot_cdf", require_group = TRUE)
+  y <- validated$y
+  group <- validated$group
+  y_name <- validated$y_name
+  group_name <- validated$group_name
+  y_name_raw <- validated$y_name_raw
+  group_name_raw <- validated$group_name_raw
+  data_name <- validated$data_name
   
   # Drop missing data
   isnagroup=is.na(group)

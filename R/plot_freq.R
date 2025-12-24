@@ -43,87 +43,58 @@
 
 #' @export
 plot_freq <- function(x, group=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, data=NULL, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
-  # Capture x and group variable names (before potentially overwriting)
-  x_name_raw <- deparse(substitute(x))
-  # Collapse in case deparse returns multiple strings (for long expressions)
-  x_name_raw <- paste(x_name_raw, collapse = " ")
-  # Remove quotes if present (handles both x = "col" and x = col)
-  x_name_raw <- gsub('^"|"$', '', x_name_raw)
-  x_name <- if (grepl("\\$", x_name_raw)) {
-    strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
-  } else {
-    x_name_raw
-  }
-  
-  # Handle group: capture name BEFORE evaluating group (to handle unquoted column names)
+  # Handle group expressions (like c(1,2,3)) separately before validation
   group_expr <- substitute(group)
-  group_name_raw <- NULL
-  # Check if group was actually provided (not just using default NULL)
-  # If group_expr is NULL (the value), group was not provided or was explicitly NULL
-  # If group_expr is a symbol, character, or expression, group was provided
   group_was_provided <- !is.null(group_expr)
+  group_is_expression <- FALSE
   
-  if (group_was_provided) {
-    if (is.character(group_expr) && length(group_expr) == 1) {
-      # group was passed as a character string (e.g., group = "group")
-      group_name_raw <- group_expr
+  # Check if group is an expression (not a simple column name)
+  if (group_was_provided && !is.null(data)) {
+    group_name_raw_temp <- if (is.character(group_expr) && length(group_expr) == 1) {
+      group_expr
     } else {
-      # group was passed as an unquoted name or will be evaluated as a vector
-      group_name_raw <- deparse(group_expr)
-      group_name_raw <- gsub('^"|"$', '', group_name_raw)
+      deparse(group_expr)
+    }
+    group_name_raw_temp <- gsub('^"|"$', '', group_name_raw_temp)
+    
+    # If it contains operators/parentheses, it's likely an expression
+    if (grepl("[()\\[\\]\\+\\-\\*/]", group_name_raw_temp)) {
+      group_is_expression <- TRUE
+      # Evaluate the expression
+      tryCatch({
+        group <- eval(group_expr, envir = parent.frame())
+      }, error = function(e) {
+        stop(sprintf("plot_freq(): Could not evaluate 'group' expression '%s'", group_name_raw_temp), call. = FALSE)
+      })
     }
   }
   
   # Extract additional arguments
   dots <- list(...)
   
-  # Handle data frame if provided
-  if (!is.null(data)) {
-    if (!is.data.frame(data)) {
-      stop("'data' must be a data frame")
-    }
-    
-    # Extract x column from data frame
-    if (!x_name_raw %in% names(data)) {
-      stop(sprintf("Column '%s' not found in data", x_name_raw))
-    }
-    x <- data[[x_name_raw]]
-    
-    # Extract group column from data frame if provided
-    if (group_was_provided) {
-      # Check if group_name_raw looks like a column name (not a vector expression)
-      # Simple heuristic: if it contains parentheses, brackets, or operators, it's likely a vector expression
-      if (grepl("[()\\[\\]\\+\\-\\*/]", group_name_raw)) {
-        # group appears to be a vector expression, try to evaluate it
-        # This handles cases like group = c(1,2,3) when data is provided
-        tryCatch({
-          group <- eval(group_expr, envir = parent.frame())
-        }, error = function(e) {
-          stop(sprintf("Could not evaluate 'group' expression '%s'", group_name_raw))
-        })
-      } else {
-        # group appears to be a column name, extract from data
-        if (!group_name_raw %in% names(data)) {
-          stop(sprintf("Column '%s' not found in data", group_name_raw))
-        }
-        group <- data[[group_name_raw]]
-      }
-    } else {
-      # group was not provided, set to NULL
-      group <- NULL
-    }
+  # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq (only if group is not an expression)
+  if (!group_is_expression) {
+    validated <- validate_plot(x, group, data, func_name = "plot_freq", require_group = FALSE)
+    x <- validated$y  # Note: validate_plot uses 'y' but we pass 'x'
+    group <- validated$group
+    x_name <- validated$y_name
+    group_name <- validated$group_name
+    x_name_raw <- validated$y_name_raw
+    group_name_raw <- validated$group_name_raw
   } else {
-    # No data frame provided, group should already be evaluated (or NULL)
-    # If group was provided as an unquoted name and doesn't exist, R will error here
-    # which is the expected behavior
-    if (!group_was_provided) {
-      group <- NULL
+    # Group was an expression, validate x separately
+    validated <- validate_plot(x, NULL, data, func_name = "plot_freq", require_group = FALSE)
+    x <- validated$y
+    x_name <- validated$y_name
+    x_name_raw <- validated$y_name_raw
+    # For group expressions, we need to capture the name differently
+    group_name_raw <- if (is.character(group_expr) && length(group_expr) == 1) {
+      group_expr
+    } else {
+      deparse(group_expr)
     }
-  }
-  
-  # Validate that x is a numeric vector
-  if (!is.numeric(x) || !is.vector(x)) {
-    stop(sprintf("'x' must be a numeric vector, and '%s' is not", x_name_raw))
+    group_name_raw <- gsub('^"|"$', '', group_name_raw)
+    group_name <- group_name_raw
   }
   
   # Handle 'group' grouping if specified

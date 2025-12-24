@@ -112,28 +112,7 @@ plot_density <- function(y, group, data = NULL, show.t = TRUE, show.ks = TRUE, .
   #21. Perform KS test (if 2 groups)
   #22. Return densities and test results
   
-  #1. Capture variable names for labels
-  # Capture y name for xlab (before potentially overwriting y)
-    y_name_raw <- deparse(substitute(y))
-    # Remove quotes if present (handles both y = "col" and y = col)
-    y_name_raw <- gsub('^"|"$', '', y_name_raw)
-    y_name <- if (grepl("\\$", y_name_raw)) {
-      strsplit(y_name_raw, "\\$")[[1]][length(strsplit(y_name_raw, "\\$")[[1]])]
-    } else {
-      y_name_raw
-    }
-  
-  # Capture group name for legend title (before potentially overwriting group)
-    group_name_raw <- deparse(substitute(group))
-    # Remove quotes if present (handles both group = "col" and group = col)
-    group_name_raw <- gsub('^"|"$', '', group_name_raw)
-    group_name <- if (grepl("\\$", group_name_raw)) {
-      strsplit(group_name_raw, "\\$")[[1]][length(strsplit(group_name_raw, "\\$")[[1]])]
-    } else {
-      group_name_raw
-    }
-  
-  #2. Extract and handle parameters
+  #1. Extract and handle parameters
   # Extract plotting parameters from ...
     dots <- list(...)
     
@@ -141,32 +120,16 @@ plot_density <- function(y, group, data = NULL, show.t = TRUE, show.ks = TRUE, .
     show_means <- if ("show.means" %in% names(dots)) dots$show.means else TRUE
     dots$show.means <- NULL  # Remove from dots so it doesn't get passed to plot functions
   
-  #3. Handle data frame input
-  # Handle data frame if provided
-    if (!is.null(data)) {
-    if (!is.data.frame(data)) {
-      stop("'data' must be a data frame")
-    }
-    
-      # Extract columns from data frame
-      # Use raw names for column lookup (they may include df$ prefix)
-        if (!y_name_raw %in% names(data)) {
-          stop(sprintf("Column '%s' not found in data", y_name_raw))
-        }
-        if (!group_name_raw %in% names(data)) {
-          stop(sprintf("Column '%s' not found in data", group_name_raw))
-        }
-        
-        y <- data[[y_name_raw]]
-        group <- data[[group_name_raw]]
-    }
+  #2. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
+  validated <- validate_plot(y, group, data, func_name = "plot_density", require_group = TRUE)
+  y <- validated$y
+  group <- validated$group
+  y_name <- validated$y_name
+  group_name <- validated$group_name
+  y_name_raw <- validated$y_name_raw
+  group_name_raw <- validated$group_name_raw
   
-  # Validate that y is a numeric vector
-  if (!is.numeric(y) || !is.vector(y)) {
-    stop(sprintf("'y' must be a numeric vector, and '%s' is not", y_name_raw))
-  }
-  
-  #4. Drop missing data
+  #3. Drop missing data
     isnagroup=is.na(group)
     isnay=is.na(y)
     group=group[!isnagroup & !isnay]
