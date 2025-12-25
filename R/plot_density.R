@@ -69,9 +69,9 @@
 #'
 #' # Using data frame
 #' df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
-#' plot_density(value, group, data = df)
-#' plot_density("value", "group", data = df)  # quoted column names also work
-#' plot_density(value, group, data = df, col = c("red", "blue"))
+#' plot_density(df$value, df$group)
+#' plot_density(value ~ group, data = df)  # formula syntax
+#' plot_density(value ~ group, data = df, col = c("red", "blue"))
 #'
 #' @export
 plot_density <- function(y, group, data = NULL, show.t = TRUE, ...) {
@@ -98,24 +98,7 @@ plot_density <- function(y, group, data = NULL, show.t = TRUE, ...) {
   #20. Add legend
   #21. Return densities
   
-  #1. Capture variable names BEFORE calling validate_plot
-  # Capture the actual variable names from the function call
-  y_expr <- substitute(y)
-  group_expr <- substitute(group)
-  y_name_raw <- deparse(y_expr)
-  group_name_raw <- deparse(group_expr)
-  # Remove quotes if present
-  y_name_raw <- gsub('^"|"$', '', y_name_raw)
-  group_name_raw <- gsub('^"|"$', '', group_name_raw)
-  # Extract column name if it's df$var format
-  if (grepl("\\$", y_name_raw)) {
-    y_name_raw <- strsplit(y_name_raw, "\\$")[[1]][length(strsplit(y_name_raw, "\\$")[[1]])]
-  }
-  if (grepl("\\$", group_name_raw)) {
-    group_name_raw <- strsplit(group_name_raw, "\\$")[[1]][length(strsplit(group_name_raw, "\\$")[[1]])]
-  }
-  
-  #2. Extract and handle parameters
+  #1. Extract and handle parameters
   # Extract plotting parameters from ...
     dots <- list(...)
     
@@ -123,13 +106,15 @@ plot_density <- function(y, group, data = NULL, show.t = TRUE, ...) {
     show_means <- if ("show.means" %in% names(dots)) dots$show.means else TRUE
     dots$show.means <- NULL  # Remove from dots so it doesn't get passed to plot functions
   
-  #3. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
+  #2. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
   validated <- validate_plot(y, group, data, func_name = "plot_density", require_group = TRUE)
   y <- validated$y
   group <- validated$group
-  # Use the names we captured above instead of from validate_plot
-  y_name <- y_name_raw
-  group_name <- group_name_raw
+  # Use names from validate_plot (it handles both formula and standard syntax)
+  y_name <- validated$y_name
+  group_name <- validated$group_name
+  y_name_raw <- validated$y_name_raw
+  group_name_raw <- validated$group_name_raw
   
   #3. Drop missing data
     isnagroup=is.na(group)

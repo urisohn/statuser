@@ -47,5 +47,9 @@
 #'   \item \url{https://github.com/urisohn/sohn}
 #' }
 #'
+#' @importFrom grDevices adjustcolor dev.list dev.off png
+#' @importFrom graphics abline arrows axis box hist layout legend lines mtext par points polygon rect segments strheight strwidth text
+#' @importFrom stats aggregate as.formula complete.cases density drop.terms ecdf formula glm ks.test lm median model.frame na.omit predict quantile runif sd setNames terms update
+#' @importFrom utils packageVersion read.csv
 #' @keywords internal
 "_PACKAGE"

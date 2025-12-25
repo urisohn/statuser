@@ -105,12 +105,8 @@ plot_cdf(y, group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
 
 # Using data frame
 df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
-plot_cdf(value, group, data = df)
-plot_cdf("value", "group", data = df)  # quoted column names also work
-plot_cdf(value, group, data = df, col = c("red", "blue"))
-
-# Using formula syntax
-plot_cdf(value ~ group, data = df)
+plot_cdf(df$value, df$group)
+plot_cdf(value ~ group, data = df)  # formula syntax
 plot_cdf(value ~ group, data = df, col = c("red", "blue"))
 
 # Formula syntax without data (variables evaluated from environment)

@@ -9,7 +9,8 @@
 #' @param cex Numeric character expansion factor. Default is 1.
 #' @param pad Percentage of padding to add to background to left & right side of the text. Default is 0.03.
 #' @param pad_v Percentage of padding to add to background to top & bottom of the text. Default is 0.03.
-#' @param align Character string or vector specifying text alignment: {"left", "center", "right"}
+#' @param align Character string or vector specifying text alignment.
+#'   Options are \code{"left"}, \code{"center"}, or \code{"right"}.
 #'   \describe{
 #'     \item{"left"}{Aligns text so the left edge is at the x coordinate.}
 #'     \item{"center"}{Aligns text so the center is at the x coordinate (default).}

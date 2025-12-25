@@ -32,12 +32,13 @@ Can be recycled if length is less than length of x.}
 
 \item{pad_v}{Percentage of padding to add to background to top & bottom of the text. Default is 0.03.}
 
-\item{align}{Character string or vector specifying text alignment: \code{"left"}, \code{"center"}, or \code{"right"}
+\item{align}{Character string or vector specifying text alignment.
+Options are \code{"left"}, \code{"center"}, or \code{"right"}.
 \describe{
   \item{"left"}{Aligns text so the left edge is at the x coordinate.}
   \item{"center"}{Aligns text so the center is at the x coordinate (default).}
   \item{"right"}{Aligns text so the right edge is at the x coordinate.}
-}
+}}
 
 \item{...}{Additional arguments passed to \code{\link[graphics]{text}}.}
 }

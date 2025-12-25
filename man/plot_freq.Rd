@@ -25,9 +25,13 @@ plot_freq(
 
 \item{group}{A grouping variable (with 2 or 3 unique values). If specified, frequencies are computed separately for each group and plotted with different colors. Can be a vector or a column name (character string) if \code{data} is provided.}
 
+\item{freq}{Logical. If TRUE (default), displays frequencies. If FALSE, displays proportions.}
+
 \item{col}{Color for the bars.}
 
 \item{lwd}{Line width for the frequency bars. Default is 9.}
+
+\item{width}{Numeric. Width of the frequency bars. If NULL (default), automatically calculated.}
 
 \item{value.labels}{Logical. If TRUE, displays frequencies on top of each line.}
 
@@ -70,7 +74,7 @@ plot_freq(x + 1, col = "red", add = TRUE)
 
 # Using a data frame
 df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
-plot_freq(x = "value", data = df)
-plot_freq(x = value, group = group, data = df)  # unquoted column names also work
+plot_freq(df$value)
+plot_freq(df$value, group = df$group)  # with grouping
 
 }

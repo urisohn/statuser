@@ -44,6 +44,8 @@ If \code{stop = TRUE}, execution will be halted after printing the message.
 message2("This is a plain cyan message", col = "cyan", font = 1)
 message2("This is a bold cyan message", col = "cyan", font = 2)
 message2("This is a bold red message", col = "red", font = 2)
+\dontrun{
 message2("This stops execution", stop = TRUE)
+}
 
 }

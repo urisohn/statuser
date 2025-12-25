@@ -204,8 +204,13 @@ scatter.gam <- function(x, y, data.dots = FALSE, three.dots = FALSE, data = NULL
   }
   
   # Plot smooth line using grid predictions
-  plot_args_line <- c(list(x = newdat$x, y = yh, type = 'l', col = 'blue', ylim = ylim), 
-                      plot_args)
+  # Use col from plot_args if provided, otherwise default to 'blue'
+  line_col <- if ("col" %in% names(plot_args)) plot_args$col else 'blue'
+  # Remove col from plot_args to avoid duplication
+  plot_args_no_col <- plot_args
+  plot_args_no_col$col <- NULL
+  plot_args_line <- c(list(x = newdat$x, y = yh, type = 'l', col = line_col, ylim = ylim), 
+                      plot_args_no_col)
   do.call(plot, plot_args_line)
   
   # Add data points if requested

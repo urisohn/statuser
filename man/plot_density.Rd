@@ -22,9 +22,8 @@ and mean labels. If FALSE, none of these are displayed.}
 (applied to all groups) or vectors (applied element-wise to each group).
 Common parameters include \code{col}, \code{lwd}, \code{lty}, \code{pch},
 \code{type}, etc. Arguments can also be passed to \code{density()} such as
-\code{bw}, \code{kernel}, etc.}
-
-\item{show.means}{Logical. If TRUE (default), shows vertical segments at mean values
+\code{bw}, \code{kernel}, etc. Additionally, \code{show.means} can be passed
+via \code{...}: Logical. If TRUE (default), shows vertical segments at mean values
 for 2-3 groups. For 2 groups, low mean uses pos=2 and high mean uses pos=4.
 For 3 groups, mid mean uses pos=3. For 4+ groups, vertical segments are not shown.}
 }
@@ -83,8 +82,8 @@ plot_density(y, group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 
 
 # Using data frame
 df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
-plot_density(value, group, data = df)
-plot_density("value", "group", data = df)  # quoted column names also work
-plot_density(value, group, data = df, col = c("red", "blue"))
+plot_density(df$value, df$group)
+plot_density(value ~ group, data = df)  # formula syntax
+plot_density(value ~ group, data = df, col = c("red", "blue"))
 
 }

@@ -39,8 +39,8 @@
 #'
 #' # Using a data frame
 #' df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
-#' plot_freq(x = "value", data = df)
-#' plot_freq(x = value, group = group, data = df)  # unquoted column names also work
+#' plot_freq(df$value)
+#' plot_freq(df$value, group = df$group)  # with grouping
 #'
 
 #' @export
