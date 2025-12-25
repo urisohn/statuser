@@ -8,16 +8,16 @@
 #' @param group A vector (factor, character, or numeric) used to group the data,
 #'   or a column name (character string or unquoted) if \code{data} is provided.
 #' @param data An optional data frame containing the variables \code{y} and \code{group}.
-#' @param show.means Logical. If TRUE (default), shows vertical segments at mean values
-#'   for 2-3 groups. For 2 groups, low mean uses pos=2 and high mean uses pos=4.
-#'   For 3 groups, mid mean uses pos=3. For 4+ groups, vertical segments are not shown.
 #' @param show.t Logical. If TRUE (default), shows points at means, vertical segments,
 #'   and mean labels. If FALSE, none of these are displayed.
 #' @param ... Additional arguments passed to plotting functions. Can be scalars
 #'   (applied to all groups) or vectors (applied element-wise to each group).
 #'   Common parameters include \code{col}, \code{lwd}, \code{lty}, \code{pch},
 #'   \code{type}, etc. Arguments can also be passed to \code{density()} such as
-#'   \code{bw}, \code{kernel}, etc.
+#'   \code{bw}, \code{kernel}, etc. Additionally, \code{show.means} can be passed
+#'   via \code{...}: Logical. If TRUE (default), shows vertical segments at mean values
+#'   for 2-3 groups. For 2 groups, low mean uses pos=2 and high mean uses pos=4.
+#'   For 3 groups, mid mean uses pos=3. For 4+ groups, vertical segments are not shown.
 #'
 #' @return Invisibly returns a list containing:
 #' \itemize{

@@ -4,7 +4,14 @@
 \alias{twolines}
 \title{Two-Lines Test of U-Shapes}
 \usage{
-twolines(f, graph = 1, link = "gaussian", data = NULL, pngfile = "")
+twolines(
+  f,
+  graph = 1,
+  link = "gaussian",
+  data = NULL,
+  pngfile = "",
+  quiet = FALSE
+)
 }
 \arguments{
 \item{f}{A formula object specifying the model (e.g., y ~ x1 + x2 + x3).
@@ -15,10 +22,14 @@ The first predictor is the one tested for a u-shaped relationship.}
 \item{link}{Character string specifying the link function for the GAM model.
 Default is "gaussian".}
 
-\item{data}{A data frame containing the variables in the formula.}
+\item{data}{An optional data frame containing the variables in the formula.
+If not provided, variables are evaluated from the calling environment.}
 
 \item{pngfile}{Optional character string. If provided, saves the plot to a PNG file
 with the specified filename.}
+
+\item{quiet}{Logical. If TRUE, suppresses the Robin Hood details messages.
+Default is FALSE.}
 }
 \value{
 A list containing:
@@ -70,6 +81,11 @@ z <- rnorm(100)
 y <- -x^2 + 0.5*z + rnorm(100)
 data <- data.frame(x = x, y = y, z = z)
 result <- twolines(y ~ x + z, data = data)
+
+# Without data argument (variables evaluated from environment)
+x <- rnorm(100)
+y <- -x^2 + rnorm(100)
+result <- twolines(y ~ x)
 }
 
 }

@@ -22,7 +22,9 @@
 #' message2("This is a plain cyan message", col = "cyan", font = 1)
 #' message2("This is a bold cyan message", col = "cyan", font = 2)
 #' message2("This is a bold red message", col = "red", font = 2)
+#' \dontrun{
 #' message2("This stops execution", stop = TRUE)
+#' }
 #'
 #' @export
 message2 <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = TRUE, 

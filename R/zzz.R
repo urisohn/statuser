@@ -7,11 +7,12 @@
   invisible()
 }
 
+#' @importFrom utils packageVersion
 .onAttach <- function(libname, pkgname) {
 
      #Startup msgs
       #Version and URL for website
-          packageStartupMessage ("Attached: 'sohn' (Version: ",packageVersion('sohn'),  ")") 
+          packageStartupMessage ("Attached: 'sohn' (Version: ",utils::packageVersion('sohn'),  ")") 
           
       #While developing:
          packageStartupMessage ("#######################################################\n",

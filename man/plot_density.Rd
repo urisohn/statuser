@@ -4,7 +4,7 @@
 \alias{plot_density}
 \title{Plot density of a variable, by another variable}
 \usage{
-plot_density(y, group, data = NULL, show.t = TRUE, show.ks = TRUE, ...)
+plot_density(y, group, data = NULL, show.t = TRUE, ...)
 }
 \arguments{
 \item{y}{A numeric vector of values to compute densities for, or a column name
@@ -16,10 +16,7 @@ or a column name (character string or unquoted) if \code{data} is provided.}
 \item{data}{An optional data frame containing the variables \code{y} and \code{group}.}
 
 \item{show.t}{Logical. If TRUE (default), shows points at means, vertical segments,
-mean labels, and t-test results. If FALSE, none of these are displayed.}
-
-\item{show.ks}{Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
-when there are exactly 2 groups. If FALSE, KS test results are not displayed.}
+and mean labels. If FALSE, none of these are displayed.}
 
 \item{...}{Additional arguments passed to plotting functions. Can be scalars
 (applied to all groups) or vectors (applied element-wise to each group).
@@ -35,11 +32,6 @@ For 3 groups, mid mean uses pos=3. For 4+ groups, vertical segments are not show
 Invisibly returns a list containing:
 \itemize{
   \item \code{densities}: A list of density objects, one for each group
-  \item \code{ks_test}: (when 2 groups) The Kolmogorov-Smirnov test result
-  \item \code{warnings}: (when warnings occur) A list of captured warnings, including:
-    \itemize{
-      \item \code{ks_ties}: Warning about ties in KS test (if present)
-    }
 }
 }
 \description{
@@ -69,12 +61,6 @@ Default colors are automatically assigned based on the number of groups:
   \item 3 groups: red4, dodgerblue, green4
   \item 4 groups: orange1, orange3, red2, red4
   \item 5+ groups: extends with additional colors
-}
-
-When there are exactly 2 groups, the function automatically performs:
-\itemize{
-  \item Kolmogorov-Smirnov test for distribution equality
-  \item Displays test results in the bottom right corner
 }
 }
 \examples{

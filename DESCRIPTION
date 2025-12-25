@@ -4,7 +4,11 @@ Title: R functions I wished existed, and now do
 Version: 0.1.5
 Author: Uri Simonsohn [aut, cre]
 Maintainer: Uri Simonsohn <urisohn@gmail.com>
-Description: Miscellaneous functions that I use for my papers and blogposts
+Description: Miscellaneous functions for data analysis, visualization, and statistical testing. 
+    Provides enhanced versions of common R functions with improved output formatting, 
+    additional features, and better integration with data frames. Functions include 
+    enhanced plotting (CDFs, densities, frequencies), statistical tests (t-tests with 
+    improved output), data manipulation utilities, and formatting helpers.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -16,6 +20,9 @@ Imports:
     labelled,
     rlang,
     sandwich,
-    lmtest
+    lmtest,
+    utils
 Suggests:
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    crayon,
+    quantreg

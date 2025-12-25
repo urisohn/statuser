@@ -48,15 +48,16 @@ A contingency table (an object of class "table") with enhanced
   values are displayed without leading zero (e.g., .100 instead of 0.100).
 }
 \description{
-Identical to base R's \code{table()}, except that when tabulating two variables
-from a dataframe, the variable names are displayed in the row/column names, and that
+Identical to base R's \code{table()}, except that when tabulating two or three variables
+from a dataframe, the variable names are displayed in the dimension names, and that
 \code{prop} argument allows reporting proportions, bypassing need for \code{prop.table(table())}
 }
 \details{
-When tabulating two variables from a dataframe (e.g., \code{table2(df$x, df$y)}),
-the variable names appear as dimension names in the table margins, while
-row and column labels show only the values. This creates a cleaner cross-tabulation
-format with variable names as headers.
+When tabulating two or three variables from a dataframe (e.g., \code{table2(df$x, df$y)} or
+\code{table2(df$x, df$y, df$z)}), the variable names appear as dimension names in the table
+margins, while row and column labels show only the values. This creates a cleaner cross-tabulation
+format with variable names as headers. For 3D tables, the third variable name appears in the
+slice headers (e.g., \code{, , var = value}).
 }
 \examples{
 # Create example data
@@ -65,8 +66,16 @@ df <- data.frame(
   status = c("X", "Y", "X", "Y", "X")
 )
 
-# Enhanced table with variable names
+# Enhanced table with variable names (2 variables)
 table2(df$group, df$status)
+
+# Enhanced table with variable names (3 variables)
+df3 <- data.frame(
+  x = c("A", "A", "B", "B"),
+  y = c("X", "Y", "X", "Y"),
+  z = c("high", "low", "high", "low")
+)
+table2(df3$x, df3$y, df3$z)
 
 # Regular table (no variable names)
 x <- c("A", "A", "B")
