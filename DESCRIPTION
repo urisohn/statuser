@@ -17,3 +17,5 @@ Imports:
     rlang,
     sandwich,
     lmtest
+Suggests:
+    testthat (>= 3.0.0)
