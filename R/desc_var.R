@@ -63,121 +63,107 @@
 #' @export
 desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
   
-  # Function outline:
-  # 1. Check if y is a formula
-  # 2. If formula, parse it and extract variables
-  # 3. Capture variable expressions using rlang
-  # 4. Extract variables from data frame if provided
-  # 5. Validate that y is numeric
-  # 6. Define helper function to compute statistics for a vector
-  # 7. Compute statistics (either for full dataset or by group)
-  # 8. Round numeric columns to specified decimal places
-  # 9. Add descriptive labels to columns using labelled package
-  # 10. Return result dataframe
+  # Helper function to format error messages with conditional newline
+  format_msg <- function(msg) {
+    total_length <- nchar(msg) + nchar("desc_var() says: ")
+    if (total_length > 40) {
+      return(paste0("desc_var() says:\n", msg))
+    } else {
+      return(paste0("desc_var() says: ", msg))
+    }
+  }
   
-  # 1. Check if y is a formula
+  # Helper function to validate that variables have the same length
+  validate_lengths <- function(vars, y_len, var_names = NULL) {
+    for (i in seq_along(vars)) {
+      if (length(vars[[i]]) != y_len) {
+        message2(format_msg("All variables must have the same length"), col = 'red', stop = TRUE)
+      }
+    }
+  }
+  
+  # Helper function to extract variable from data or environment
+  extract_var <- function(var_name, data, calling_env, error_msg) {
+    if (!is.null(data)) {
+      if (!var_name %in% names(data)) {
+        message2(format_msg(sprintf("'%s' not found in data", var_name)), col = 'red', stop = TRUE)
+      }
+      return(data[[var_name]])
+    } else {
+      tryCatch({
+        get(var_name, envir = calling_env)
+      }, error = function(e) {
+        message2(format_msg(sprintf("'%s' not found", var_name)), col = 'red', stop = TRUE)
+      })
+    }
+  }
+  
+  # Helper function to extract and validate grouping variables
+  extract_group_vars <- function(group_var_names, data, calling_env, y_len) {
+    if (is.null(group_var_names) || length(group_var_names) == 0) {
+      return(list(group_list = NULL, use_separate_cols = FALSE))
+    }
+    
+    # Extract grouping variables
+    group_list <- lapply(group_var_names, function(gv) {
+      extract_var(gv, data, calling_env, sprintf("'%s' not found", gv))
+    })
+    names(group_list) <- group_var_names
+    
+    # Validate all variables have the same length
+    validate_lengths(group_list, y_len)
+    
+    # For multiple grouping variables, keep them separate
+    # For single grouping variable, create a single group vector
+    use_separate_cols <- length(group_var_names) > 1
+    
+    return(list(group_list = group_list, use_separate_cols = use_separate_cols))
+  }
+  
+  # 1. Check if y is a formula and extract variables
   is_formula <- inherits(y, "formula")
+  calling_env <- parent.frame()
   
   if (is_formula) {
     # Parse formula: y ~ x or y ~ x1 + x2
     formula_vars <- all.vars(y)
     
     if (length(formula_vars) < 1) {
-      stop("Formula must have at least one variable")
+      message2(format_msg("Formula must have at least one variable"), col = 'red', stop = TRUE)
     }
     
     # First variable is response, rest are grouping variables
     y_var_name <- formula_vars[1]
-    group_var_names <- formula_vars[-1]
+    group_var_names <- if (length(formula_vars) > 1) formula_vars[-1] else NULL
+    y_name <- y_var_name  # For consistent error messages
     
-    if (length(group_var_names) == 0) {
-      # No grouping variables: y ~ 1 or just y
-      group_var_names <- NULL
+    # Validate data frame if provided
+    if (!is.null(data) && !is.data.frame(data)) {
+      message2(format_msg("'data' must be a data frame"), col = 'red', stop = TRUE)
     }
     
-    # Get calling environment for evaluating variables
-    calling_env <- parent.frame()
+    # Extract response variable
+    y <- extract_var(y_var_name, data, calling_env, sprintf("'%s' not found", y_var_name))
+    y_len <- length(y)
     
-    if (!is.null(data)) {
-      if (!is.data.frame(data)) {
-        stop("'data' must be a data frame")
-      }
-      
-      # Extract response variable
-      if (!y_var_name %in% names(data)) {
-        message2(sprintf("desc_var() says:\n '%s' not found in data", y_var_name), col = 'red', stop = TRUE)
-      }
-      y <- data[[y_var_name]]
-      
-      # Extract grouping variables
-      if (!is.null(group_var_names)) {
-        for (gv in group_var_names) {
-          if (!gv %in% names(data)) {
-            message2(sprintf("desc_var() says:'%s' not found in data", gv), col = 'red', stop = TRUE)
-          }
-        }
-        # Create interaction of all grouping variables
-        group_list <- lapply(group_var_names, function(gv) data[[gv]])
-        names(group_list) <- group_var_names
-        
-        # Validate all variables have the same length before calling interaction()
-        y_len <- length(y)
-        for (i in seq_along(group_list)) {
-          if (length(group_list[[i]]) != y_len) {
-            message2("desc_var() says:\nAll variables must have the same length", col = 'red', stop = TRUE)
-          }
-        }
-        
-        group <- do.call(interaction, c(group_list, sep = " & "))
+    # Extract grouping variables
+    group_result <- extract_group_vars(group_var_names, data, calling_env, y_len)
+    group_list <- group_result$group_list
+    use_separate_group_cols <- group_result$use_separate_cols
+    
+    # Create single group vector if single grouping variable, otherwise keep separate
+    if (!is.null(group_list)) {
+      if (use_separate_group_cols) {
+        group <- NULL  # Keep separate, don't create interaction
       } else {
-        group <- NULL
+        group <- group_list[[1]]  # Single grouping variable
       }
     } else {
-      # No data frame: evaluate in calling environment
-      y <- tryCatch({
-        get(y_var_name, envir = calling_env)
-      }, error = function(e) {
-        message2(sprintf("desc_var() says:\n '%s' not found", y_var_name), col = 'red', stop = TRUE)
-      })
-      
-      if (!is.null(group_var_names)) {
-        group_list <- lapply(group_var_names, function(gv) {
-          tryCatch({
-            get(gv, envir = calling_env)
-          }, error = function(e) {
-            message2(sprintf("desc_var() says:'%s' not found", gv), col = 'red', stop = TRUE)
-          })
-        })
-        names(group_list) <- group_var_names
-        
-        # Validate all variables have the same length before calling interaction()
-        y_len <- length(y)
-        for (i in seq_along(group_list)) {
-          if (length(group_list[[i]]) != y_len) {
-            message2("desc_var() says:\nAll variables must have the same length", col = 'red', stop = TRUE)
-          }
-        }
-        
-        group <- do.call(interaction, c(group_list, sep = " & "))
-      } else {
-        group <- NULL
-      }
+      group <- NULL
     }
     
-    # Set group_was_provided based on whether we have grouping variables
-    group_was_provided <- !is.null(group)
-    
-    # Store individual grouping variable names for later use in output columns
-    # (only if using formula syntax with multiple grouping variables)
-    if (!is.null(group_var_names) && length(group_var_names) > 1) {
-      # Store the grouping variable names for later use
-      formula_group_var_names <- group_var_names
-    } else {
-      formula_group_var_names <- NULL
-    }
   } else {
-    # Not a formula: use original logic
-    # 2. Capture variable expressions using rlang
+    # Not a formula: use rlang to capture expressions
     y_quo <- rlang::enquo(y)
     group_was_provided <- !missing(group)
     group_quo <- if (group_was_provided) rlang::enquo(group) else NULL
@@ -185,201 +171,158 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     # Get variable names for error messages
     y_name <- rlang::as_name(y_quo)
     group_name <- if (group_was_provided) rlang::as_name(group_quo) else NULL
-  
     
-    # 3. Extract variables from data frame if provided
-    if (!is.null(data)) {
-      if (!is.data.frame(data)) {
-        stop("'data' must be a data frame")
-      }
-      
-      # Evaluate y in data context
-      y <- tryCatch({
+    # Validate data frame if provided
+    if (!is.null(data) && !is.data.frame(data)) {
+      message2(format_msg("'data' must be a data frame"), col = 'red', stop = TRUE)
+    }
+    
+    # Extract y variable
+    y <- tryCatch({
+      if (!is.null(data)) {
         rlang::eval_tidy(y_quo, data = data)
+      } else {
+        rlang::eval_tidy(y_quo)
+      }
+    }, error = function(e) {
+      if (!is.null(data)) {
+        message2(format_msg(sprintf("Column '%s' not found in data: %s", y_name, e$message)), col = 'red', stop = TRUE)
+      } else {
+        message2(format_msg(sprintf("Could not evaluate 'y': %s", e$message)), col = 'red', stop = TRUE)
+      }
+    })
+    
+    y_len <- length(y)
+    
+    # Extract group variable if provided
+    if (group_was_provided) {
+      group <- tryCatch({
+        if (!is.null(data)) {
+          rlang::eval_tidy(group_quo, data = data)
+        } else {
+          rlang::eval_tidy(group_quo)
+        }
       }, error = function(e) {
-        stop(sprintf("Column '%s' not found in data: %s", y_name, e$message))
+        if (!is.null(data)) {
+          message2(format_msg(sprintf("Column '%s' not found in data: %s", group_name, e$message)), col = 'red', stop = TRUE)
+        } else {
+          message2(format_msg(sprintf("Could not evaluate 'group': %s", e$message)), col = 'red', stop = TRUE)
+        }
       })
       
-      # Evaluate group in data context if provided
-      if (group_was_provided) {
-        group <- tryCatch({
-          rlang::eval_tidy(group_quo, data = data)
-        }, error = function(e) {
-          stop(sprintf("Column '%s' not found in data: %s", group_name, e$message))
-        })
-        # Validate length immediately after extraction
-        if (length(group) != length(y)) {
-          message2("desc_var() says:\nAll variables must have the same length", col = 'red', stop = TRUE)
-        }
-      } else {
-        group <- NULL
+      # Validate length
+      if (!is.null(group)) {
+        validate_lengths(list(group), y_len)
       }
     } else {
-      # No data frame provided - evaluate in calling environment
-      y <- tryCatch({
-        rlang::eval_tidy(y_quo)
-      }, error = function(e) {
-        stop(sprintf("Could not evaluate 'y': %s", e$message))
-      })
-      
-      if (group_was_provided) {
-        group <- tryCatch({
-          rlang::eval_tidy(group_quo)
-        }, error = function(e) {
-          stop(sprintf("Could not evaluate 'group': %s", e$message))
-        })
-        
-        # Validate group exists and has correct length
-        if (is.null(group)) {
-          group <- NULL
-        } else if (length(group) != length(y)) {
-          message2("desc_var() says:\nAll variables must have the same length", col = 'red', stop = TRUE)
-        }
-      } else {
-        group <- NULL
-      }
-    }
-  }
-  
-  # 3. Validations
-  
-  # 3.1. Validate all variables have the same length
-  y_len <- length(y)
-  
-  # Check group length (covers both formula and non-formula cases)
-  if (!is.null(group)) {
-    if (length(group) != y_len) {
-      message2("desc_var() says:\nAll variables must have the same length", col = 'red', stop = TRUE)
-    }
-  }
-  
-  # For formula syntax, also check individual grouping variables if they exist
-  if (exists("group_list") && !is.null(group_list) && length(group_list) > 0) {
-    for (i in seq_along(group_list)) {
-      if (length(group_list[[i]]) != y_len) {
-        message2("desc_var() says:\nAll variables must have the same length", col = 'red', stop = TRUE)
-      }
+      group <- NULL
     }
     
-    # 3.2. Check that multiple grouping variables do not overlap perfectly
-    if (length(group_list) > 1) {
-      # Check all pairs of grouping variables for perfect overlap
-      for (i in 1:(length(group_list) - 1)) {
-        for (j in (i + 1):length(group_list)) {
-          var1 <- group_list[[i]]
-          var2 <- group_list[[j]]
-          # Check if var1 perfectly predicts var2 (each unique value of var1 maps to exactly one unique value of var2)
-          df_check <- data.frame(v1 = var1, v2 = var2, stringsAsFactors = FALSE)
-          unique_v1 <- unique(df_check$v1)
-          perfect_overlap <- TRUE
-          for (val1 in unique_v1) {
-            subset_v2 <- df_check$v2[df_check$v1 == val1]
-            if (length(unique(subset_v2)) != 1) {
-              perfect_overlap <- FALSE
-              break
-            }
-          }
-          # If var1 perfectly predicts var2, check if var2 also perfectly predicts var1 (one-to-one mapping)
-          if (perfect_overlap) {
-            unique_v2 <- unique(df_check$v2)
-            for (val2 in unique_v2) {
-              subset_v1 <- df_check$v1[df_check$v2 == val2]
-              if (length(unique(subset_v1)) != 1) {
-                perfect_overlap <- FALSE
-                break
-              }
-            }
-          }
-          if (perfect_overlap) {
-            var1_name <- names(group_list)[i]
-            var2_name <- names(group_list)[j]
-            message2(sprintf("desc_var() says:\nMultiple grouping variables do not overlap perfectly: '%s' and '%s' overlap perfectly", var1_name, var2_name), col = 'red', stop = TRUE)
-          }
-        }
-      }
-    }
+    # For non-formula case, always use single group column
+    group_list <- NULL
+    use_separate_group_cols <- FALSE
   }
   
-  # 3.3. Validate that y (dv) is numeric
+  # 2. Validations
+  
+  # 2.1. Validate that y is numeric
   if (!is.numeric(y)) {
-    y_var_display <- if (exists("y_var_name")) y_var_name else if (exists("y_name")) y_name else "y"
-    message2(sprintf("desc_var() says:\nThe dv is numeric: '%s' is not numeric", y_var_display), col = 'red', stop = TRUE)
+    message2(format_msg(sprintf("The dv is numeric: '%s' is not numeric", y_name)), col = 'red', stop = TRUE)
+  }
+  
+  # 2.2. Check that multiple grouping variables do not overlap perfectly (formula syntax only)
+  if (use_separate_group_cols && !is.null(group_list) && length(group_list) > 1) {
+    # Check all pairs of grouping variables for perfect overlap
+    for (i in 1:(length(group_list) - 1)) {
+      for (j in (i + 1):length(group_list)) {
+        var1 <- group_list[[i]]
+        var2 <- group_list[[j]]
+        # Perfect overlap: one-to-one mapping means unique combinations equals max unique values
+        n_unique_combos <- length(unique(paste(var1, var2, sep = "|")))
+        n_unique_v1 <- length(unique(var1))
+        n_unique_v2 <- length(unique(var2))
+        if (n_unique_combos == max(n_unique_v1, n_unique_v2)) {
+          var1_name <- names(group_list)[i]
+          var2_name <- names(group_list)[j]
+          message2(format_msg(sprintf("Multiple grouping variables do not overlap perfectly: '%s' and '%s' overlap perfectly", var1_name, var2_name)), col = 'red', stop = TRUE)
+        }
+      }
+    }
   }
     
     
   
-  # 4. Helper function to compute statistics for a vector
-      compute_stats <- function(x) {
-        na_count <- sum(is.na(x))
-        x <- x[!is.na(x)]  # Remove NAs
-        n <- length(x)
-        
-        # Calculate mode statistics
-        mode_val <- NA_real_
-        freq_mode <- NA_integer_
-        mode2nd_val <- NA_real_
-        freq_mode2nd <- NA_integer_
-        
-        if (n > 0) {
-          # Check if all values are unique (continuous variable with no repeats)
-          n_unique <- length(unique(x))
-          all_unique <- n_unique == n
-          
-          # Only compute mode statistics if there are repeated values
-          if (!all_unique) {
-            # Count frequencies
-            tab <- table(x)
-            ord <- order(tab, decreasing = TRUE)
-            first_two <- names(tab)[ord[1:min(2, length(ord))]]
-            
-            if (length(first_two) > 0) {
-              # Mode (most frequent value)
-              mode_val <- as.numeric(first_two[1])
-              freq_mode <- as.integer(tab[ord[1]])
-              
-              # 2nd mode (2nd most frequent value)
-              if (length(first_two) > 1) {
-                mode2nd_val <- as.numeric(first_two[2])
-                freq_mode2nd <- as.integer(tab[ord[2]])
-              }
-            }
-          }
-          # If all_unique is TRUE, mode statistics remain NA
-        }
-        
-        # Compute statistics (use NA values when n == 0)
-        mean_val <- if (n > 0) mean(x) else NA_real_
-        sd_val <- if (n > 0) sd(x) else NA_real_
-        se_val <- if (n > 0) sd_val / sqrt(n) else NA_real_
-        median_val <- if (n > 0) median(x) else NA_real_
-        min_val <- if (n > 0) min(x) else NA_real_
-        max_val <- if (n > 0) max(x) else NA_real_
-        
-        # Return single list structure
-        result <- list(
-          n = as.integer(n),
-          mean = as.numeric(mean_val),
-          sd = as.numeric(sd_val),
-          se = as.numeric(se_val),
-          median = as.numeric(median_val),
-          na = as.integer(na_count),
-          min = as.numeric(min_val),
-          max = as.numeric(max_val)
-        )
-        
-        # Only include mode statistics if there are repeated values
-        if (n > 0 && !all_unique) {
-          result$mode <- as.numeric(mode_val)
-          result$freq_mode <- as.integer(freq_mode)
-          result$mode2 <- as.numeric(mode2nd_val)
-          result$freq_mode2 <- as.integer(freq_mode2nd)
-        }
-        
-        return(result)
-      }
+  # 3. Helper function to compute statistics for a vector
+  compute_stats <- function(x) {
+    na_count <- sum(is.na(x))
+    x <- x[!is.na(x)]  # Remove NAs
+    n <- length(x)
+    
+    # Handle empty case
+    if (n == 0) {
+      return(list(
+        n = 0L,
+        mean = NA_real_,
+        sd = NA_real_,
+        se = NA_real_,
+        median = NA_real_,
+        na = as.integer(na_count),
+        min = NA_real_,
+        max = NA_real_,
+        mode = NA_real_,
+        freq_mode = NA_integer_,
+        mode2 = NA_real_,
+        freq_mode2 = NA_integer_
+      ))
+    }
+    
+    # Compute basic statistics
+    mean_val <- mean(x)
+    sd_val <- sd(x)
+    se_val <- sd_val / sqrt(n)
+    median_val <- median(x)
+    min_val <- min(x)
+    max_val <- max(x)
+    
+    # Compute mode statistics only if there are repeated values
+    n_unique <- length(unique(x))
+    has_repeats <- n_unique < n
+    
+    if (has_repeats) {
+      tab <- table(x)
+      ord <- order(tab, decreasing = TRUE)
+      mode_val <- as.numeric(names(tab)[ord[1]])
+      freq_mode <- as.integer(tab[ord[1]])
+      mode2nd_val <- if (length(ord) > 1) as.numeric(names(tab)[ord[2]]) else NA_real_
+      freq_mode2nd <- if (length(ord) > 1) as.integer(tab[ord[2]]) else NA_integer_
+    } else {
+      mode_val <- NA_real_
+      freq_mode <- NA_integer_
+      mode2nd_val <- NA_real_
+      freq_mode2nd <- NA_integer_
+    }
+    
+    # Return consistent structure
+    return(list(
+      n = as.integer(n),
+      mean = as.numeric(mean_val),
+      sd = as.numeric(sd_val),
+      se = as.numeric(se_val),
+      median = as.numeric(median_val),
+      na = as.integer(na_count),
+      min = as.numeric(min_val),
+      max = as.numeric(max_val),
+      mode = as.numeric(mode_val),
+      freq_mode = as.integer(freq_mode),
+      mode2 = as.numeric(mode2nd_val),
+      freq_mode2 = as.integer(freq_mode2nd)
+    ))
+  }
   
-  # 5. Compute statistics
-  if (is.null(group)) {
+  # 4. Compute statistics
+  has_grouping <- !is.null(group) || (use_separate_group_cols && !is.null(group_list))
+  
+  if (!has_grouping) {
     # No grouping: compute for full dataset
     stats <- compute_stats(y)
     
@@ -397,48 +340,54 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
       stringsAsFactors = FALSE
     )
     
-    # Add mode columns only if they exist (i.e., if there are repeated values)
-    if ("mode" %in% names(stats)) {
+    # Add mode columns only if there are repeated values (mode is not NA)
+    if (!is.na(stats$mode)) {
       result_df$mode <- stats$mode
       result_df$freq_mode <- stats$freq_mode
       result_df$mode2 <- stats$mode2
       result_df$freq_mode2 <- stats$freq_mode2
     } else {
-      message2("desc_var() says:\nNote: mode not reported because all values are unique")
+      message2(format_msg("Note: mode not reported because all values are unique"))
     }
   } else {
     # Grouping: compute for each group
-    if (length(group) != length(y)) {
-      stop("'group' must have the same length as 'y'")
-    }
-    
-    unique_groups <- sort(unique(group))
     result_list <- list()
     has_mode_stats <- FALSE
     
-    # First pass: check if any group has mode stats
-    for (g in unique_groups) {
-      y_group <- y[group == g]
-      stats <- compute_stats(y_group)
-      if ("mode" %in% names(stats)) {
-        has_mode_stats <- TRUE
-        break
-      }
-    }
-    
-    # Second pass: build data frames with consistent columns
-    # Check if we should use separate columns for grouping variables (formula syntax with multiple vars)
-    use_separate_group_cols <- exists("formula_group_var_names") && !is.null(formula_group_var_names) && length(formula_group_var_names) > 1
-    
-    for (g in unique_groups) {
-      y_group <- y[group == g]
-      stats <- compute_stats(y_group)
+    if (use_separate_group_cols) {
+      # Multiple grouping variables: iterate over unique combinations
+      # Create a data frame to get unique combinations efficiently
+      group_df <- as.data.frame(group_list, stringsAsFactors = FALSE)
+      unique_combos <- unique(group_df)
       
-      # Build base data frame with grouping columns
-      if (use_separate_group_cols) {
-        # Split interaction group identifier to get individual values
-        group_values <- strsplit(as.character(g), " & ", fixed = TRUE)[[1]]
+      # First pass: check if any group has mode stats
+      for (i in seq_len(nrow(unique_combos))) {
+        combo <- unique_combos[i, , drop = FALSE]
+        # Create mask: all grouping variables match this combination
+        mask <- Reduce(`&`, lapply(names(group_list), function(nm) {
+          group_list[[nm]] == combo[[nm]]
+        }))
+        y_group <- y[mask]
+        stats <- compute_stats(y_group)
+        if (!is.na(stats$mode)) {
+          has_mode_stats <- TRUE
+          break
+        }
+      }
+      
+      # Second pass: build data frames
+      for (i in seq_len(nrow(unique_combos))) {
+        combo <- unique_combos[i, , drop = FALSE]
+        # Create mask: all grouping variables match this combination
+        mask <- Reduce(`&`, lapply(names(group_list), function(nm) {
+          group_list[[nm]] == combo[[nm]]
+        }))
+        y_group <- y[mask]
+        stats <- compute_stats(y_group)
+        
+        # Build data frame with grouping variables as separate columns
         result_row <- data.frame(
+          combo,
           n = stats$n,
           mean = stats$mean,
           sd = stats$sd,
@@ -449,14 +398,36 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
           max = stats$max,
           stringsAsFactors = FALSE
         )
-        # Add individual grouping variable columns
-        for (i in seq_along(formula_group_var_names)) {
-          result_row[[formula_group_var_names[i]]] <- group_values[i]
+        
+        # Add mode columns if any group has mode stats
+        if (has_mode_stats) {
+          result_row$mode <- stats$mode
+          result_row$freq_mode <- stats$freq_mode
+          result_row$mode2 <- stats$mode2
+          result_row$freq_mode2 <- stats$freq_mode2
         }
-        # Reorder columns to put grouping variables first
-        result_row <- result_row[, c(formula_group_var_names, setdiff(names(result_row), formula_group_var_names)), drop = FALSE]
-      } else {
-        # Single group column (non-formula or single grouping variable)
+        
+        result_list[[length(result_list) + 1]] <- result_row
+      }
+    } else {
+      # Single group column: use group vector directly
+      unique_groups <- sort(unique(group))
+      
+      # First pass: check if any group has mode stats
+      for (g in unique_groups) {
+        y_group <- y[group == g]
+        stats <- compute_stats(y_group)
+        if (!is.na(stats$mode)) {
+          has_mode_stats <- TRUE
+          break
+        }
+      }
+      
+      # Second pass: build data frames
+      for (g in unique_groups) {
+        y_group <- y[group == g]
+        stats <- compute_stats(y_group)
+        
         result_row <- data.frame(
           group = as.character(g),
           n = stats$n,
@@ -469,40 +440,43 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
           max = stats$max,
           stringsAsFactors = FALSE
         )
-      }
-      
-      # Add mode columns only if any group has mode stats (use NA if this group doesn't)
-      if (has_mode_stats) {
-        if ("mode" %in% names(stats)) {
+        
+        # Add mode columns if any group has mode stats
+        if (has_mode_stats) {
           result_row$mode <- stats$mode
           result_row$freq_mode <- stats$freq_mode
           result_row$mode2 <- stats$mode2
           result_row$freq_mode2 <- stats$freq_mode2
-        } else {
-          result_row$mode <- NA_real_
-          result_row$freq_mode <- NA_integer_
-          result_row$mode2 <- NA_real_
-          result_row$freq_mode2 <- NA_integer_
         }
+        
+        result_list[[length(result_list) + 1]] <- result_row
       }
-      
-      result_list[[length(result_list) + 1]] <- result_row
     }
     
     result_df <- do.call(rbind, result_list)
     
+    # Sort by grouping variables
+    if (use_separate_group_cols && !is.null(group_list)) {
+      # Sort by all grouping variables in order
+      sort_cols <- names(group_list)
+      result_df <- result_df[do.call(order, result_df[sort_cols]), , drop = FALSE]
+    } else if (!is.null(group)) {
+      # Sort by single group column
+      result_df <- result_df[order(result_df$group), , drop = FALSE]
+    }
+    
     # Show message if no group has mode stats
     if (!has_mode_stats) {
-      message2("desc_var() says:\nNote: mode not reported because all values are unique")
+      message2(format_msg("Note: mode not reported because all values are unique"))
     }
   }
   
-  # 6. Round numeric columns (except n, NA_total, freq_mode, and freq_mode2, which are integers) to specified decimals
+  # 5. Round numeric columns (except n, NA_total, freq_mode, and freq_mode2, which are integers) to specified decimals
   numeric_cols <- c("mean", "sd", "se", "median", "mode", "mode2", "min", "max")
   numeric_cols <- numeric_cols[numeric_cols %in% names(result_df)]
   result_df[numeric_cols] <- lapply(result_df[numeric_cols], round, digits = decimals)
   
-  # 7. Add descriptive labels to columns using labelled package
+  # 6. Add descriptive labels to columns using labelled package
   label_list <- list(
     group = "Group identifier",
     n = "Number of observations",
@@ -520,8 +494,8 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
   )
   
   # Add labels for individual grouping variable columns if they exist
-  if (exists("formula_group_var_names") && !is.null(formula_group_var_names)) {
-    for (gv in formula_group_var_names) {
+  if (use_separate_group_cols && !is.null(group_list)) {
+    for (gv in names(group_list)) {
       if (gv %in% names(result_df)) {
         label_list[[gv]] <- paste("Grouping variable:", gv)
       }
@@ -533,7 +507,7 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
   
   rownames(result_df) <- NULL
   
-  # 8. Return result dataframe (will print if called directly, won't print if assigned)
+  # 7. Return result dataframe (will print if called directly, won't print if assigned)
   return(result_df)
 }
 
