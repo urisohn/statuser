@@ -123,15 +123,44 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
   if (is_formula_input) {
     validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE, data_name = data_name)
   } else {
-    # Not a formula - pass it to validation
-    validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE, data_name = data_name)
-    # Override the name if it got "formula" instead of the actual variable name
-    if (validated$y_name_raw == "formula") {
-      # Try to get the actual variable name from the call
-      mc <- match.call()
-      formula_expr <- mc$formula
-      if (!is.null(formula_expr)) {
-        actual_name <- deparse(formula_expr)
+    # Not a formula - capture the actual variable name first
+    formula_expr <- mc$formula
+    actual_name <- if (!is.null(formula_expr)) {
+      deparse(formula_expr)
+    } else {
+      deparse(substitute(formula))
+    }
+    # Remove quotes if present
+    actual_name <- gsub('^"|"$', '', actual_name)
+    
+    # If data is provided, extract the variable from data frame first
+    # This prevents validate_plot from looking for "formula" in the data frame
+    if (!is.null(data)) {
+      if (!is.data.frame(data)) {
+        stop("plot_cdf(): 'data' must be a data frame", call. = FALSE)
+      }
+      # Clean the variable name (remove $ prefix if present)
+      clean_name <- if (grepl("\\$", actual_name)) {
+        strsplit(actual_name, "\\$")[[1]][length(strsplit(actual_name, "\\$")[[1]])]
+      } else {
+        actual_name
+      }
+      # Check if variable exists in data
+      if (!clean_name %in% names(data)) {
+        stop(sprintf("plot_cdf(): Column \"%s\" not found in dataset \"%s\"", clean_name, data_name), call. = FALSE)
+      }
+      # Extract variable from data frame
+      formula <- data[[clean_name]]
+      # Now call validate_plot without data (since we've already extracted the variable)
+      validated <- validate_plot(formula, NULL, NULL, func_name = "plot_cdf", require_group = FALSE, data_name = data_name)
+      # Override the names with the actual variable name
+      validated$y_name_raw <- clean_name
+      validated$y_name <- clean_name
+    } else {
+      # No data - pass it to validation (will evaluate from environment)
+      validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE, data_name = data_name)
+      # Override the name if it got "formula" instead of the actual variable name
+      if (validated$y_name_raw == "formula") {
         validated$y_name_raw <- actual_name
         validated$y_name <- if (grepl("\\$", actual_name)) {
           strsplit(actual_name, "\\$")[[1]][length(strsplit(actual_name, "\\$")[[1]])]
