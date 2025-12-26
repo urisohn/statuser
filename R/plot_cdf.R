@@ -254,7 +254,7 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
       }
     # Set font and size for main title if not provided
       font_main <- if ("font.main" %in% names(dots)) dots$font.main else 2
-      cex_main <- if ("cex.main" %in% names(dots)) dots$cex.main else 1.3
+      cex_main <- if ("cex.main" %in% names(dots)) dots$cex.main else 1.38
     
     # Set xlab if not provided
       xlab_title <- if ("xlab" %in% names(dots)) dots$xlab else y_name

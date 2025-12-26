@@ -185,6 +185,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       if (!"font.lab" %in% names(dots)) dots$font.lab <- 2
       if (!"cex.lab" %in% names(dots)) dots$cex.lab <- 1.2
       
+      # Set main title formatting (15% bigger than default)
+      if (!"cex.main" %in% names(dots)) dots$cex.main <- 1.38
+      
       # Set type='n' to create plot frame without drawing points (unless user specifies type)
       if (!"type" %in% names(dots)) dots$type <- "n"
       
@@ -210,9 +213,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       do.call(plot, plot_args)
       
       # Calculate total sample size and add it below the main title
-      # Main title is typically at line 3, so position (N=...) at line 0.5 (close to plot, clearly below title)
+      # Main title is typically at line 3, so position (N=...) at line 0.75 (between positions used for grouped and non-grouped plots)
       tot <- length(x)
-      mtext(paste0("(N=", tot, ")"), side = 3, line = 0.5, font = 3, cex = 0.9)
+      mtext(paste0("(N=", tot, ")"), side = 3, line = 0.75, font = 3, cex = 0.9)
       
       # Restore original margins if we changed them
       if (!"mar" %in% names(dots) && old_mar[3] < 5) {
@@ -432,6 +435,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
             if (!"font.lab" %in% names(dots)) dots$font.lab <- 2
             if (!"cex.lab" %in% names(dots)) dots$cex.lab <- 1.2
           
+          # Set main title formatting (15% bigger than default)
+          if (!"cex.main" %in% names(dots)) dots$cex.main <- 1.38
+          
           # Set type='n' to create plot frame without drawing points (unless user specifies type)
             if (!"type" %in% names(dots)) dots$type <- "n"
           
@@ -459,9 +465,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
         do.call(plot, plot_args)
       
     # Calculate total sample size and add it below the main title
-    # Main title is typically at line 3, so position (N=...) at line 1 (below title, above plot)
+    # Main title is typically at line 3, so position (N=...) at line 0.75 (between positions used for grouped and non-grouped plots)
         tot <- total  # Use the original total (before percentage conversion)
-        mtext(paste0("(N=", tot, ")"), side = 3, line = 1, font = 3, cex = 0.9)
+        mtext(paste0("(N=", tot, ")"), side = 3, line = 0.75, font = 3, cex = 0.9)
       
       # Restore original margins if we changed them
       if (!"mar" %in% names(dots) && old_mar[3] < 5) {
