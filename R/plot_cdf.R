@@ -2,10 +2,11 @@
 #'
 #' Plots empirical cumulative distribution functions (ECDFs) separately for
 #' each unique value of a grouping variable, with support for vectorized
-#' plotting parameters.
+#' plotting parameters. If no grouping variable is provided, plots a single ECDF.
 #'
 #' @param formula A formula of the form \code{y ~ group} where \code{y} is the
-#'   response variable and \code{group} is the grouping variable.
+#'   response variable and \code{group} is the grouping variable. Alternatively,
+#'   can be just \code{y} (without a grouping variable) to plot a single ECDF.
 #' @param data An optional data frame containing the variables in the formula.
 #'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param show.ks Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
@@ -35,9 +36,8 @@
 #' @details
 #' This function:
 #' \itemize{
-#'   \item Splits the response variable by unique values of the grouping variable
-#'   \item Computes an ECDF for each group
-#'   \item Plots all ECDFs on the same graph
+#'   \item If a grouping variable is provided: splits the response variable by unique values of the grouping variable, computes an ECDF for each group, and plots all ECDFs on the same graph
+#'   \item If no grouping variable is provided: computes a single ECDF for all data and plots it
 #'   \item Handles plotting parameters: scalars apply to all groups, vectors
 #'     apply element-wise to groups (in order of unique grouping variable values)
 #' }
@@ -66,8 +66,11 @@
 #' }
 #'
 #' @examples
-#' # Basic usage with formula syntax
+#' # Basic usage with single variable (no grouping)
 #' y <- rnorm(100)
+#' plot_cdf(y)
+#' 
+#' # Basic usage with formula syntax and grouping
 #' group <- rep(c("A", "B", "C"), c(30, 40, 30))
 #' plot_cdf(y ~ group)
 #'
@@ -102,9 +105,32 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     dots$show.ks <- NULL
     dots$show.quantiles <- NULL
   
+  # Check if input is a formula or a variable
+  is_formula_input <- tryCatch(inherits(formula, "formula"), error = function(e) FALSE)
+  
   # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
-  # Only formula syntax is supported
-  validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = TRUE)
+  # If not a formula, we need to pass it in a way that preserves the variable name
+  if (is_formula_input) {
+    validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE)
+  } else {
+    # Not a formula - pass it to validation
+    validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE)
+    # Override the name if it got "formula" instead of the actual variable name
+    if (validated$y_name_raw == "formula") {
+      # Try to get the actual variable name from the call
+      mc <- match.call()
+      formula_expr <- mc$formula
+      if (!is.null(formula_expr)) {
+        actual_name <- deparse(formula_expr)
+        validated$y_name_raw <- actual_name
+        validated$y_name <- if (grepl("\\$", actual_name)) {
+          strsplit(actual_name, "\\$")[[1]][length(strsplit(actual_name, "\\$")[[1]])]
+        } else {
+          actual_name
+        }
+      }
+    }
+  }
   y <- validated$y
   group <- validated$group
   y_name <- validated$y_name
@@ -113,21 +139,36 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
   group_name_raw <- validated$group_name_raw
   data_name <- validated$data_name
   
+  # Check if group is provided
+  has_group <- !is.null(group)
+  
   # Drop missing data
-  isnagroup=is.na(group)
-  isnay=is.na(y)
-  group=group[!isnagroup & !isnay]
-  y=y[!isnagroup & !isnay]
-  
-  n.nagroup = sum(isnagroup)
-  n.nay = sum(isnay)
-  
-  if (n.nagroup>0) message2("sohn::plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
-  if (n.nay>0) message2("sohn::plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
-  
-  # Get unique groups and their order
-  unique_x <- unique(group)
-  n_groups <- length(unique_x)
+  if (has_group) {
+    isnagroup=is.na(group)
+    isnay=is.na(y)
+    group=group[!isnagroup & !isnay]
+    y=y[!isnagroup & !isnay]
+    
+    n.nagroup = sum(isnagroup)
+    n.nay = sum(isnay)
+    
+    if (n.nagroup>0) message2("sohn::plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
+    if (n.nay>0) message2("sohn::plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+    
+    # Get unique groups and their order
+    unique_x <- unique(group)
+    n_groups <- length(unique_x)
+  } else {
+    # No group variable - just drop missing y values
+    isnay=is.na(y)
+    y=y[!isnay]
+    
+    n.nay = sum(isnay)
+    if (n.nay>0) message2("sohn::plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+    
+    unique_x <- NULL
+    n_groups <- 1
+  }
   
   # Initialize return values for tests (when 2 groups)
   ks_test_result <- NULL
@@ -154,16 +195,24 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     return(NULL)
   }
   
-  # Compute ECDFs for each group
+  # Compute ECDFs for each group (or single ECDF if no group)
   ecdf_list <- list()
   y_ranges <- list()
   
-  for (i in seq_along(unique_x)) {
-    group_val <- unique_x[i]
-    y_group <- y[group == group_val]
-    if (length(y_group) > 0) {
-      ecdf_list[[i]] <- ecdf(y_group)
-      y_ranges[[i]] <- range(y_group)
+  if (has_group) {
+    for (i in seq_along(unique_x)) {
+      group_val <- unique_x[i]
+      y_group <- y[group == group_val]
+      if (length(y_group) > 0) {
+        ecdf_list[[i]] <- ecdf(y_group)
+        y_ranges[[i]] <- range(y_group)
+      }
+    }
+  } else {
+    # No group - single ECDF for all data
+    if (length(y) > 0) {
+      ecdf_list[[1]] <- ecdf(y)
+      y_ranges[[1]] <- range(y)
     }
   }
   
@@ -195,7 +244,11 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     # Build plot arguments
     # Set main title if not provided
       if (!"main" %in% names(dots)) {
-        main_title <- paste0("Comparing Distribution of '", y_name, "' by '", group_name, "'")
+        if (has_group) {
+          main_title <- paste0("Comparing Distribution of '", y_name, "' by '", group_name, "'")
+        } else {
+          main_title <- paste0("Distribution of '", y_name, "'")
+        }
       } else {
         main_title <- dots$main
       }
@@ -209,22 +262,37 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     # Set ylab if not provided
       ylab_title <- if ("ylab" %in% names(dots)) dots$ylab else "% of observations"
     
-    # Set default ylim if not provided (extend to 1.15 to accommodate legend above plot)
+    # Set default ylim if not provided (extend to 1.15 to accommodate legend above plot if groups exist)
       if (!"ylim" %in% names(dots)) {
-        default_ylim <- c(0, 1.15)
+        if (has_group && n_groups > 1) {
+          default_ylim <- c(0, 1.15)
+        } else {
+          default_ylim <- c(0, 1)
+        }
       } else {
         default_ylim <- dots$ylim
       }
     
     # Ensure adequate top margin for main title and legend
     old_mar <- par("mar")
+    old_mgp <- par("mgp")
     if (!"mar" %in% names(dots)) {
       # Increase top margin if it's too small (less than 3 lines to accommodate title and legend)
-      if (old_mar[3] < 3) {
-        par(mar = c(old_mar[1], old_mar[2], 3, old_mar[4]))
-        # Restore original margins on exit
-        on.exit(par(mar = old_mar), add = TRUE)
+      # Add 1 line to the left margin
+      new_mar <- c(old_mar[1], old_mar[2] + 1, old_mar[3], old_mar[4])
+      if (new_mar[3] < 3) {
+        new_mar[3] <- 3
       }
+      par(mar = new_mar)
+      # Restore original margins on exit
+      on.exit(par(mar = old_mar), add = TRUE)
+    }
+    # Move ylab 0.75 lines to the left
+    if (!"mgp" %in% names(dots)) {
+      new_mgp <- c(old_mgp[1], old_mgp[2] - 0.75, old_mgp[3])
+      par(mgp = new_mgp)
+      # Restore original mgp on exit
+      on.exit(par(mgp = old_mgp), add = TRUE)
     }
     
     # Remove vectorized parameters and data from dots for plot()
@@ -243,7 +311,8 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
                       cex.main = cex_main,
                       ylim = default_ylim,
                       font.lab = 2, cex.lab = 1.2, las = 1,
-                      yaxt = "n")  # Suppress default y-axis to draw custom percentage axis
+                      yaxt = "n",  # Suppress default y-axis to draw custom percentage axis
+                      xaxt = "n")  # Suppress default x-axis to redraw with adjusted label position
     if (!is.null(pch1)) plot_args$pch <- pch1
     
     # Set up plot
@@ -253,6 +322,9 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     y_ticks <- seq(0, 1, by = 0.25)
     y_labels <- paste0(y_ticks * 100, "%")
     axis(2, at = y_ticks, labels = y_labels, las = 1)
+    
+    # Draw x-axis with labels moved lower (padj moves labels down)
+    axis(1, padj = 0.5)
     
     # Add remaining ECDFs
     if (length(ecdf_list) > 1) {
@@ -276,22 +348,24 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
       }
     }
     
-    # Add legend on top
-    legend_cols <- sapply(1:length(ecdf_list), function(i) get_param("col", i) %||% default_colors[i])
-    legend_lwds <- sapply(1:length(ecdf_list), function(i) get_param("lwd", i) %||% 4)
-    legend_ltys <- sapply(1:length(ecdf_list), function(i) get_param("lty", i) %||% 1)
-    
-    # Calculate sample sizes for each group and add to legend labels
-    group_ns <- sapply(1:length(ecdf_list), function(i) {
-      length(y[group == unique_x[i]])
-    })
-    
-    # Create legend labels with sample sizes (newline before sample size, lowercase n)
-    legend_labels <- paste0(as.character(unique_x), "\n(n=", group_ns, ")")
-    
-    legend("top", legend = legend_labels, 
-           col = legend_cols, lwd = legend_lwds, lty = legend_ltys,
-           horiz = TRUE, bty = "n")
+    # Add legend on top (only if there are groups)
+    if (has_group && n_groups > 1) {
+      legend_cols <- sapply(1:length(ecdf_list), function(i) get_param("col", i) %||% default_colors[i])
+      legend_lwds <- sapply(1:length(ecdf_list), function(i) get_param("lwd", i) %||% 4)
+      legend_ltys <- sapply(1:length(ecdf_list), function(i) get_param("lty", i) %||% 1)
+      
+      # Calculate sample sizes for each group and add to legend labels
+      group_ns <- sapply(1:length(ecdf_list), function(i) {
+        length(y[group == unique_x[i]])
+      })
+      
+      # Create legend labels with sample sizes (newline before sample size, lowercase n)
+      legend_labels <- paste0(as.character(unique_x), "\n(n=", group_ns, ")")
+      
+      legend("top", legend = legend_labels, 
+             col = legend_cols, lwd = legend_lwds, lty = legend_ltys,
+             horiz = TRUE, bty = "n")
+    }
     
     # If exactly 2 groups, perform KS test and quantile regression tests
       if (n_groups == 2) {
@@ -487,13 +561,17 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
   }
   
   # Return ECDFs and test results
-  names(ecdf_list) <- as.character(unique_x)
+  if (has_group) {
+    names(ecdf_list) <- as.character(unique_x)
+  } else {
+    names(ecdf_list) <- "all"
+  }
   
   # Build return list
   result <- list(ecdfs = ecdf_list)
   
   # Add test results if 2 groups
-  if (n_groups == 2) {
+  if (has_group && n_groups == 2) {
     result$ks_test <- ks_test_result
     # Add quantile regression models as separate named objects
     if (!is.null(quantile_regression_25)) {
