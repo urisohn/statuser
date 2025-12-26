@@ -153,19 +153,32 @@ table2(df$group, df$status, prop = "column") # Column proportions
 </details>
 
 <details>
-<summary><code>desc_var()</code>: Comprehensive variable summary stats, optionally by a grouping variable</summary>
+<summary><code>desc_var()</code>: Comprehensive variable summary stats, optionally by grouping variable(s)</summary>
 
 ```r
 # Why use desc_var() instead of psych::describeBy()?
 # - Returns a single dataframe (not a list) - easier to export, filter, merge
-# - Includes useful quantiles (5th, 10th, 90th, 95th percentiles)
 # - Shows mode statistics (most frequent values) - useful for discrete data
 # - Counts missing values automatically
 # - Columns are labeled for easy interpretation
+# - Supports multiple grouping variables with formula syntax
+# - Results are sorted by grouping variables
 
 # With grouping - compare groups side-by-side
 df <- data.frame(score = rnorm(100), condition = rep(c("Control", "Treatment"), 50))
 desc_var(score, condition, data = df)
+
+# Formula syntax (single grouping variable)
+desc_var(score ~ condition, data = df)
+
+# Multiple grouping variables - results sorted by all grouping variables
+df2 <- data.frame(
+  score = rnorm(200),
+  x1 = rep(c("A", "B"), 100),
+  x2 = rep(c("men", "women"), each = 100),
+  x3 = sample(1:3, replace = TRUE, size = 200)
+)
+desc_var(score ~ x1 + x2 + x3, data = df2)
 
 # Without grouping - get stats for full dataset
 desc_var(score, data = df)

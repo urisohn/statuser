@@ -65,7 +65,7 @@ test_that("desc_var returns all expected columns", {
   
   expected_cols <- c("group", "n", "mean", "sd", "se", "median", "NA_total",
                      "mode", "freq_mode", "mode2", "freq_mode2",
-                     "q5", "q10", "q90", "q95", "min", "max")
+                     "min", "max")
   
   expect_true(all(expected_cols %in% names(result)))
 })
@@ -80,21 +80,54 @@ test_that("desc_var handles empty groups", {
   expect_equal(nrow(result), 2)
 })
 
-test_that("desc_var computes quantiles correctly", {
-  y <- 1:100
-  group <- rep(c("A", "B"), 50)
+test_that("desc_var handles formula syntax", {
+  df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
   
-  result <- desc_var(y, group)
+  result <- desc_var(y ~ group, data = df)
+  expect_equal(nrow(result), 2)
+  expect_equal(as.character(result$group), c("A", "B"))
+})
+
+test_that("desc_var handles multiple grouping variables", {
+  df <- data.frame(
+    y = rnorm(200),
+    x1 = rep(c("A", "B"), 100),
+    x2 = rep(c("X", "Y"), each = 100)
+  )
   
-  # Check that quantiles are present
-  expect_true("q5" %in% names(result))
-  expect_true("q10" %in% names(result))
-  expect_true("q90" %in% names(result))
-  expect_true("q95" %in% names(result))
+  result <- desc_var(y ~ x1 + x2, data = df)
+  expect_equal(nrow(result), 4)  # 2 x 2 = 4 combinations
+  expect_true("x1" %in% names(result))
+  expect_true("x2" %in% names(result))
+  expect_false("group" %in% names(result))  # Should use separate columns, not "group"
+})
+
+test_that("desc_var sorts results by grouping variables", {
+  df <- data.frame(
+    y = rnorm(200),
+    x1 = rep(c("B", "A"), 100),  # Intentionally out of order
+    x2 = rep(c("Y", "X"), each = 100)
+  )
   
-  # Check that q5 < q10 < q90 < q95 for each group
-  expect_true(all(result$q5 < result$q10))
-  expect_true(all(result$q10 < result$q90))
-  expect_true(all(result$q90 < result$q95))
+  result <- desc_var(y ~ x1 + x2, data = df)
+  # Results should be sorted by x1 then x2
+  expect_equal(as.character(result$x1), c("A", "A", "B", "B"))
+  expect_equal(as.character(result$x2), c("X", "Y", "X", "Y"))
+})
+
+test_that("desc_var detects missing group combinations", {
+  df <- data.frame(
+    y = rnorm(100),
+    x1 = rep(c("A", "B"), 50),
+    x2 = rep(c("X", "Y"), 50)
+  )
+  # Remove one combination
+  df_missing <- df[!(df$x1 == "B" & df$x2 == "Y"), ]
+  
+  # Should produce a warning about missing combinations
+  expect_message(
+    desc_var(y ~ x1 + x2, data = df_missing),
+    "Some possible group combinations are not observed"
+  )
 })
 
