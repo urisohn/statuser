@@ -108,13 +108,23 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
   # Check if input is a formula or a variable
   is_formula_input <- tryCatch(inherits(formula, "formula"), error = function(e) FALSE)
   
+  # Capture data name for error messages
+  mc <- match.call()
+  data_expr <- mc$data
+  data_name <- if (!is.null(data_expr)) {
+    data_name_val <- deparse(data_expr)
+    gsub('^"|"$', '', data_name_val)
+  } else {
+    NULL
+  }
+  
   # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
   # If not a formula, we need to pass it in a way that preserves the variable name
   if (is_formula_input) {
-    validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE)
+    validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE, data_name = data_name)
   } else {
     # Not a formula - pass it to validation
-    validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE)
+    validated <- validate_plot(formula, NULL, data, func_name = "plot_cdf", require_group = FALSE, data_name = data_name)
     # Override the name if it got "formula" instead of the actual variable name
     if (validated$y_name_raw == "formula") {
       # Try to get the actual variable name from the call

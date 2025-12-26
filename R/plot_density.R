@@ -125,9 +125,19 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
     original_y_name <- NULL
   }
   
+  # Capture data name for error messages
+  mc <- match.call()
+  data_expr <- mc$data
+  data_name <- if (!is.null(data_expr)) {
+    data_name_val <- deparse(data_expr)
+    gsub('^"|"$', '', data_name_val)
+  } else {
+    NULL
+  }
+  
   #2. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
   # Only formula syntax is supported
-  validated <- validate_plot(formula, NULL, data, func_name = "plot_density", require_group = FALSE)
+  validated <- validate_plot(formula, NULL, data, func_name = "plot_density", require_group = FALSE, data_name = data_name)
   y <- validated$y
   group <- validated$group
   y_name <- validated$y_name

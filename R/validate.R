@@ -9,6 +9,8 @@
 #' @param data An optional data frame containing the variables.
 #' @param func_name Character string. Name of the calling function (for error messages).
 #' @param require_group Logical. If TRUE, group is required. If FALSE, group can be NULL.
+#' @param data_name Character string. Name of the data argument (for error messages). 
+#'   If NULL, will attempt to infer from the call.
 #'
 #' @return A list containing:
 #' \itemize{
@@ -22,11 +24,28 @@
 #' }
 #'
 #' @keywords internal
-validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", require_group = TRUE) {
+validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", require_group = TRUE, data_name = NULL) {
   # Capture data name for error messages (before potentially overwriting)
-  data_name <- deparse(substitute(data))
-  # Remove quotes if present
-  data_name <- gsub('^"|"$', '', data_name)
+  # If data_name not provided, try to infer it from the call
+  if (is.null(data_name)) {
+    # Try to get it from parent frame (the calling function)
+    parent_call <- sys.call(-1)
+    if (!is.null(parent_call)) {
+      parent_mc <- match.call(definition = sys.function(-1), call = parent_call)
+      if ("data" %in% names(parent_mc)) {
+        data_expr <- parent_mc$data
+        if (!is.null(data_expr)) {
+          data_name <- deparse(data_expr)
+          # Remove quotes if present
+          data_name <- gsub('^"|"$', '', data_name)
+        }
+      }
+    }
+    # Fallback to "data" if we couldn't determine it
+    if (is.null(data_name)) {
+      data_name <- "data"
+    }
+  }
   
   # Check if y is a formula
   # Use tryCatch to avoid "object not found" error if y is a symbol in data

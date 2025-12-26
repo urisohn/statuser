@@ -122,3 +122,15 @@ test_that("plot_freq handles missing values", {
   expect_true(is.data.frame(result))
 })
 
+test_that("plot_freq error message shows correct dataset name", {
+  # Create a dataset with a specific name
+  IV5 <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5))
+  
+  # Try to access a variable that doesn't exist - should show "IV5" not "data"
+  expect_error(
+    plot_freq(nonexistent ~ 1, data = IV5),
+    'Variable "nonexistent" not found in dataset "IV5"',
+    fixed = TRUE
+  )
+})
+

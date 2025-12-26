@@ -67,9 +67,19 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     original_x_name <- NULL
   }
   
+  # Capture data name for error messages
+  mc <- match.call()
+  data_expr <- mc$data
+  data_name <- if (!is.null(data_expr)) {
+    data_name_val <- deparse(data_expr)
+    gsub('^"|"$', '', data_name_val)
+  } else {
+    NULL
+  }
+  
   # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
   # Only formula syntax is supported (x ~ group or x ~ 1 for single variable)
-  validated <- validate_plot(formula, NULL, data, func_name = "plot_freq", require_group = FALSE)
+  validated <- validate_plot(formula, NULL, data, func_name = "plot_freq", require_group = FALSE, data_name = data_name)
   x <- validated$y  # Note: validate_plot uses 'y' but we use 'x'
   group <- validated$group
   x_name <- validated$y_name

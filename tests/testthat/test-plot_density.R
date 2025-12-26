@@ -116,3 +116,15 @@ test_that("plot_density returns correct structure", {
   expect_equal(names(result$densities), c("A", "B"))
 })
 
+test_that("plot_density error message shows correct dataset name", {
+  # Create a dataset with a specific name
+  IV5 <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+  
+  # Try to access a variable that doesn't exist - should show "IV5" not "data"
+  expect_error(
+    plot_density(nonexistent ~ group, data = IV5),
+    'Variable "nonexistent" not found in dataset "IV5"',
+    fixed = TRUE
+  )
+})
+
