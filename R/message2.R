@@ -232,16 +232,16 @@ message2 <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = TRUE
   }
   
   # Create message
-  msg <- list(...)
+  msg_parts <- list(...)
+  msg_text <- paste(msg_parts, collapse = "")
   
   # Combine message parts with ANSI codes if supported
   if (supportsANSI) {
     # Wrap message with ANSI codes, start on new line
-    msg_text <- paste(msg, collapse = "")
     msg <- paste0("\n", ansi_start, msg_text, ansi_end)
   } else {
     # Start on new line even without ANSI
-    msg <- paste0("\n", paste(msg, collapse = ""))
+    msg <- paste0("\n", msg_text)
   }
   
   # Handle domain translation (similar to .makeMessage behavior)
@@ -263,7 +263,7 @@ message2 <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = TRUE
   if (stop) {
     opt <- options(show.error.messages = FALSE)
     on.exit(options(opt))
-    stop("")
+    stop(msg_text)
   }
   
   invisible()

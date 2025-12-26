@@ -168,9 +168,57 @@ t.test2 <- function(..., digits = 3) {
     call_args <- match.call(expand.dots = TRUE)
     calling_env <- parent.frame()
   
-  # TASK 2: Call stats::t.test() to perform the t-test
-  # Pass all arguments through to stats::t.test()
+  # Check if we need to convert to formula syntax (y, group case)
+  # If second positional argument exists and is not numeric, treat as grouping variable
+  dots_list <- list(...)
+  needs_formula_conversion <- FALSE
+  y_var_for_formula <- NULL
+  group_var_for_formula <- NULL
+  
+  if (length(dots_list) >= 2) {
+    # Check if first two arguments are vectors (not named)
+    arg_names <- names(dots_list)
+    if (is.null(arg_names) || (length(arg_names) >= 2 && (arg_names[1] == "" || arg_names[2] == ""))) {
+      arg1 <- dots_list[[1]]
+      arg2 <- dots_list[[2]]
+      
+      # If arg1 is numeric and arg2 is not numeric (likely a grouping variable)
+      if (is.numeric(arg1) && !is.numeric(arg2) && length(arg1) == length(arg2)) {
+        needs_formula_conversion <- TRUE
+        y_var_for_formula <- arg1
+        group_var_for_formula <- arg2
+        
+        # Create temporary data frame and use formula syntax
+        temp_df <- data.frame(y_var = arg1, group_var = arg2, stringsAsFactors = FALSE)
+        formula_obj <- y_var ~ group_var
+        
+        # Create modified dots list with formula and data
+        modified_dots <- list(formula_obj, data = temp_df)
+        # Add any additional arguments (skip first two)
+        if (length(dots_list) > 2) {
+          # Preserve named arguments
+          additional_args <- dots_list[-(1:2)]
+          # Filter out 'data' if present (we're providing our own)
+          if ("data" %in% names(additional_args)) {
+            additional_args <- additional_args[names(additional_args) != "data"]
+          }
+          modified_dots <- c(modified_dots, additional_args)
+        }
+        
+        # Call t.test with formula syntax
+        tt_result <- do.call(stats::t.test, modified_dots)
+      } else {
+        # Standard case: pass through to t.test
+        tt_result <- stats::t.test(...)
+      }
+    } else {
+      # Standard case: pass through to t.test
+      tt_result <- stats::t.test(...)
+    }
+  } else {
+    # Standard case: pass through to t.test
     tt_result <- stats::t.test(...)
+  }
   
   # TASK 3: Extract test results: means, test statistics, and method type
   # Determine test type (Student vs Welch) from method string
@@ -229,9 +277,33 @@ t.test2 <- function(..., digits = 3) {
   
   # Try to extract data from the call for standard error calculation
   tryCatch({
-    # Check if it's formula syntax (y ~ group)
-    if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
+    # Check if we converted to formula syntax (needs_formula_conversion case)
+    if (needs_formula_conversion && !is.null(y_var_for_formula) && !is.null(group_var_for_formula)) {
+      # Use the variables we already extracted
+      y_var <- y_var_for_formula
+      group_var <- group_var_for_formula
+      
+      # Store extracted variables for simplify_ttest
+      extracted_y_var <- y_var
+      extracted_group_var <- group_var
+      
+      # Calculate standard errors for each group and get group values for column names
+      unique_groups <- sort(unique(group_var))
+      if (length(unique_groups) == 2) {
+        g1_data <- y_var[group_var == unique_groups[1]]
+        g2_data <- y_var[group_var == unique_groups[2]]
+        
+        # TASK 5: Calculate standard errors (sd / sqrt(n))
+        se1 <- sd(g1_data, na.rm = TRUE) / sqrt(length(g1_data))
+        se2 <- sd(g2_data, na.rm = TRUE) / sqrt(length(g2_data))
+        
+        # TASK 4: Use group values as column names (e.g., "a", "b")
+        col1_name <- as.character(unique_groups[1])
+        col2_name <- as.character(unique_groups[2])
+      }
+    } else if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
         as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
+      # Check if it's formula syntax (y ~ group)
       # TASK 4 & 5: Formula syntax - Extract group values for column names and calculate SEs
       # Formula syntax: y ~ group
       formula <- eval(call_args[[2]], envir = calling_env)

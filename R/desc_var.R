@@ -130,8 +130,10 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
   }
   
   # 1. Check if y is a formula and extract variables
-  is_formula <- inherits(y, "formula")
+  # Use tryCatch to avoid "object not found" error if y is a symbol in data
+  is_formula <- tryCatch(inherits(y, "formula"), error = function(e) FALSE)
   calling_env <- parent.frame()
+  call_match <- match.call()
   
   if (is_formula) {
     # Parse formula: y ~ x or y ~ x1 + x2
@@ -178,8 +180,44 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     group_quo <- if (group_was_provided) rlang::enquo(group) else NULL
     
     # Get variable names for error messages
-    y_name <- rlang::as_name(y_quo)
-    group_name <- if (group_was_provided) rlang::as_name(group_quo) else NULL
+    # Check if quosure expression is a symbol (unquoted variable) or already evaluated
+    y_expr <- rlang::quo_get_expr(y_quo)
+    if (rlang::is_symbol(y_expr)) {
+      # Extract name directly from symbol without evaluating
+      y_name <- as.character(y_expr)
+    } else {
+      # Expression is already evaluated (e.g., numeric vector passed directly)
+      # Try to get name from call, or use default
+      y_name <- tryCatch({
+        if ("y" %in% names(call_match)) {
+          deparse(call_match$y)
+        } else {
+          "y"
+        }
+      }, error = function(e) {
+        "y"
+      })
+    }
+    
+    group_name <- if (group_was_provided) {
+      group_expr <- rlang::quo_get_expr(group_quo)
+      if (rlang::is_symbol(group_expr)) {
+        # Extract name directly from symbol without evaluating
+        as.character(group_expr)
+      } else {
+        tryCatch({
+          if ("group" %in% names(call_match)) {
+            deparse(call_match$group)
+          } else {
+            "group"
+          }
+        }, error = function(e) {
+          "group"
+        })
+      }
+    } else {
+      NULL
+    }
     
     # Validate data frame if provided
     if (!is.null(data) && !is.data.frame(data)) {
@@ -189,7 +227,31 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     # Extract y variable
     y <- tryCatch({
       if (!is.null(data)) {
-        rlang::eval_tidy(y_quo, data = data)
+        # If data is provided and expression is a symbol, get it directly from data
+        if (rlang::is_symbol(y_expr)) {
+          # Use the already-extracted y_name, or try to get it from the call
+          col_name <- if (!is.null(y_name) && y_name != "") {
+            y_name
+          } else {
+            # Fallback: try to get name from call
+            if ("y" %in% names(call_match)) {
+              deparse(call_match$y)
+            } else {
+              stop("Could not determine column name")
+            }
+          }
+          
+          if (col_name %in% names(data)) {
+            data[[col_name]]
+          } else {
+            # Column not found in data, try eval_tidy as fallback
+            # But first, modify quosure environment to prioritize data
+            rlang::eval_tidy(y_quo, data = data)
+          }
+        } else {
+          # Expression is not a symbol (already evaluated), use eval_tidy
+          rlang::eval_tidy(y_quo, data = data)
+        }
       } else {
         rlang::eval_tidy(y_quo)
       }
@@ -205,9 +267,33 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     
     # Extract group variable if provided
     if (group_was_provided) {
+      group_expr_for_eval <- rlang::quo_get_expr(group_quo)
       group <- tryCatch({
         if (!is.null(data)) {
-          rlang::eval_tidy(group_quo, data = data)
+          # If data is provided and expression is a symbol, get it directly from data
+          if (rlang::is_symbol(group_expr_for_eval)) {
+            # Use the already-extracted group_name, or try to get it from the call
+            col_name <- if (!is.null(group_name) && group_name != "") {
+              group_name
+            } else {
+              # Fallback: try to get name from call
+              if ("group" %in% names(call_match)) {
+                deparse(call_match$group)
+              } else {
+                stop("Could not determine column name")
+              }
+            }
+            
+            if (col_name %in% names(data)) {
+              data[[col_name]]
+            } else {
+              # Column not found in data, try eval_tidy as fallback
+              rlang::eval_tidy(group_quo, data = data)
+            }
+          } else {
+            # Expression is not a symbol (already evaluated), use eval_tidy
+            rlang::eval_tidy(group_quo, data = data)
+          }
         } else {
           rlang::eval_tidy(group_quo)
         }
@@ -245,14 +331,17 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
       for (j in (i + 1):length(group_list)) {
         var1 <- group_list[[i]]
         var2 <- group_list[[j]]
-        # Perfect overlap: one-to-one mapping means unique combinations equals max unique values
+        # Perfect overlap: one-to-one mapping means unique combinations equals both unique value counts
+        # This means each value in var1 maps to exactly one value in var2, and vice versa
         n_unique_combos <- length(unique(paste(var1, var2, sep = "|")))
         n_unique_v1 <- length(unique(var1))
         n_unique_v2 <- length(unique(var2))
-        if (n_unique_combos == max(n_unique_v1, n_unique_v2)) {
+        # Perfect overlap occurs when: n_unique_combos == n_unique_v1 == n_unique_v2
+        # This ensures one-to-one mapping (no many-to-one or one-to-many)
+        if (n_unique_combos == n_unique_v1 && n_unique_combos == n_unique_v2 && n_unique_v1 == n_unique_v2) {
           var1_name <- names(group_list)[i]
           var2_name <- names(group_list)[j]
-          message2(format_msg(sprintf("Multiple grouping variables do not overlap perfectly: '%s' and '%s' overlap perfectly", var1_name, var2_name)), col = 'red', stop = TRUE)
+          message2(format_msg(sprintf("Multiple grouping variables should not overlap perfectly: '%s' and '%s' overlap perfectly", var1_name, var2_name)), col = 'red', stop = TRUE)
         }
       }
     }
@@ -348,19 +437,19 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
       stringsAsFactors = FALSE
     )
     
-    # Add mode columns only if there are repeated values (mode is not NA)
-    if (!is.na(stats$mode)) {
-      result_df$mode <- stats$mode
-      result_df$freq_mode <- stats$freq_mode
-      result_df$mode2 <- stats$mode2
-      result_df$freq_mode2 <- stats$freq_mode2
-    } else {
+    # Add mode columns (always include them, even if NA)
+    result_df$mode <- stats$mode
+    result_df$freq_mode <- stats$freq_mode
+    result_df$mode2 <- stats$mode2
+    result_df$freq_mode2 <- stats$freq_mode2
+    
+    # Show message if mode is not available
+    if (is.na(stats$mode)) {
       message2(format_msg("mode not reported because all values are unique"))
     }
   } else {
     # Grouping: compute for each group
     result_list <- list()
-    has_mode_stats <- FALSE
     
     if (use_separate_group_cols) {
       # Multiple grouping variables: iterate over unique combinations
@@ -384,22 +473,7 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
         message2(format_msg(sprintf("Some possible group combinations are not observed:\n%s", missing_list)), col = 'blue')
       }
       
-      # First pass: check if any group has mode stats
-      for (i in seq_len(nrow(unique_combos))) {
-        combo <- unique_combos[i, , drop = FALSE]
-        # Create mask: all grouping variables match this combination
-        mask <- Reduce(`&`, lapply(names(group_list), function(nm) {
-          group_list[[nm]] == combo[[nm]]
-        }))
-        y_group <- y[mask]
-        stats <- compute_stats(y_group)
-        if (!is.na(stats$mode)) {
-          has_mode_stats <- TRUE
-          break
-        }
-      }
-      
-      # Second pass: build data frames
+      # Build data frames for each combination
       for (i in seq_len(nrow(unique_combos))) {
         combo <- unique_combos[i, , drop = FALSE]
         # Create mask: all grouping variables match this combination
@@ -423,29 +497,17 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
           stringsAsFactors = FALSE
         )
         
-        # Add mode columns if any group has mode stats
-        if (has_mode_stats) {
-          result_row$mode <- stats$mode
-          result_row$freq_mode <- stats$freq_mode
-          result_row$mode2 <- stats$mode2
-          result_row$freq_mode2 <- stats$freq_mode2
-        }
+        # Add mode columns (always include them, even if NA)
+        result_row$mode <- stats$mode
+        result_row$freq_mode <- stats$freq_mode
+        result_row$mode2 <- stats$mode2
+        result_row$freq_mode2 <- stats$freq_mode2
         
         result_list[[length(result_list) + 1]] <- result_row
       }
     } else {
       # Single group column: use group vector directly
       unique_groups <- sort(unique(group))
-      
-      # First pass: check if any group has mode stats
-      for (g in unique_groups) {
-        y_group <- y[group == g]
-        stats <- compute_stats(y_group)
-        if (!is.na(stats$mode)) {
-          has_mode_stats <- TRUE
-          break
-        }
-      }
       
       # Second pass: build data frames
       for (g in unique_groups) {
@@ -465,13 +527,11 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
           stringsAsFactors = FALSE
         )
         
-        # Add mode columns if any group has mode stats
-        if (has_mode_stats) {
-          result_row$mode <- stats$mode
-          result_row$freq_mode <- stats$freq_mode
-          result_row$mode2 <- stats$mode2
-          result_row$freq_mode2 <- stats$freq_mode2
-        }
+        # Add mode columns (always include them, even if NA)
+        result_row$mode <- stats$mode
+        result_row$freq_mode <- stats$freq_mode
+        result_row$mode2 <- stats$mode2
+        result_row$freq_mode2 <- stats$freq_mode2
         
         result_list[[length(result_list) + 1]] <- result_row
       }
@@ -499,8 +559,8 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
         result_df <- result_df[order(result_df$group), , drop = FALSE]
       }
       
-    # Show message if no group has mode stats
-      if (!has_mode_stats) {
+    # Show message if no group has mode stats (all mode values are NA)
+      if ("mode" %in% names(result_df) && all(is.na(result_df$mode))) {
         message2(format_msg("mode not reported because all values are unique"))
       }
   }

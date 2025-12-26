@@ -7,9 +7,11 @@
 desc_var(y, group = NULL, data = NULL, decimals = 3)
 }
 \arguments{
-\item{y}{A numeric vector of values, or a column name (character string or unquoted) if \code{data} is provided.}
+\item{y}{A numeric vector of values, a column name (character string or unquoted) if \code{data} is provided,
+or a formula of the form \code{y ~ x} or \code{y ~ x1 + x2} (for multiple grouping variables).}
 
-\item{group}{Optional grouping variable, if not provided  computed for the full data}
+\item{group}{Optional grouping variable, if not provided computed for the full data.
+Ignored if \code{y} is a formula.}
 
 \item{data}{Optional data frame containing the variable(s).}
 
@@ -29,13 +31,12 @@ A data frame with one row per group (or one row if no group is specified) contai
     \item \code{freq_mode}: Frequency of mode
     \item \code{mode2}: 2nd most frequent value
     \item \code{freq_mode2}: Frequency of 2nd mode
-    \item \code{q5, q10, q90, q95}: Quantiles (5th, 10th, 90th, 95th percentiles)
     \item \code{min}: Minimum
     \item \code{max}: Maximum
   }
 }
 \description{
-Computes mean, SD, number of missing observations, mode, 2nd mode, median, and quantiles
+Computes mean, SD, number of missing observations, mode, 2nd mode, max, min
 Returns a dataframe with one row per group
 }
 \details{
@@ -43,7 +44,6 @@ This function computes descriptive statistics similar to \code{psych::describeBy
 \itemize{
   \item Returns a single dataframe with one row per group (instead of a list)
   \item Excludes kurtosis, skewness, and range
-  \item Includes specific quantiles: 5, 10, 90, 95
   \item Includes count of missing (NA) observations
   \item Includes mode statistics (most frequent value and 2nd most frequent value with their frequencies)
   \item Adds descriptive labels to all columns using the \code{labelled} package
@@ -64,5 +64,12 @@ desc_var(y, group)
 
 # With custom decimal places
 desc_var(y, group, data = df, decimals = 2)
+
+# Using formula syntax: y ~ x
+desc_var(y ~ group, data = df)
+
+# Using formula syntax with multiple grouping variables: y ~ x1 + x2
+df2 <- data.frame(y = rnorm(200), x1 = rep(c("A", "B"), 100), x2 = rep(c("X", "Y"), each = 100))
+desc_var(y ~ x1 + x2, data = df2)
 
 }

@@ -119,15 +119,29 @@ test_that("desc_var detects missing group combinations", {
   df <- data.frame(
     y = rnorm(100),
     x1 = rep(c("A", "B"), 50),
-    x2 = rep(c("X", "Y"), 50)
+    x2 = rep(c("X", "Y"), each = 50)
   )
   # Remove one combination
   df_missing <- df[!(df$x1 == "B" & df$x2 == "Y"), ]
   
-  # Should produce a warning about missing combinations
+  # Should produce a message about missing combinations
   expect_message(
     desc_var(y ~ x1 + x2, data = df_missing),
     "Some possible group combinations are not observed"
+  )
+})
+
+test_that("desc_var detects perfectly overlapping grouping variables", {
+  df <- data.frame(
+    y = rnorm(100),
+    x1 = rep(c("A", "B"), 50),
+    x2 = rep(c("X", "Y"), 50)
+  )
+  
+  # Should stop with a specific error message
+  expect_error(
+    desc_var(y ~ x1 + x2, data = df),
+    "Multiple grouping variables should not overlap perfectly"
   )
 })
 
