@@ -3,8 +3,8 @@
 #' Creates a scatter plot with a GAM (Generalized Additive Model) smooth line,
 #' with options to display data points and three-way spline summary points.
 #'
-#' @param x A numeric vector of x values.
-#' @param y A numeric vector of y values.
+#' @param x A numeric vector of x values, or a formula of the form \code{y ~ x}.
+#' @param y A numeric vector of y values. Not used if \code{x} is a formula.
 #' @param data.dots Logical. If TRUE, displays the original data points on the
 #'   plot. Default is FALSE.
 #' @param three.dots Logical. If TRUE, displays three summary points representing
@@ -43,6 +43,9 @@
 #' y <- 2*x + rnorm(100)
 #' scatter.gam(x, y)
 #'
+#' # Using formula syntax
+#' scatter.gam(y ~ x)
+#'
 #' # With data points
 #' scatter.gam(x, y, data.dots = TRUE)
 #'
@@ -56,6 +59,9 @@
 #' df <- data.frame(x = rnorm(100), y = 2*rnorm(100) + rnorm(100))
 #' scatter.gam(x, y, data = df, data.dots = TRUE)
 #'
+#' # Using formula syntax with data frame
+#' scatter.gam(y ~ x, data = df, data.dots = TRUE)
+#'
 #' # Custom styling
 #' scatter.gam(x, y, data.dots = TRUE, col = "red", lwd = 2, main = "GAM Fit")
 #'
@@ -66,22 +72,105 @@
 #' @export
 scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL, k = NULL, plot.dist = NULL, 
                         dot.pch = 16, dot.col = adjustcolor('gray', 0.7), jitter = FALSE, ...) {
-  # Capture x and y names for labels (before potentially overwriting)
-  x_name_raw <- deparse(substitute(x))
-  y_name_raw <- deparse(substitute(y))
-  # Remove quotes if present
-  x_name_raw <- gsub('^"|"$', '', x_name_raw)
-  y_name_raw <- gsub('^"|"$', '', y_name_raw)
-  # Clean variable names: remove df$ prefix if present
-  x_name <- if (grepl("\\$", x_name_raw)) {
-    strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
+  # Check if x is a formula (y ~ x syntax)
+  is_formula <- tryCatch(inherits(x, "formula"), error = function(e) FALSE)
+  
+  if (is_formula) {
+    # Formula syntax: y ~ x
+    formula_vars <- all.vars(x)
+    if (length(formula_vars) != 2) {
+      stop("scatter.gam(): Formula must have exactly two variables: y ~ x", call. = FALSE)
+    }
+    
+    y_var_name <- formula_vars[1]
+    x_var_name <- formula_vars[2]
+    
+    # Get environment for evaluating variables
+    formula_env <- environment(x)
+    if (is.null(formula_env)) {
+      calling_env <- parent.frame()
+    } else {
+      calling_env <- formula_env
+    }
+    
+    if (!is.null(data)) {
+      # Data provided: extract from data frame
+      if (!is.data.frame(data)) {
+        stop("scatter.gam(): 'data' must be a data frame", call. = FALSE)
+      }
+      
+      # Check if variables exist in data
+      if (!y_var_name %in% names(data)) {
+        stop(sprintf("scatter.gam(): Variable \"%s\" not found in dataset", y_var_name), call. = FALSE)
+      }
+      if (!x_var_name %in% names(data)) {
+        stop(sprintf("scatter.gam(): Variable \"%s\" not found in dataset", x_var_name), call. = FALSE)
+      }
+      
+      # Extract variables from data
+      y <- data[[y_var_name]]
+      x <- data[[x_var_name]]
+      
+      # Set names for labels
+      y_name <- y_var_name
+      x_name <- x_var_name
+    } else {
+      # No data: evaluate variables from environment
+      y_exists <- exists(y_var_name, envir = calling_env, inherits = TRUE)
+      x_exists <- exists(x_var_name, envir = calling_env, inherits = TRUE)
+      
+      if (!y_exists) {
+        stop(sprintf("scatter.gam(): Could not find variable '%s'", y_var_name), call. = FALSE)
+      }
+      if (!x_exists) {
+        stop(sprintf("scatter.gam(): Could not find variable '%s'", x_var_name), call. = FALSE)
+      }
+      
+      y <- eval(as.name(y_var_name), envir = calling_env)
+      x <- eval(as.name(x_var_name), envir = calling_env)
+      
+      # Set names for labels
+      y_name <- y_var_name
+      x_name <- x_var_name
+    }
   } else {
-    x_name_raw
-  }
-  y_name <- if (grepl("\\$", y_name_raw)) {
-    strsplit(y_name_raw, "\\$")[[1]][length(strsplit(y_name_raw, "\\$")[[1]])]
-  } else {
-    y_name_raw
+    # Standard syntax: x, y
+    # Capture x and y names for labels (before potentially overwriting)
+    x_name_raw <- deparse(substitute(x))
+    y_name_raw <- deparse(substitute(y))
+    # Remove quotes if present
+    x_name_raw <- gsub('^"|"$', '', x_name_raw)
+    y_name_raw <- gsub('^"|"$', '', y_name_raw)
+    # Clean variable names: remove df$ prefix if present
+    x_name <- if (grepl("\\$", x_name_raw)) {
+      strsplit(x_name_raw, "\\$")[[1]][length(strsplit(x_name_raw, "\\$")[[1]])]
+    } else {
+      x_name_raw
+    }
+    y_name <- if (grepl("\\$", y_name_raw)) {
+      strsplit(y_name_raw, "\\$")[[1]][length(strsplit(y_name_raw, "\\$")[[1]])]
+    } else {
+      y_name_raw
+    }
+    
+    # Handle data frame if provided
+    if (!is.null(data)) {
+      if (!is.data.frame(data)) {
+        stop("scatter.gam(): 'data' must be a data frame", call. = FALSE)
+      }
+      
+      # Extract columns from data frame
+      # Use raw names for column lookup (they may include df$ prefix)
+      if (!x_name_raw %in% names(data)) {
+        stop(sprintf("scatter.gam(): Column '%s' not found in data", x_name_raw), call. = FALSE)
+      }
+      if (!y_name_raw %in% names(data)) {
+        stop(sprintf("scatter.gam(): Column '%s' not found in data", y_name_raw), call. = FALSE)
+      }
+      
+      x <- data[[x_name_raw]]
+      y <- data[[y_name_raw]]
+    }
   }
   
   # Extract additional arguments
@@ -91,25 +180,6 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
   if ("plot.dist" %in% names(dots)) {
     plot.dist <- dots$plot.dist
     dots$plot.dist <- NULL
-  }
-  
-  # Handle data frame if provided
-  if (!is.null(data)) {
-    if (!is.data.frame(data)) {
-      stop("'data' must be a data frame")
-    }
-    
-    # Extract columns from data frame
-    # Use raw names for column lookup (they may include df$ prefix)
-    if (!x_name_raw %in% names(data)) {
-      stop(sprintf("Column '%s' not found in data", x_name_raw))
-    }
-    if (!y_name_raw %in% names(data)) {
-      stop(sprintf("Column '%s' not found in data", y_name_raw))
-    }
-    
-    x <- data[[x_name_raw]]
-    y <- data[[y_name_raw]]
   }
   
   # Check for required package
