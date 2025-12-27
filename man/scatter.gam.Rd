@@ -19,9 +19,9 @@ scatter.gam(
 )
 }
 \arguments{
-\item{x}{A numeric vector of x values.}
+\item{x}{A numeric vector of x values, or a formula of the form \code{y ~ x}.}
 
-\item{y}{A numeric vector of y values.}
+\item{y}{A numeric vector of y values. Not used if \code{x} is a formula.}
 
 \item{data.dots}{Logical. If TRUE, displays the original data points on the
 plot. Default is FALSE.}
@@ -74,6 +74,9 @@ x <- rnorm(100)
 y <- 2*x + rnorm(100)
 scatter.gam(x, y)
 
+# Using formula syntax
+scatter.gam(y ~ x)
+
 # With data points
 scatter.gam(x, y, data.dots = TRUE)
 
@@ -86,6 +89,9 @@ scatter.gam(x, y, data.dots = TRUE, three.dots = TRUE)
 # Using data frame
 df <- data.frame(x = rnorm(100), y = 2*rnorm(100) + rnorm(100))
 scatter.gam(x, y, data = df, data.dots = TRUE)
+
+# Using formula syntax with data frame
+scatter.gam(y ~ x, data = df, data.dots = TRUE)
 
 # Custom styling
 scatter.gam(x, y, data.dots = TRUE, col = "red", lwd = 2, main = "GAM Fit")

@@ -8,7 +8,8 @@ plot_cdf(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...)
 }
 \arguments{
 \item{formula}{A formula of the form \code{y ~ group} where \code{y} is the
-response variable and \code{group} is the grouping variable.}
+response variable and \code{group} is the grouping variable. Alternatively,
+can be just \code{y} (without a grouping variable) to plot a single ECDF.}
 
 \item{data}{An optional data frame containing the variables in the formula.
 If \code{data} is not provided, variables are evaluated from the calling environment.}
@@ -43,14 +44,13 @@ Invisibly returns a list containing:
 \description{
 Plots empirical cumulative distribution functions (ECDFs) separately for
 each unique value of a grouping variable, with support for vectorized
-plotting parameters.
+plotting parameters. If no grouping variable is provided, plots a single ECDF.
 }
 \details{
 This function:
 \itemize{
-  \item Splits the response variable by unique values of the grouping variable
-  \item Computes an ECDF for each group
-  \item Plots all ECDFs on the same graph
+  \item If a grouping variable is provided: splits the response variable by unique values of the grouping variable, computes an ECDF for each group, and plots all ECDFs on the same graph
+  \item If no grouping variable is provided: computes a single ECDF for all data and plots it
   \item Handles plotting parameters: scalars apply to all groups, vectors
     apply element-wise to groups (in order of unique grouping variable values)
 }
@@ -79,8 +79,11 @@ When there are exactly 2 groups, the function automatically performs:
 }
 }
 \examples{
-# Basic usage with formula syntax
+# Basic usage with single variable (no grouping)
 y <- rnorm(100)
+plot_cdf(y)
+
+# Basic usage with formula syntax and grouping
 group <- rep(c("A", "B", "C"), c(30, 40, 30))
 plot_cdf(y ~ group)
 

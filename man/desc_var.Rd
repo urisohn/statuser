@@ -26,7 +26,8 @@ A data frame with one row per group (or one row if no group is specified) contai
     \item \code{sd}: Standard deviation
     \item \code{se}: Standard error
     \item \code{median}: Median
-    \item \code{NA_total}: Number of observations with missing (NA) values
+    \item \code{missing}: Number of observations with missing (NA) values
+    \item \code{unique}: Number of unique values
     \item \code{mode}: Most frequent value
     \item \code{freq_mode}: Frequency of mode
     \item \code{mode2}: 2nd most frequent value

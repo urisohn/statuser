@@ -6,6 +6,7 @@
 \usage{
 table2(
   ...,
+  data = NULL,
   exclude = if (useNA == "no") c(NA, NaN),
   useNA = c("no", "ifany", "always"),
   dnn = NULL,
@@ -19,7 +20,11 @@ table2(
 character strings), or a list (or data frame) whose components can be so
 interpreted. For the default method, either all arguments are vectors of
 the same length, or one argument is a data frame and the rest are vectors
-that can be matched by name.}
+that can be matched by name. If \code{data} is provided, variables can be
+specified as unquoted names (e.g., \code{table2(DV1, x1, data = df)}).}
+
+\item{data}{Optional data frame containing the variables. If provided, variables
+in \code{...} can be specified as unquoted column names.}
 
 \item{exclude}{Levels to remove from all factors in \code{...}.}
 
@@ -88,5 +93,8 @@ table2(df$group, df$status, prop = 1)  # Row proportions
 table2(df$group, df$status, prop = 2)  # Column proportions
 table2(df$group, df$status, prop = "row")  # Row proportions (character)
 table2(df$group, df$status, prop = 1, digits = 3)  # Row proportions with 3 decimals
+
+# Using data argument with unquoted variable names
+table2(DV1, x1, data = df, prop = "col")
 
 }

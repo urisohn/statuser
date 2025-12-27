@@ -9,7 +9,8 @@ validate_plot(
   group = NULL,
   data = NULL,
   func_name = "plot",
-  require_group = TRUE
+  require_group = TRUE,
+  data_name = NULL
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ Can be NULL for functions where group is optional.}
 \item{func_name}{Character string. Name of the calling function (for error messages).}
 
 \item{require_group}{Logical. If TRUE, group is required. If FALSE, group can be NULL.}
+
+\item{data_name}{Character string. Name of the data argument (for error messages). 
+If NULL, will attempt to infer from the call.}
 }
 \value{
 A list containing:

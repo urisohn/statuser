@@ -2,18 +2,19 @@
 % Please edit documentation in R/plot_density.R
 \name{plot_density}
 \alias{plot_density}
-\title{Plot density of a variable, by another variable}
+\title{Plot density of a variable, optionally by another variable}
 \usage{
-plot_density(formula, data = NULL, show.t = TRUE, ...)
+plot_density(formula, data = NULL, show_means = TRUE, ...)
 }
 \arguments{
 \item{formula}{A formula of the form \code{y ~ group} where \code{y} is the
-response variable and \code{group} is the grouping variable.}
+response variable and \code{group} is an optional grouping variable.
+For single variable (no grouping), use \code{y ~ 1}.}
 
 \item{data}{An optional data frame containing the variables in the formula.
 If \code{data} is not provided, variables are evaluated from the calling environment.}
 
-\item{show.t}{Logical. If TRUE (default), shows points at means, vertical segments,
+\item{show_means}{Logical. If TRUE (default), shows points at means, vertical segments,
 and mean labels. If FALSE, none of these are displayed.}
 
 \item{...}{Additional arguments passed to plotting functions. Can be scalars
@@ -32,8 +33,8 @@ Invisibly returns a list containing:
 }
 }
 \description{
-Plots density functions separately for each unique value of a grouping
-variable.
+Plots density functions. If a grouping variable is provided, plots density
+functions separately for each unique value of the grouping variable.
 }
 \details{
 This function:
@@ -61,8 +62,11 @@ Default colors are automatically assigned based on the number of groups:
 }
 }
 \examples{
-# Basic usage with formula syntax
+# Basic usage with formula syntax (no grouping)
 y <- rnorm(100)
+plot_density(y ~ 1)
+
+# With grouping variable
 group <- rep(c("A", "B", "C"), c(30, 40, 30))
 plot_density(y ~ group)
 

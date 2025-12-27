@@ -4,10 +4,12 @@
 \alias{print.simplified_ttest}
 \title{Print method for simplified t-test output}
 \usage{
-\method{print}{simplified_ttest}(x, ...)
+\method{print}{simplified_ttest}(x, quiet = FALSE, ...)
 }
 \arguments{
 \item{x}{An object of class \code{simplified_ttest}}
+
+\item{quiet}{Logical. If TRUE, suppresses missing value messages. Default is FALSE.}
 
 \item{...}{Additional arguments passed to print}
 }
