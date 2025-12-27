@@ -222,6 +222,10 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
       # Overall proportions: divide by sum of all cells
       cat("\nNote: Proportions for full data\n")
       total_sum <- sum(result, na.rm = TRUE)
+      
+      # Save original frequency table before converting to proportions
+      orig_freq <- result
+      
       result <- result / total_sum
       # Round to specified number of digits
       result <- round(result, digits = digits)
@@ -233,8 +237,9 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
         n_cols <- ncol(result)
         dimn <- dimnames(result)
         
-        # Calculate column totals (marginal proportions for columns)
-        col_totals <- colSums(result, na.rm = TRUE)
+        # Calculate column totals from original frequency table, then convert to proportions
+        col_totals_freq <- colSums(orig_freq, na.rm = TRUE)
+        col_totals <- col_totals_freq / total_sum
         col_totals <- round(col_totals, digits = digits)
         
         # TASK 8: Add summary row with column marginal proportions
@@ -242,8 +247,9 @@ table2 <- function(..., exclude = if (useNA == "no") c(NA, NaN),
         result <- rbind(result, summary_row)
         dimn[[1]] <- c(dimn[[1]], "Total")  # Add "Total" to row labels
         
-        # Calculate row totals (marginal proportions for rows)
-        row_totals <- rowSums(result[1:n_rows, , drop = FALSE], na.rm = TRUE)
+        # Calculate row totals from original frequency table, then convert to proportions
+        row_totals_freq <- rowSums(orig_freq, na.rm = TRUE)
+        row_totals <- row_totals_freq / total_sum
         row_totals <- round(row_totals, digits = digits)
         
         # TASK 8: Add summary column with row marginal proportions

@@ -139,3 +139,28 @@ test_that("table2 handles single vector", {
   expect_equal(sum(result), length(x))
 })
 
+test_that("table2 prop='ALL' Total row sums to 1.0", {
+  x <- c("A", "A", "B", "B", "A")
+  y <- c("X", "Y", "X", "Y", "X")
+  
+  # Test with prop='ALL' (overall proportions)
+  result <- table2(x, y, prop = "ALL")
+  
+  # Check that the Total row (excluding the bottom right 1.0) sums to 1.0
+  n_rows <- nrow(result)
+  n_cols <- ncol(result)
+  total_row <- result[n_rows, -n_cols, drop = FALSE]  # Total row excluding last column
+  total_row_sum <- sum(total_row, na.rm = TRUE)
+  
+  # Should sum to 1.0 (within rounding tolerance)
+  expect_equal(total_row_sum, 1.0, tolerance = 10^(-attr(result, "proportion_digits") - 1))
+  
+  # Also test with prop=0 (numeric equivalent)
+  result0 <- table2(x, y, prop = 0)
+  n_rows0 <- nrow(result0)
+  n_cols0 <- ncol(result0)
+  total_row0 <- result0[n_rows0, -n_cols0, drop = FALSE]
+  total_row_sum0 <- sum(total_row0, na.rm = TRUE)
+  expect_equal(total_row_sum0, 1.0, tolerance = 10^(-attr(result0, "proportion_digits") - 1))
+})
+
