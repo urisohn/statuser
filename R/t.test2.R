@@ -274,6 +274,9 @@ t.test2 <- function(..., digits = 3) {
   # Variables to pass to simplify_ttest for display
   extracted_y_var <- NULL
   extracted_group_var <- NULL
+  # Variables for paired tests
+  x_arg <- NULL
+  y_arg <- NULL
   
   # Try to extract data from the call for standard error calculation
   tryCatch({
@@ -414,6 +417,14 @@ t.test2 <- function(..., digits = 3) {
   if (!is.null(extracted_y_var) && !is.null(extracted_group_var)) {
     tt_result$y_var <- extracted_y_var
     tt_result$group_var <- extracted_group_var
+  }
+  # Pass original data for all two-sample tests (paired and unpaired) if available
+  # This allows the print function to check for missing values
+  is_paired <- grepl("Paired", tt_result$method, ignore.case = TRUE)
+  if (!is.null(x_arg) && !is.null(y_arg)) {
+    # For all two-sample tests, pass the original x and y vectors
+    tt_result$x_var <- x_arg
+    tt_result$y_var <- y_arg
   }
   # Pass se_diff for console display
   tt_result$se_diff <- se_diff
