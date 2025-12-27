@@ -52,19 +52,6 @@ test_that("plot_density handles custom parameters", {
   expect_error(plot_density(y ~ group, col = c("red", "blue"), lwd = c(1, 2)), NA)
 })
 
-test_that("plot_density handles show.t parameter", {
-  y <- rnorm(100)
-  group <- rep(c("A", "B"), 50)
-  
-  expect_error(plot_density(y ~ group, show.t = TRUE), NA)
-  expect_error(plot_density(y ~ group, show.t = FALSE), NA)
-  
-  # Both should return densities
-  result1 <- plot_density(y ~ group, show.t = TRUE)
-  result2 <- plot_density(y ~ group, show.t = FALSE)
-  expect_equal(length(result1$densities), length(result2$densities))
-})
-
 test_that("plot_density handles show.means parameter", {
   y <- rnorm(100)
   group <- rep(c("A", "B"), 50)

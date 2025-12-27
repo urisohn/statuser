@@ -30,9 +30,13 @@ validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", requ
   if (is.null(data_name)) {
     # Try to get it from parent frame (the calling function)
     parent_call <- sys.call(-1)
-    if (!is.null(parent_call)) {
-      parent_mc <- match.call(definition = sys.function(-1), call = parent_call)
-      if ("data" %in% names(parent_mc)) {
+    parent_func <- sys.function(-1)
+    if (!is.null(parent_call) && !is.null(parent_func)) {
+      # Wrap in tryCatch in case match.call fails (e.g., in test contexts)
+      parent_mc <- tryCatch({
+        match.call(definition = parent_func, call = parent_call)
+      }, error = function(e) NULL)
+      if (!is.null(parent_mc) && "data" %in% names(parent_mc)) {
         data_expr <- parent_mc$data
         if (!is.null(data_expr)) {
           data_name <- deparse(data_expr)
@@ -244,9 +248,13 @@ validate_table2 <- function(..., data = NULL, func_name = "table2", data_name = 
   if (is.null(data_name)) {
     # Try to get it from parent frame (the calling function)
     parent_call <- sys.call(-1)
-    if (!is.null(parent_call)) {
-      parent_mc <- match.call(definition = sys.function(-1), call = parent_call)
-      if ("data" %in% names(parent_mc)) {
+    parent_func <- sys.function(-1)
+    if (!is.null(parent_call) && !is.null(parent_func)) {
+      # Wrap in tryCatch in case match.call fails (e.g., in test contexts)
+      parent_mc <- tryCatch({
+        match.call(definition = parent_func, call = parent_call)
+      }, error = function(e) NULL)
+      if (!is.null(parent_mc) && "data" %in% names(parent_mc)) {
         data_expr <- parent_mc$data
         if (!is.null(data_expr)) {
           data_name <- deparse(data_expr)
