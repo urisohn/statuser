@@ -191,8 +191,8 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     n.nagroup = sum(isnagroup)
     n.nay = sum(isnay)
     
-    if (n.nagroup>0) message2("sohn::plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
-    if (n.nay>0) message2("sohn::plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+    if (n.nagroup>0) message2("plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
+    if (n.nay>0) message2("plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
     
     # Get unique groups and sort them alphabetically
     unique_x <- sort(unique(group))
@@ -203,7 +203,7 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     y=y[!isnay]
     
     n.nay = sum(isnay)
-    if (n.nay>0) message2("sohn::plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+    if (n.nay>0) message2("plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
     
     unique_x <- NULL
     n_groups <- 1
@@ -437,7 +437,8 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
         if (requireNamespace("quantreg", quietly = TRUE)) {
         # Show message about independence assumption (only once per session)
         if (is.null(getOption("sohn.plot_cdf.message.shown"))) {
-          message("The p-values are done with quantile regressions that assume all observations are independent")
+          message2("", appendLF = FALSE)  # Breakline
+          message2("The p-values are done with quantile regressions that assume all observations are independent", col='red')
           options(sohn.plot_cdf.message.shown = TRUE)
         }
         

@@ -130,6 +130,27 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
   x_name_raw <- validated$y_name_raw
   group_name_raw <- validated$group_name_raw
   
+  # Drop missing data
+  if (!is.null(group)) {
+    isnagroup=is.na(group)
+    isnax=is.na(x)
+    group=group[!isnagroup & !isnax]
+    x=x[!isnagroup & !isnax]
+    
+    n.nagroup = sum(isnagroup)
+    n.nax = sum(isnax)
+    
+    if (n.nagroup>0) message2("plot_freq() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
+    if (n.nax>0) message2("plot_freq() says: dropped ",n.nax," observations with missing '",x_name_raw,"' values",col='red4')
+  } else {
+    # No group variable - just drop missing x values
+    isnax=is.na(x)
+    x=x[!isnax]
+    
+    n.nax = sum(isnax)
+    if (n.nax>0) message2("plot_freq() says: dropped ",n.nax," observations with missing '",x_name_raw,"' values",col='red4')
+  }
+  
   # Handle 'group' grouping if specified
   if (!is.null(group)) {
     # Validate group argument

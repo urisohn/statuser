@@ -33,11 +33,11 @@ init_bottom_plot <- function(xlim, ylim, xlab, ylab, bg, cex.lab) {
                   if (k==1) return('steelblue')
           
           if (k == 2) {
-            return(c("firebrick", "steelblue"))
+            return(c("firebrick", "dodgerblue"))
           } else if (k == 3) {
-            return( c('firebrick','deepskyblue3','black'))
+            return( c('orange1','red1','red4'))
           } else if (k == 4) {
-            return(c('firebrick','orange2', 'deepskyblue3','black'))
+            return(c('orange1','red1', 'red4','black'))
           } else {
             # For 5+ groups, use a combination of colors that cycle
             # Start with the 4-group palette and add more colors
