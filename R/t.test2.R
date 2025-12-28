@@ -184,6 +184,9 @@ t.test2 <- function(..., digits = 3) {
   N2 <- NA_integer_
   # Variable to store correlation
   corr_value <- NA_real_
+  # Variables to store missing value counts (for warnings)
+  n_missing_1 <- 0L
+  n_missing_2 <- 0L
   
   # Try to extract data from the call for standard error calculation
   tryCatch({
@@ -198,6 +201,12 @@ t.test2 <- function(..., digits = 3) {
       if (length(unique_groups) == 2) {
         g1_data <- y_var[group_var == unique_groups[1]]
         g2_data <- y_var[group_var == unique_groups[2]]
+        
+        # Check for missing values and store counts
+        n_missing_g1 <- sum(is.na(g1_data))
+        n_missing_g2 <- sum(is.na(g2_data))
+        n_missing_1 <- n_missing_g1
+        n_missing_2 <- n_missing_g2
         
         # TASK 5: Calculate standard errors (sd / sqrt(n))
         se1 <- sd(g1_data, na.rm = TRUE) / sqrt(length(g1_data))
@@ -235,6 +244,12 @@ t.test2 <- function(..., digits = 3) {
       if (length(unique_groups) == 2) {
         g1_data <- y_var[group_var == unique_groups[1]]
         g2_data <- y_var[group_var == unique_groups[2]]
+        
+        # Check for missing values and store counts
+        n_missing_g1 <- sum(is.na(g1_data))
+        n_missing_g2 <- sum(is.na(g2_data))
+        n_missing_1 <- n_missing_g1
+        n_missing_2 <- n_missing_g2
         
         # TASK 5: Calculate standard errors (sd / sqrt(n))
         se1 <- sd(g1_data, na.rm = TRUE) / sqrt(length(g1_data))
@@ -321,6 +336,11 @@ t.test2 <- function(..., digits = 3) {
       }
       
       if (!is.null(x_arg) && is.numeric(x_arg)) {
+        # Check for missing values and store counts (only for non-paired tests)
+        if (!is_paired) {
+          n_missing_x <- sum(is.na(x_arg))
+          n_missing_1 <- n_missing_x
+        }
         se1 <- sd(x_arg, na.rm = TRUE) / sqrt(length(x_arg))
         N1 <- sum(!is.na(x_arg))
         # Calculate mean from data (for paired tests, estimate only has mean difference)
@@ -328,6 +348,11 @@ t.test2 <- function(..., digits = 3) {
       }
       
       if (!is.null(y_arg) && is.numeric(y_arg)) {
+        # Check for missing values and store counts (only for non-paired tests)
+        if (!is_paired) {
+          n_missing_y <- sum(is.na(y_arg))
+          n_missing_2 <- n_missing_y
+        }
         se2 <- sd(y_arg, na.rm = TRUE) / sqrt(length(y_arg))
         N2 <- sum(!is.na(y_arg))
         # Calculate mean from data (for paired tests, estimate only has mean difference)
@@ -378,16 +403,16 @@ t.test2 <- function(..., digits = 3) {
     diff_col_name <- paste0(col1_name, "-", col2_name)
     result_list[[diff_col_name]] <- diff
     # Add confidence interval columns after diff
+    result_list$ci <- level
     result_list$ci.L <- conf_intL
     result_list$ci.H <- conf_intH
-    result_list$ci.level <- level
   } else {
     # For one-sample test, diff is NA, so use default name
     result_list$diff <- diff
     # Add confidence interval columns for one-sample test as well
+    result_list$ci <- level
     result_list$ci.L <- conf_intL
     result_list$ci.H <- conf_intH
-    result_list$ci.level <- level
   }
   
   # Add other test statistics columns
@@ -425,6 +450,9 @@ t.test2 <- function(..., digits = 3) {
   display_df <- result_df
   
   # Check if group names are too long (>= 5 characters) and replace with "Group 1" and "Group 2"
+  # Store original names for potential message in print method
+  orig_col1 <- NULL
+  orig_col2 <- NULL
   if (!is.na(mean2) && nchar(col1_name) >= 5 && nchar(col2_name) >= 5) {
     # Store original names for message
     orig_col1 <- col1_name
@@ -449,10 +477,6 @@ t.test2 <- function(..., digits = 3) {
       }
     }
     names(display_df) <- new_names
-    
-    # Display mapping message
-    message2(paste0("Group 1: ", orig_col1), col = "blue")
-    message2(paste0("Group 2: ", orig_col2), col = "blue")
   }
   
   # Helper function to format values based on size
@@ -497,7 +521,7 @@ t.test2 <- function(..., digits = 3) {
       if (is.numeric(display_df[[col]])) {
         display_df[[col]] <- round(display_df[[col]], 0)
       }
-    } else if (col == "method" || col == "ci.level") {
+    } else if (col == "method" || col == "ci") {
       # Character columns, no formatting
       next
     } else if (is.numeric(display_df[[col]])) {
@@ -523,9 +547,27 @@ t.test2 <- function(..., digits = 3) {
   # Remove columns from display_df
   display_df <- display_df[, !names(display_df) %in% cols_to_remove, drop = FALSE]
   
-  print(display_df, row.names = FALSE)
+  # Store display information as attributes for print method
+  attr(result_df, "display_df") <- display_df
+  attr(result_df, "col1_name") <- col1_name
+  attr(result_df, "col2_name") <- col2_name
+  attr(result_df, "show_group_mapping") <- !is.null(orig_col1) && !is.null(orig_col2)
+  if (attr(result_df, "show_group_mapping")) {
+    attr(result_df, "orig_col1") <- orig_col1
+    attr(result_df, "orig_col2") <- orig_col2
+  }
+  # Store missing value counts for warnings (only for non-paired tests)
+  if (!is_paired) {
+    attr(result_df, "n_missing_1") <- n_missing_1
+    attr(result_df, "n_missing_2") <- n_missing_2
+  }
   
-  # Return dataframe invisibly (original, unrounded values)
-  return(invisible(result_df))
+  # Add class for print method
+  class(result_df) <- c("simplified_ttest", class(result_df))
+  
+  # Return dataframe visibly (original, unrounded values)
+  # When not assigned, R will automatically call print.simplified_ttest()
+  # When assigned, the print method won't be called
+  return(result_df)
 }
 
