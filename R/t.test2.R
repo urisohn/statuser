@@ -395,7 +395,6 @@ t.test2 <- function(..., digits = 3) {
   # Extract confidence level (e.g., 0.95 for 95% CI)
     conf_level <- if (!is.null(conf_int)) attr(conf_int, "conf.level") else NA_real_
     level <- if (!is.na(conf_level)) paste0(100 * conf_level, "%") else NA_character_
-    level_numeric <- if (!is.na(conf_level)) 100 * conf_level else NA_real_
   
   # TASK 4: EXTRACT COLUMN NAMES - Determine column names from variable names or group values
   # Initialize column names with defaults (will be overwritten if we can extract names)
@@ -692,14 +691,12 @@ t.test2 <- function(..., digits = 3) {
     result_list$ci <- level
     result_list$ci.L <- conf_intL
     result_list$ci.H <- conf_intH
-    result_list$level <- level_numeric
   } else {
     # For one-sample test, do NOT add diff column
     # Add confidence interval columns for one-sample test
     result_list$ci <- level
     result_list$ci.L <- conf_intL
     result_list$ci.H <- conf_intH
-    result_list$level <- level_numeric
   }
   
   # Add other test statistics columns

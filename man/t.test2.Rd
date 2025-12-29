@@ -13,7 +13,7 @@
 }
 \value{
 A dataframe (returned invisibly) with columns named after the variables
-  or group values, plus: diff, SE_diff, conf.intL, conf.intH, level, t, df, p.value, se1, se2, method
+  or group values, plus: diff, SE_diff, conf.intL, conf.intH, t, df, p.value, se1, se2, method
 }
 \description{
 Runs \code{\link[stats]{t.test}} and returns results as a dataframe
@@ -37,7 +37,6 @@ The dataframe contains:
   \item SE_diff: Standard error of the difference of means (NA for one-sample test)
   \item conf.intL: Lower bound of confidence interval
   \item conf.intH: Upper bound of confidence interval
-  \item level: Confidence level of the confidence interval (e.g., 95 for 95\%)
   \item t: t-statistic
   \item df: Degrees of freedom
   \item p.value: p-value
