@@ -337,3 +337,79 @@ validate_table2 <- function(..., data = NULL, func_name = "table2", data_name = 
   )
 }
 
+#' Validate Grouping Variable for t.test2()
+#'
+#' Validates that a grouping variable exists and has exactly 2 levels for t-test.
+#'
+#' @param group_var_name Character string. Name of the grouping variable (for error messages).
+#' @param data An optional data frame containing the variable.
+#' @param calling_env The environment in which to look for the variable if data is not provided.
+#' @param data_name Character string. Name of the data argument (for error messages).
+#'   If NULL, will attempt to infer from the call.
+#'
+#' @return The validated grouping variable (numeric or factor vector). Stops execution with an error message if validation fails.
+#'
+#' @keywords internal
+validate_t.test2 <- function(group_var_name, data = NULL, calling_env = parent.frame(), data_name = NULL) {
+  # Capture data name for error messages (before potentially overwriting)
+  # If data_name not provided, try to infer it from the call
+  if (is.null(data_name)) {
+    # Try to get it from parent frame (the calling function)
+    parent_call <- sys.call(-1)
+    parent_func <- sys.function(-1)
+    if (!is.null(parent_call) && !is.null(parent_func)) {
+      # Wrap in tryCatch in case match.call fails (e.g., in test contexts)
+      parent_mc <- tryCatch({
+        match.call(definition = parent_func, call = parent_call)
+      }, error = function(e) NULL)
+      if (!is.null(parent_mc) && "data" %in% names(parent_mc)) {
+        data_expr <- parent_mc$data
+        if (!is.null(data_expr)) {
+          data_name <- deparse(data_expr)
+          # Remove quotes if present
+          data_name <- gsub('^"|"$', '', data_name)
+        }
+      }
+    }
+    # Fallback to "data" if we couldn't determine it
+    if (is.null(data_name)) {
+      data_name <- "data"
+    }
+  }
+  
+  # Check if variable exists in data or environment
+  if (!is.null(data)) {
+    # Data provided: check if variable exists in data frame
+    if (!is.data.frame(data)) {
+      message2("t.test2() says: 'data' must be a data frame", col = "red", stop = TRUE)
+    }
+    
+    # Check if variable exists in data
+    if (!group_var_name %in% names(data)) {
+      message2(sprintf("t.test2() says: '%s' is not a variable in %s", group_var_name, data_name), col = "red", stop = TRUE)
+    }
+    
+    # Extract variable from data
+    group_var <- data[[group_var_name]]
+  } else {
+    # No data: check if variable exists before evaluating
+    group_exists <- exists(group_var_name, envir = calling_env, inherits = TRUE)
+    
+    if (!group_exists) {
+      message2(sprintf("t.test2() says: Could not find variable '%s'", group_var_name), col = "red", stop = TRUE)
+    }
+    
+    # Variable exists, now evaluate
+    group_var <- eval(as.name(group_var_name), envir = calling_env)
+  }
+  
+  # Validate grouping variable has exactly 2 levels
+  unique_groups <- unique(group_var)
+  n_levels <- length(unique_groups[!is.na(unique_groups)])
+  if (n_levels != 2) {
+    message2(sprintf("t.test2() says: The grouping variable '%s' has %d unique values, cannot run t-test (requires exactly 2 levels).", group_var_name, n_levels), col = "red", stop = TRUE)
+  }
+  
+  return(group_var)
+}
+
