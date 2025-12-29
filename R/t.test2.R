@@ -83,6 +83,79 @@ t.test2 <- function(..., digits = 3) {
     return(trimws(expr_str))
   }
   
+  # Helper function to run stats::t.test() with centralized error handling
+  # Handles formula vs non-formula syntax and provides consistent error messages
+  run_t_test <- function(call_args, calling_env = parent.frame(), modified_dots = NULL, dots_list = NULL) {
+    # If modified_dots is provided, use do.call (for formula conversions or special cases)
+    if (!is.null(modified_dots)) {
+      return(tryCatch({
+        do.call(stats::t.test, modified_dots)
+      }, error = function(e) {
+        handle_t_test_error(e, call_args, calling_env)
+      }))
+    }
+    
+    # Otherwise, use dots_list with do.call
+    if (!is.null(dots_list)) {
+      return(tryCatch({
+        do.call(stats::t.test, dots_list)
+      }, error = function(e) {
+        handle_t_test_error(e, call_args, calling_env)
+      }))
+    }
+    
+    # Fallback: should not happen, but provide error
+    stop("run_t_test: either modified_dots or dots_list must be provided")
+  }
+  
+  # Helper function to handle t.test errors and provide better error messages
+  handle_t_test_error <- function(e, call_args, calling_env) {
+    # Check if error is about object not found
+    if (grepl("object.*not found", e$message, ignore.case = TRUE)) {
+      # Try to extract variable name from error or formula
+      if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
+          as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
+        formula <- eval(call_args[[2]], envir = calling_env)
+        data_expr <- if ("data" %in% names(call_args)) call_args$data else NULL
+        data_arg <- if (!is.null(data_expr)) {
+          tryCatch({
+            eval(data_expr, envir = calling_env)
+          }, error = function(e2) {
+            if (grepl("object.*not found", e2$message, ignore.case = TRUE)) {
+              data_name <- deparse(data_expr)
+              data_name <- gsub('^"|"$', '', data_name)
+              message2(sprintf("t.test2() says: the dataframe '%s' does not exist", data_name), col = "red", stop = TRUE)
+            } else {
+              stop(e2)
+            }
+          })
+        } else NULL
+        data_name <- if (!is.null(data_expr)) {
+          name <- deparse(data_expr)
+          gsub('^"|"$', '', name)
+        } else NULL
+        
+        # Check both y and group variables
+        y_var_name <- extract_var_name(formula[[2]])
+        group_var_name <- extract_var_name(formula[[3]])
+        
+        if (!is.null(data_arg)) {
+          if (!y_var_name %in% names(data_arg)) {
+            message2(sprintf("t.test2() says: '%s' is not a variable in %s", y_var_name, data_name), col = "red", stop = TRUE)
+          }
+          if (!group_var_name %in% names(data_arg)) {
+            message2(sprintf("t.test2() says: '%s' is not a variable in %s", group_var_name, data_name), col = "red", stop = TRUE)
+          }
+        }
+      }
+      # If we can't determine which variable, re-throw original error
+      stop(e)
+    } else {
+      # Re-throw other errors
+      stop(e)
+    }
+  }
+  
   # Check if we have a single variable with data argument (e.g., t.test2(DV1, data=df1))
   # This needs special handling since t.test() doesn't support data argument for non-formula syntax
   # We need to check this BEFORE creating dots_list, which would try to evaluate DV1 and fail
@@ -132,7 +205,7 @@ t.test2 <- function(..., digits = 3) {
           }
         }
         # Call t.test with extracted variable
-        tt_result <- do.call(stats::t.test, modified_dots)
+        tt_result <- run_t_test(call_args = call_args, calling_env = calling_env, modified_dots = modified_dots)
         handled_single_var <- TRUE
       } else {
         # Variable not found in data frame
@@ -194,44 +267,10 @@ t.test2 <- function(..., digits = 3) {
           }
           
           # Call t.test with formula syntax
-          tt_result <- do.call(stats::t.test, modified_dots)
+          tt_result <- run_t_test(call_args = call_args, calling_env = calling_env, modified_dots = modified_dots)
         } else {
           # Standard case: pass through to t.test (with error handling for missing variables)
-          tt_result <- tryCatch({
-            stats::t.test(...)
-          }, error = function(e) {
-            # Check if error is about object not found
-            if (grepl("object.*not found", e$message, ignore.case = TRUE)) {
-              # Try to extract variable name from error or formula
-              if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
-                  as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
-                formula <- eval(call_args[[2]], envir = calling_env)
-                data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
-                data_name <- if ("data" %in% names(call_args)) {
-                  name <- deparse(call_args$data)
-                  gsub('^"|"$', '', name)
-                } else NULL
-                
-                # Check both y and group variables
-                y_var_name <- extract_var_name(formula[[2]])
-                group_var_name <- extract_var_name(formula[[3]])
-                
-                if (!is.null(data_arg)) {
-                  if (!y_var_name %in% names(data_arg)) {
-                    message2(sprintf("t.test2() says: '%s' is not a variable in %s", y_var_name, data_name), col = "red", stop = TRUE)
-                  }
-                  if (!group_var_name %in% names(data_arg)) {
-                    message2(sprintf("t.test2() says: '%s' is not a variable in %s", group_var_name, data_name), col = "red", stop = TRUE)
-                  }
-                }
-              }
-              # If we can't determine which variable, re-throw original error
-              stop(e)
-            } else {
-              # Re-throw other errors
-              stop(e)
-            }
-          })
+          tt_result <- run_t_test(call_args = call_args, calling_env = calling_env, dots_list = dots_list)
         }
       } else {
         # Check if it's formula syntax that needs validation
@@ -261,41 +300,7 @@ t.test2 <- function(..., digits = 3) {
           group_var <- validation_result$group_var
         }
         # Standard case: pass through to t.test (with error handling for missing variables)
-        tt_result <- tryCatch({
-          stats::t.test(...)
-        }, error = function(e) {
-          # Check if error is about object not found
-          if (grepl("object.*not found", e$message, ignore.case = TRUE)) {
-            # Try to extract variable name from error or formula
-            if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
-                as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
-              formula <- eval(call_args[[2]], envir = calling_env)
-              data_arg <- if ("data" %in% names(call_args)) safe_eval_data(call_args$data, calling_env) else NULL
-              data_name <- if ("data" %in% names(call_args)) {
-                name <- deparse(call_args$data)
-                gsub('^"|"$', '', name)
-              } else NULL
-              
-              # Check both y and group variables
-              y_var_name <- extract_var_name(formula[[2]])
-              group_var_name <- extract_var_name(formula[[3]])
-              
-              if (!is.null(data_arg)) {
-                if (!y_var_name %in% names(data_arg)) {
-                  message2(sprintf("t.test2() says: '%s' is not a variable in %s", y_var_name, data_name), col = "red", stop = TRUE)
-                }
-                if (!group_var_name %in% names(data_arg)) {
-                  message2(sprintf("t.test2() says: '%s' is not a variable in %s", group_var_name, data_name), col = "red", stop = TRUE)
-                }
-              }
-            }
-            # If we can't determine which variable, re-throw original error
-            stop(e)
-          } else {
-            # Re-throw other errors
-            stop(e)
-          }
-        })
+        tt_result <- run_t_test(call_args = call_args, calling_env = calling_env, dots_list = dots_list)
       }
     } else {
       # Check if it's formula syntax that needs validation
@@ -325,41 +330,7 @@ t.test2 <- function(..., digits = 3) {
         group_var <- validation_result$group_var
       }
       # Standard case: pass through to t.test (with error handling for missing variables)
-      tt_result <- tryCatch({
-        stats::t.test(...)
-      }, error = function(e) {
-        # Check if error is about object not found
-        if (grepl("object.*not found", e$message, ignore.case = TRUE)) {
-          # Try to extract variable name from error or formula
-          if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
-              as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
-            formula <- eval(call_args[[2]], envir = calling_env)
-            data_arg <- if ("data" %in% names(call_args)) safe_eval_data(call_args$data, calling_env) else NULL
-            data_name <- if ("data" %in% names(call_args)) {
-              name <- deparse(call_args$data)
-              gsub('^"|"$', '', name)
-            } else NULL
-            
-            # Check both y and group variables
-            y_var_name <- extract_var_name(formula[[2]])
-            group_var_name <- extract_var_name(formula[[3]])
-            
-            if (!is.null(data_arg)) {
-              if (!y_var_name %in% names(data_arg)) {
-                message2(sprintf("t.test2() says: '%s' is not a variable in %s", y_var_name, data_name), col = "red", stop = TRUE)
-              }
-              if (!group_var_name %in% names(data_arg)) {
-                message2(sprintf("t.test2() says: '%s' is not a variable in %s", group_var_name, data_name), col = "red", stop = TRUE)
-              }
-            }
-          }
-          # If we can't determine which variable, re-throw original error
-          stop(e)
-        } else {
-          # Re-throw other errors
-          stop(e)
-        }
-      })
+      tt_result <- run_t_test(call_args = call_args, calling_env = calling_env, dots_list = dots_list)
     }
   }
   
@@ -555,7 +526,19 @@ t.test2 <- function(..., digits = 3) {
             (!is.null(arg2_name) && arg2_name != "" && arg2_name != "digits")) {
           x_expr <- call_args[[2]]
           # Check if there's a data argument and x_expr is a symbol (variable name)
-          data_arg <- if ("data" %in% names(call_args)) safe_eval_data(call_args$data, calling_env) else NULL
+          data_arg <- if ("data" %in% names(call_args)) {
+            tryCatch({
+              eval(call_args$data, envir = calling_env)
+            }, error = function(e) {
+              if (grepl("object.*not found", e$message, ignore.case = TRUE)) {
+                data_name <- deparse(call_args$data)
+                data_name <- gsub('^"|"$', '', data_name)
+                message2(sprintf("t.test2() says: the dataframe '%s' does not exist", data_name), col = "red", stop = TRUE)
+              } else {
+                stop(e)
+              }
+            })
+          } else NULL
           if (!is.null(data_arg) && is.data.frame(data_arg) && is.symbol(x_expr)) {
             # Evaluate the variable name in the context of the data frame
             var_name <- as.character(x_expr)
