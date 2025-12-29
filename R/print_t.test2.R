@@ -55,12 +55,27 @@ print.t.test2 <- function(x, ...) {
   NA1 <- if (is.null(NA1) || is.na(NA1)) 0L else NA1
   NA2 <- if (is.null(NA2) || is.na(NA2)) 0L else NA2
   
-  # For one-sample tests, remove group2, diff, and N2 columns before formatting
+  # For one-sample tests, remove group2, diff column, and N2 columns before formatting
+  # For paired tests, remove N2 column (only show N)
   if (isTRUE(is_one_sample)) {
     # Get column names to remove
     name_2 <- attr(x, "name_2")
     name_N2 <- attr(x, "name_N2")
-    cols_to_remove <- c("diff")
+    name_1 <- attr(x, "name_1")
+    cols_to_remove <- c()
+    
+    # Find diff column (format: "group1-group2" or "1-2" if using Group 1/Group 2)
+    if (!is.null(name_1) && !is.null(name_2)) {
+      if (name_1 == "Group 1" && name_2 == "Group 2") {
+        diff_col_name <- "1-2"
+      } else {
+        diff_col_name <- paste0(name_1, "-", name_2)
+      }
+      if (diff_col_name %in% names(x)) {
+        cols_to_remove <- c(cols_to_remove, diff_col_name)
+      }
+    }
+    
     if (!is.null(name_2) && name_2 %in% names(x)) {
       cols_to_remove <- c(cols_to_remove, name_2)
     }
@@ -68,6 +83,14 @@ print.t.test2 <- function(x, ...) {
       cols_to_remove <- c(cols_to_remove, name_N2)
     }
     # Create display dataframe without these columns
+    display_x <- x[, !names(x) %in% cols_to_remove, drop = FALSE]
+  } else if (isTRUE(is_paired)) {
+    # For paired tests, remove N2 column (only show N)
+    name_N2 <- attr(x, "name_N2")
+    cols_to_remove <- c()
+    if (!is.null(name_N2) && name_N2 %in% names(x)) {
+      cols_to_remove <- c(cols_to_remove, name_N2)
+    }
     display_x <- x[, !names(x) %in% cols_to_remove, drop = FALSE]
   } else {
     display_x <- x
@@ -91,8 +114,8 @@ print.t.test2 <- function(x, ...) {
       if (col == "df") {
         # df always has 1 decimal
         display_x[[col]] <- round(display_x[[col]], 1)
-      } else if (grepl("^N", col) || grepl("^N ", col)) {
-        # N columns are integers
+      } else if (col == "N" || grepl("^N", col) || grepl("^N ", col) || grepl("^N\\(", col)) {
+        # N columns are integers (including plain "N" for paired tests)
         display_x[[col]] <- round(display_x[[col]], 0)
       } else if (col == "p.value") {
         # p.value is formatted separately using format_pvalue
@@ -115,8 +138,40 @@ print.t.test2 <- function(x, ...) {
   class(display_x) <- setdiff(class(display_x), "t.test2")
   print.data.frame(display_x, row.names = FALSE, ...)
   
-  # Check if this is a one-sample test
-  if (isTRUE(is_one_sample)) {
+  # Show group mapping if group names were replaced
+  show_group_mapping <- attr(x, "show_group_mapping")
+  if (isTRUE(show_group_mapping)) {
+    orig_group1 <- attr(x, "orig_group1")
+    orig_group2 <- attr(x, "orig_group2")
+    if (!is.null(orig_group1) && !is.null(orig_group2)) {
+      cat(paste0("\nGroup 1: ", orig_group1, "\n"))
+      cat(paste0("Group 2: ", orig_group2, "\n"))
+    }
+  }
+  
+  # Check if this is a paired test
+  if (isTRUE(is_paired)) {
+    # Paired test - show missing pairs
+    NA_paired <- attr(x, "NA_paired")
+    NA_paired <- if (is.null(NA_paired) || is.na(NA_paired)) 0L else NA_paired
+    
+    if (NA_paired > 0) {
+      # Get N value from original dataframe (before formatting)
+      N_col <- if ("N" %in% names(x)) "N" else names(x)[grepl("^N", names(x))][1]
+      if (length(N_col) > 0 && N_col %in% names(x)) {
+        N <- x[[N_col]]
+        total_pairs <- if (!is.na(N)) N + NA_paired else NA_integer_
+        
+        if (!is.na(total_pairs)) {
+          cat(paste0("\nnote: ", NA_paired, " of ", total_pairs, " pairs were dropped due to missing values\n"))
+        } else {
+          cat(paste0("\nnote: ", NA_paired, " pairs were dropped due to missing values\n"))
+        }
+      } else {
+        cat(paste0("\nnote: ", NA_paired, " pairs were dropped due to missing values\n"))
+      }
+    }
+  } else if (isTRUE(is_one_sample)) {
     # One-sample test - only show missing values for the single variable
     if (NA1 > 0) {
       # Get N value from original dataframe (before formatting)
@@ -147,9 +202,22 @@ print.t.test2 <- function(x, ...) {
       total_1 <- if (!is.na(N1)) N1 + NA1 else NA_integer_
       total_2 <- if (!is.na(N2)) N2 + NA2 else NA_integer_
       
-      # Use group names for the note
-      col1_name <- if (!is.null(name_1) && !is.na(name_1)) name_1 else "Group 1"
-      col2_name <- if (!is.null(name_2) && !is.na(name_2)) name_2 else "Group 2"
+      # Use original group names for the note (not "Group 1" and "Group 2")
+      orig_group1 <- attr(x, "orig_group1")
+      orig_group2 <- attr(x, "orig_group2")
+      show_group_mapping <- attr(x, "show_group_mapping")
+      
+      # If group names were replaced, use original names; otherwise use current names
+      if (isTRUE(show_group_mapping) && !is.null(orig_group1) && !is.null(orig_group2)) {
+        col1_name <- orig_group1
+        col2_name <- orig_group2
+      } else {
+        col1_name <- if (!is.null(name_1) && !is.na(name_1)) name_1 else group1
+        col2_name <- if (!is.null(name_2) && !is.na(name_2)) name_2 else group2
+        # Fallback to "Group 1" and "Group 2" if still empty
+        if (is.na(col1_name) || col1_name == "") col1_name <- "Group 1"
+        if (is.na(col2_name) || col2_name == "") col2_name <- "Group 2"
+      }
       
       # Check if group names are in "varname=value" format
       is_varname_format1 <- grepl("=", col1_name)
@@ -158,9 +226,9 @@ print.t.test2 <- function(x, ...) {
       # Warning about missing data
       if (!is.na(total_1) && !is.na(total_2)) {
         if (is_varname_format1 && is_varname_format2) {
-          # Format: "When x4=0 there are k out of N values missing, and when x4=1 there are k2 out of N2 values missing"
-          cat(paste0("\nnote: When ", col1_name, " there are ", NA1, " out of ", total_1, 
-                     " values missing, and when ", col2_name, " there are ", NA2, " out of ", total_2, " values missing\n"))
+          # Format: "When 'x4=0' there are k out of N values missing, and when 'x4=1' there are k2 out of N2 values missing"
+          cat(paste0("\nnote: When '", col1_name, "' there are ", NA1, " out of ", total_1, 
+                     " values missing, and when '", col2_name, "' there are ", NA2, " out of ", total_2, " values missing\n"))
         } else {
           # Original format
           cat(paste0("\nnote: '", col1_name, "' is missing ", NA1, " of ", total_1, 
@@ -168,13 +236,13 @@ print.t.test2 <- function(x, ...) {
         }
       } else if (!is.na(total_1)) {
         if (is_varname_format1) {
-          cat(paste0("\nnote: When ", col1_name, " there are ", NA1, " out of ", total_1, " values missing\n"))
+          cat(paste0("\nnote: When '", col1_name, "' there are ", NA1, " out of ", total_1, " values missing\n"))
         } else {
           cat(paste0("\nnote: '", col1_name, "' is missing ", NA1, " of ", total_1, " values\n"))
         }
       } else if (!is.na(total_2)) {
         if (is_varname_format2) {
-          cat(paste0("\nnote: When ", col2_name, " there are ", NA2, " out of ", total_2, " values missing\n"))
+          cat(paste0("\nnote: When '", col2_name, "' there are ", NA2, " out of ", total_2, " values missing\n"))
         } else {
           cat(paste0("\nnote: '", col2_name, "' is missing ", NA2, " of ", total_2, " values\n"))
         }

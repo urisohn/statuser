@@ -82,6 +82,7 @@ t.test2 <- function(...) {
   N2 <- NA_integer_
   NA1 <- NA_integer_
   NA2 <- NA_integer_
+  NA_paired <- NA_integer_  # Number of dropped pairs for paired tests
   corr_value <- NA_real_
   
   # Extract data to get group names and sample sizes
@@ -154,9 +155,10 @@ t.test2 <- function(...) {
         mean2 <- mean(g2_data, na.rm = TRUE)
         diff <- mean1 - mean2
         
-        # Calculate correlation for paired tests
+        # Calculate correlation for paired tests and track dropped pairs
         if (is_paired && length(g1_data) == length(g2_data)) {
           complete <- complete.cases(g1_data, g2_data)
+          NA_paired <- sum(!complete)  # Number of pairs dropped due to missing values
           if (sum(complete) > 1) {
             corr_value <- cor(g1_data[complete], g2_data[complete])
           }
@@ -238,11 +240,12 @@ t.test2 <- function(...) {
         mean2 <- mean(y_arg, na.rm = TRUE)
       }
       
-      # For paired tests, calculate correlation
+      # For paired tests, calculate correlation and track dropped pairs
       if (is_paired && !is.null(x_arg) && !is.null(y_arg) && 
           is.numeric(x_arg) && is.numeric(y_arg) &&
           length(x_arg) == length(y_arg)) {
         complete <- complete.cases(x_arg, y_arg)
+        NA_paired <- sum(!complete)  # Number of pairs dropped due to missing values
         if (sum(complete) > 1) {
           corr_value <- cor(x_arg[complete], y_arg[complete])
         }
@@ -269,6 +272,11 @@ t.test2 <- function(...) {
   #Decide suffix for groups
   ng <- if (!is.na(group1) && !is.na(group2)) max(nchar(group1), nchar(group2), na.rm = TRUE) else 0
   
+  # Store original group names before potentially replacing them
+  orig_group1 <- group1
+  orig_group2 <- group2
+  show_group_mapping <- FALSE
+  
   if (ng <= 8 && !is.na(group1) && !is.na(group2)) {
     name_1 <- group1
     name_2 <- group2
@@ -279,6 +287,7 @@ t.test2 <- function(...) {
     name_2 <- "Group 2"
     name_N1 <- "N1"
     name_N2 <- "N2"
+    show_group_mapping <- TRUE
   }
 
   # Build data.frame with dynamic column names
@@ -286,19 +295,34 @@ t.test2 <- function(...) {
   result_list <- list()
   result_list[[name_1]] <- mean1
   result_list[[name_2]] <- mean2
-  result_list$diff <- diff
+  
+  # Create diff column name as "group1-group2" (e.g., "men-women")
+  # If using "Group 1" and "Group 2", use "1-2" instead
+  if (!is.na(mean2)) {
+    if (name_1 == "Group 1" && name_2 == "Group 2") {
+      diff_col_name <- "1-2"
+    } else {
+      diff_col_name <- paste0(name_1, "-", name_2)
+    }
+    result_list[[diff_col_name]] <- diff
+  }
+  
   result_list$ci <- ci_level
   result_list$ci.L <- ci_L
   result_list$ci.H <- ci_H
   result_list$t <- t_stat
   result_list$df <- df
   result_list$p.value <- p_value
-  result_list[[name_N1]] <- N1
-  result_list[[name_N2]] <- N2
   
-  # Add correlation for paired tests
+  # For paired tests, only show one N column (both sample sizes are the same)
   if (is_paired) {
-    result_list$corr <- corr_value
+    result_list$N <- N1
+    # Add correlation for paired tests with name "r(var1,var2)"
+    corr_col_name <- paste0("r(", name_1, ",", name_2, ")")
+    result_list[[corr_col_name]] <- corr_value
+  } else {
+    result_list[[name_N1]] <- N1
+    result_list[[name_N2]] <- N2
   }
   
   # Convert list to dataframe
@@ -315,12 +339,18 @@ t.test2 <- function(...) {
   attr(result, "method_type") <- method_type
   attr(result, "NA1") <- NA1
   attr(result, "NA2") <- NA2
+  attr(result, "NA_paired") <- NA_paired
   attr(result, "group1") <- group1
   attr(result, "group2") <- group2
   attr(result, "name_1") <- name_1
   attr(result, "name_2") <- name_2
   attr(result, "name_N1") <- name_N1
   attr(result, "name_N2") <- name_N2
+  attr(result, "show_group_mapping") <- show_group_mapping
+  if (show_group_mapping) {
+    attr(result, "orig_group1") <- orig_group1
+    attr(result, "orig_group2") <- orig_group2
+  }
   
   # Add class for print method
   class(result) <- c("t.test2", class(result))
