@@ -83,21 +83,6 @@ t.test2 <- function(..., digits = 3) {
     return(trimws(expr_str))
   }
   
-  # Helper function to safely evaluate data argument and catch missing data frame errors
-  safe_eval_data <- function(data_expr, calling_env) {
-    tryCatch({
-      eval(data_expr, envir = calling_env)
-    }, error = function(e) {
-      if (grepl("object.*not found", e$message, ignore.case = TRUE)) {
-        data_name <- deparse(data_expr)
-        data_name <- gsub('^"|"$', '', data_name)
-        message2(sprintf("t.test2() says: '%s' does not exist", data_name), col = "red", stop = TRUE)
-      } else {
-        stop(e)
-      }
-    })
-  }
-  
   # Check if we have a single variable with data argument (e.g., t.test2(DV1, data=df1))
   # This needs special handling since t.test() doesn't support data argument for non-formula syntax
   # We need to check this BEFORE creating dots_list, which would try to evaluate DV1 and fail
@@ -109,12 +94,21 @@ t.test2 <- function(..., digits = 3) {
     first_arg_expr <- call_args[[2]]
     data_arg_expr <- call_args$data
     
-    # Evaluate data argument to get the data frame
-    data_arg <- safe_eval_data(data_arg_expr, calling_env)
+    # Validate data frame and variable existence
+    data_name <- deparse(data_arg_expr)
+    data_name <- gsub('^"|"$', '', data_name)
+    var_name <- as.character(first_arg_expr)
+    
+    validation_result <- validate_t.test2(
+      data_expr = data_arg_expr,
+      data_name = data_name,
+      var_names = var_name,
+      calling_env = calling_env
+    )
+    data_arg <- validation_result$data
     
     # Check if first argument is a symbol and data is a data frame
     if (is.symbol(first_arg_expr) && !is.null(data_arg) && is.data.frame(data_arg)) {
-      var_name <- as.character(first_arg_expr)
       if (var_name %in% names(data_arg)) {
         # Extract the variable from the data frame
         extracted_var <- data_arg[[var_name]]
@@ -212,7 +206,7 @@ t.test2 <- function(..., digits = 3) {
               if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
                   as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
                 formula <- eval(call_args[[2]], envir = calling_env)
-                data_arg <- if ("data" %in% names(call_args)) safe_eval_data(call_args$data, calling_env) else NULL
+                data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
                 data_name <- if ("data" %in% names(call_args)) {
                   name <- deparse(call_args$data)
                   gsub('^"|"$', '', name)
@@ -245,29 +239,26 @@ t.test2 <- function(..., digits = 3) {
             as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
           # Formula syntax: validate before calling t.test
           formula <- eval(call_args[[2]], envir = calling_env)
-          data_arg <- if ("data" %in% names(call_args)) safe_eval_data(call_args$data, calling_env) else NULL
           
           # Extract variable names from formula
           y_var_name <- extract_var_name(formula[[2]])
           group_var_name <- extract_var_name(formula[[3]])
-          data_name <- if ("data" %in% names(call_args)) deparse(call_args$data) else NULL
-          if (!is.null(data_name)) {
-            data_name <- gsub('^"|"$', '', data_name)
-          }
+          data_expr <- if ("data" %in% names(call_args)) call_args$data else NULL
+          data_name <- if (!is.null(data_expr)) {
+            name <- deparse(data_expr)
+            gsub('^"|"$', '', name)
+          } else NULL
           
-          # Validate y variable exists
-          if (!is.null(data_arg)) {
-            if (!y_var_name %in% names(data_arg)) {
-              message2(sprintf("t.test2() says: '%s' is not a variable in %s", y_var_name, data_name), col = "red", stop = TRUE)
-            }
-          } else {
-            if (!exists(y_var_name, envir = calling_env, inherits = TRUE)) {
-              message2(sprintf("t.test2() says: Could not find variable '%s'", y_var_name), col = "red", stop = TRUE)
-            }
-          }
-          
-          # Validate and extract grouping variable (validation happens inside validate_t.test2)
-          group_var <- validate_t.test2(group_var_name, data = data_arg, calling_env = calling_env, data_name = data_name)
+          # Validate data frame, variables, and grouping variable
+          validation_result <- validate_t.test2(
+            data_expr = data_expr,
+            data_name = data_name,
+            var_names = c(y_var_name, group_var_name),
+            group_var_name = group_var_name,
+            calling_env = calling_env
+          )
+          data_arg <- validation_result$data
+          group_var <- validation_result$group_var
         }
         # Standard case: pass through to t.test (with error handling for missing variables)
         tt_result <- tryCatch({
@@ -312,29 +303,26 @@ t.test2 <- function(..., digits = 3) {
           as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
         # Formula syntax: validate before calling t.test
         formula <- eval(call_args[[2]], envir = calling_env)
-        data_arg <- if ("data" %in% names(call_args)) safe_eval_data(call_args$data, calling_env) else NULL
         
         # Extract variable names from formula
         y_var_name <- extract_var_name(formula[[2]])
         group_var_name <- extract_var_name(formula[[3]])
-        data_name <- if ("data" %in% names(call_args)) deparse(call_args$data) else NULL
-        if (!is.null(data_name)) {
-          data_name <- gsub('^"|"$', '', data_name)
-        }
+        data_expr <- if ("data" %in% names(call_args)) call_args$data else NULL
+        data_name <- if (!is.null(data_expr)) {
+          name <- deparse(data_expr)
+          gsub('^"|"$', '', name)
+        } else NULL
         
-        # Validate y variable exists
-        if (!is.null(data_arg)) {
-          if (!y_var_name %in% names(data_arg)) {
-            message2(sprintf("t.test2() says: '%s' is not a variable in %s", y_var_name, data_name), col = "red", stop = TRUE)
-          }
-        } else {
-          if (!exists(y_var_name, envir = calling_env, inherits = TRUE)) {
-            message2(sprintf("t.test2() says: Could not find variable '%s'", y_var_name), col = "red", stop = TRUE)
-          }
-        }
-        
-        # Validate and extract grouping variable (validation happens inside validate_t.test2)
-        group_var <- validate_t.test2(group_var_name, data = data_arg, calling_env = calling_env, data_name = data_name)
+        # Validate data frame, variables, and grouping variable
+        validation_result <- validate_t.test2(
+          data_expr = data_expr,
+          data_name = data_name,
+          var_names = c(y_var_name, group_var_name),
+          group_var_name = group_var_name,
+          calling_env = calling_env
+        )
+        data_arg <- validation_result$data
+        group_var <- validation_result$group_var
       }
       # Standard case: pass through to t.test (with error handling for missing variables)
       tt_result <- tryCatch({
@@ -484,31 +472,33 @@ t.test2 <- function(..., digits = 3) {
       # TASK 4 & 5: Formula syntax - Extract group values for column names and calculate SEs
       # Formula syntax: y ~ group
       formula <- eval(call_args[[2]], envir = calling_env)
-      data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
       
       # Extract variable names from formula
       y_var_name <- extract_var_name(formula[[2]])
       group_var_name <- extract_var_name(formula[[3]])
-      data_name <- if ("data" %in% names(call_args)) deparse(call_args$data) else NULL
-      if (!is.null(data_name)) {
-        data_name <- gsub('^"|"$', '', data_name)
-      }
+      data_expr <- if ("data" %in% names(call_args)) call_args$data else NULL
+      data_name <- if (!is.null(data_expr)) {
+        name <- deparse(data_expr)
+        gsub('^"|"$', '', name)
+      } else NULL
       
-      # Validate and extract y variable
+      # Validate data frame, variables, and grouping variable
+      validation_result <- validate_t.test2(
+        data_expr = data_expr,
+        data_name = data_name,
+        var_names = c(y_var_name, group_var_name),
+        group_var_name = group_var_name,
+        calling_env = calling_env
+      )
+      data_arg <- validation_result$data
+      group_var <- validation_result$group_var
+      
+      # Extract y variable (already validated to exist)
       if (!is.null(data_arg)) {
-        if (!y_var_name %in% names(data_arg)) {
-          message2(sprintf("t.test2() says: '%s' is not a variable in %s", y_var_name, data_name), col = "red", stop = TRUE)
-        }
         y_var <- data_arg[[y_var_name]]
       } else {
-        if (!exists(y_var_name, envir = calling_env, inherits = TRUE)) {
-          message2(sprintf("t.test2() says: Could not find variable '%s'", y_var_name), col = "red", stop = TRUE)
-        }
-        y_var <- eval(as.name(y_var_name), envir = calling_env)
+        y_var <- get(y_var_name, envir = calling_env, inherits = TRUE)
       }
-      
-      # Validate and extract grouping variable (validation happens inside validate_t.test2)
-      group_var <- validate_t.test2(group_var_name, data = data_arg, calling_env = calling_env, data_name = data_name)
       
       # Calculate standard errors for each group and get group values for column names
       unique_groups <- sort(unique(group_var))
