@@ -151,14 +151,33 @@ print.t.test2 <- function(x, ...) {
       col1_name <- if (!is.null(name_1) && !is.na(name_1)) name_1 else "Group 1"
       col2_name <- if (!is.null(name_2) && !is.na(name_2)) name_2 else "Group 2"
       
+      # Check if group names are in "varname=value" format
+      is_varname_format1 <- grepl("=", col1_name)
+      is_varname_format2 <- grepl("=", col2_name)
+      
       # Warning about missing data
       if (!is.na(total_1) && !is.na(total_2)) {
-        cat(paste0("\nnote: '", col1_name, "' is missing ", NA1, " of ", total_1, 
-                   " values, and '", col2_name, "' is missing ", NA2, " of ", total_2, "\n"))
+        if (is_varname_format1 && is_varname_format2) {
+          # Format: "When x4=0 there are k out of N values missing, and when x4=1 there are k2 out of N2 values missing"
+          cat(paste0("\nnote: When ", col1_name, " there are ", NA1, " out of ", total_1, 
+                     " values missing, and when ", col2_name, " there are ", NA2, " out of ", total_2, " values missing\n"))
+        } else {
+          # Original format
+          cat(paste0("\nnote: '", col1_name, "' is missing ", NA1, " of ", total_1, 
+                     " values, while '", col2_name, "' is missing ", NA2, " of ", total_2, "\n"))
+        }
       } else if (!is.na(total_1)) {
-        cat(paste0("\nnote: '", col1_name, "' is missing ", NA1, " of ", total_1, " values\n"))
+        if (is_varname_format1) {
+          cat(paste0("\nnote: When ", col1_name, " there are ", NA1, " out of ", total_1, " values missing\n"))
+        } else {
+          cat(paste0("\nnote: '", col1_name, "' is missing ", NA1, " of ", total_1, " values\n"))
+        }
       } else if (!is.na(total_2)) {
-        cat(paste0("\nnote: '", col2_name, "' is missing ", NA2, " of ", total_2, " values\n"))
+        if (is_varname_format2) {
+          cat(paste0("\nnote: When ", col2_name, " there are ", NA2, " out of ", total_2, " values missing\n"))
+        } else {
+          cat(paste0("\nnote: '", col2_name, "' is missing ", NA2, " of ", total_2, " values\n"))
+        }
       }
     }
   }

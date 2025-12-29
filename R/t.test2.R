@@ -124,13 +124,13 @@ t.test2 <- function(...) {
       # Get unique groups
       unique_groups <- sort(unique(group_var))
       if (length(unique_groups) == 2) {
-        # Check if groups are single integers
+        # Check if groups are integers
         g1_val <- unique_groups[1]
         g2_val <- unique_groups[2]
         
-        # Check if both are integers (numeric or can be coerced to integer)
-        is_g1_int <- is.numeric(g1_val) && g1_val == as.integer(g1_val) && abs(g1_val) < 10
-        is_g2_int <- is.numeric(g2_val) && g2_val == as.integer(g2_val) && abs(g2_val) < 10
+        # Check if both are integers (numeric and equal to their integer value)
+        is_g1_int <- is.numeric(g1_val) && !is.na(g1_val) && g1_val == as.integer(g1_val)
+        is_g2_int <- is.numeric(g2_val) && !is.na(g2_val) && g2_val == as.integer(g2_val)
         
         if (is_g1_int && is_g2_int) {
           # Format as "varname=value"
