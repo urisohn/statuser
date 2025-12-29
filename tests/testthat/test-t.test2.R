@@ -522,3 +522,51 @@ test_that("t.test2 uses 'mean' column name for one-sample tests", {
   expect_true(grepl("One sample", output_text, fixed = TRUE))
 })
 
+test_that("t.test2 correctly extracts group names and sample sizes when data= is specified but variables exist in environment", {
+  # This test verifies the fix for the bug where t.test2() would miss group names
+  # and sample sizes when data= is specified but variables are found in the environment
+  
+  set.seed(12)
+  n <- 100
+  
+  # Create variables in the environment
+  y_env <- round(rnorm(n * 2, mean = 100, sd = 4), 0)
+  group_env <- rep(c("A", "B"), n)
+  
+  # Create a different data frame (with different data)
+  df <- data.frame(
+    y = round(rnorm(n * 2, mean = 50, sd = 2), 0),  # Different mean and SD
+    group = rep(c("X", "Y"), n)  # Different group names
+  )
+  
+  # When data= is specified but variables exist in environment,
+  # t.test() uses environment variables (standard R behavior)
+  # t.test2() should also use environment variables and correctly extract
+  # group names and sample sizes from the environment variables
+  
+  result <- t.test2(y_env ~ group_env, data = df)
+  
+  # Should use environment variables (A and B, not X and Y)
+  expect_true("A" %in% names(result))
+  expect_true("B" %in% names(result))
+  expect_false("X" %in% names(result))
+  expect_false("Y" %in% names(result))
+  
+  # Should have correct sample sizes from environment variables
+  expect_true("N(A)" %in% names(result))
+  expect_true("N(B)" %in% names(result))
+  expect_equal(result[["N(A)"]], n)
+  expect_equal(result[["N(B)"]], n)
+  
+  # Should have correct group names in attributes
+  expect_equal(attr(result, "group1"), "A")
+  expect_equal(attr(result, "group2"), "B")
+  
+  # Verify the test actually ran on environment data (not data frame data)
+  # The means should match environment data, not data frame data
+  # Since we set seed, we can verify approximate values
+  expect_true(result[["A"]] > 90)  # Environment mean ~100
+  expect_true(result[["B"]] > 90)  # Environment mean ~100
+  # Data frame mean would be ~50, so this confirms we used environment data
+})
+

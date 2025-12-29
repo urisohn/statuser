@@ -107,6 +107,40 @@ t.test2 <- function(...) {
     return(trimws(expr_str))
   }
   
+  # Helper function to warn if variables were read from environment when data= was specified
+  # Takes a list of variable info: list(list(name="var1", from_env=TRUE, from_data=FALSE), ...)
+  warn_if_env_vars <- function(var_info_list, data_arg, call_args) {
+    if (is.null(data_arg) || !is.data.frame(data_arg)) {
+      return(invisible(NULL))
+    }
+    
+    # Collect variables that need warnings
+    impacted_vars <- character(0)
+    for (var_info in var_info_list) {
+      if (!is.null(var_info$name) && isTRUE(var_info$from_env) && !isTRUE(var_info$from_data)) {
+        impacted_vars <- c(impacted_vars, var_info$name)
+      }
+    }
+    
+    # If any variables are impacted, report them
+    if (length(impacted_vars) > 0) {
+      data_name <- if ("data" %in% names(call_args)) {
+        deparse(call_args$data)
+      } else {
+        "data"
+      }
+      
+      message2("t.test2() says:", col = "red", font = 2)
+      
+      var_list <- paste0("'", impacted_vars, "'", collapse = ", ")
+      if (length(impacted_vars) == 1) {
+        message2(sprintf("Warning: you specified %s and data='%s' but that variable is not in '%s'. The t-test was run reading, instead, data from a standalone vector with that name in the R environment.", var_list, data_name, data_name), col = "red")
+      } else {
+        message2(sprintf("Warning: you specified %s and data='%s' but those variables are not in '%s'.\nThe t-test was run reading, instead, data from standalone vectors with those names in the R environment.", var_list, data_name, data_name), col = "red")
+      }
+    }
+  }
+  
   # Try to extract data and group names
   tryCatch({
     # Check if it's formula syntax
@@ -121,13 +155,39 @@ t.test2 <- function(...) {
       group_var_name <- extract_var_name(formula[[3]])
       
       # Extract y and group variables
-      if (!is.null(data_arg)) {
+      # Match t.test() behavior: check environment first, then data frame
+      # This is important because t.test() uses environment variables if they exist,
+      # even when data= is specified
+      y_from_env <- exists(y_var_name, envir = calling_env, inherits = TRUE)
+      y_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && y_var_name %in% names(data_arg)
+      
+      if (y_from_env) {
+        y_var <- eval(as.name(y_var_name), envir = calling_env)
+      } else if (y_from_data) {
         y_var <- data_arg[[y_var_name]]
+      } else {
+        y_var <- eval(as.name(y_var_name), envir = calling_env)  # Will throw error if not found
+      }
+      
+      group_from_env <- exists(group_var_name, envir = calling_env, inherits = TRUE)
+      group_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && group_var_name %in% names(data_arg)
+      
+      if (group_from_env) {
+        group_var <- eval(as.name(group_var_name), envir = calling_env)
+      } else if (group_from_data) {
         group_var <- data_arg[[group_var_name]]
       } else {
-        y_var <- eval(as.name(y_var_name), envir = calling_env)
-        group_var <- eval(as.name(group_var_name), envir = calling_env)
+        group_var <- eval(as.name(group_var_name), envir = calling_env)  # Will throw error if not found
       }
+      
+      # Warn if data= is specified but variables were read from environment instead
+      warn_if_env_vars(
+        list(
+          list(name = y_var_name, from_env = y_from_env, from_data = y_from_data),
+          list(name = group_var_name, from_env = group_from_env, from_data = group_from_data)
+        ),
+        data_arg, call_args
+      )
       
       # Get unique groups
       unique_groups <- sort(unique(group_var))
@@ -177,16 +237,35 @@ t.test2 <- function(...) {
       y_arg <- NULL
       x_expr <- NULL
       y_expr <- NULL
+      x_from_env <- FALSE
+      x_from_data <- FALSE
+      y_from_env <- FALSE
+      y_from_data <- FALSE
+      x_var_name <- NULL
+      y_var_name <- NULL
+      data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
       
       # Find x and y in the call
       if ("x" %in% names(call_args)) {
         x_arg <- eval(call_args$x, envir = calling_env)
         x_expr <- call_args$x
+        # For named arguments, assume they come from environment (they're evaluated directly)
+        if (is.symbol(x_expr)) {
+          x_var_name <- as.character(x_expr)
+          x_from_env <- exists(x_var_name, envir = calling_env, inherits = TRUE)
+          x_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && x_var_name %in% names(data_arg)
+        }
       }
       
       if ("y" %in% names(call_args)) {
         y_arg <- eval(call_args$y, envir = calling_env)
         y_expr <- call_args$y
+        # For named arguments, assume they come from environment (they're evaluated directly)
+        if (is.symbol(y_expr)) {
+          y_var_name <- as.character(y_expr)
+          y_from_env <- exists(y_var_name, envir = calling_env, inherits = TRUE)
+          y_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && y_var_name %in% names(data_arg)
+        }
       }
       
       # If not found as named arguments, try positional arguments
@@ -194,14 +273,19 @@ t.test2 <- function(...) {
         arg2_name <- names(call_args)[2]
         if (is.null(arg2_name) || arg2_name == "") {
           x_expr <- call_args[[2]]
-          # Check if there's a data argument and x_expr is a symbol
-          data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
-          if (!is.null(data_arg) && is.data.frame(data_arg) && is.symbol(x_expr)) {
-            var_name <- as.character(x_expr)
-            if (var_name %in% names(data_arg)) {
-              x_arg <- data_arg[[var_name]]
-            } else {
+          
+          if (is.symbol(x_expr)) {
+            x_var_name <- as.character(x_expr)
+            # Match t.test() behavior: check environment first, then data frame
+            x_from_env <- exists(x_var_name, envir = calling_env, inherits = TRUE)
+            x_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && x_var_name %in% names(data_arg)
+            
+            if (x_from_env) {
               x_arg <- eval(x_expr, envir = calling_env)
+            } else if (x_from_data) {
+              x_arg <- data_arg[[x_var_name]]
+            } else {
+              x_arg <- eval(x_expr, envir = calling_env)  # Will throw error if not found
             }
           } else {
             x_arg <- eval(x_expr, envir = calling_env)
@@ -213,9 +297,34 @@ t.test2 <- function(...) {
         arg3_name <- names(call_args)[3]
         if (is.null(arg3_name) || arg3_name == "") {
           y_expr <- call_args[[3]]
-          y_arg <- eval(y_expr, envir = calling_env)
+          
+          if (is.symbol(y_expr)) {
+            y_var_name <- as.character(y_expr)
+            # Match t.test() behavior: check environment first, then data frame
+            y_from_env <- exists(y_var_name, envir = calling_env, inherits = TRUE)
+            y_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && y_var_name %in% names(data_arg)
+            
+            if (y_from_env) {
+              y_arg <- eval(y_expr, envir = calling_env)
+            } else if (y_from_data) {
+              y_arg <- data_arg[[y_var_name]]
+            } else {
+              y_arg <- eval(y_expr, envir = calling_env)  # Will throw error if not found
+            }
+          } else {
+            y_arg <- eval(y_expr, envir = calling_env)
+          }
         }
       }
+      
+      # Warn if data= is specified but variables were read from environment instead
+      warn_if_env_vars(
+        list(
+          list(name = x_var_name, from_env = x_from_env, from_data = x_from_data),
+          list(name = y_var_name, from_env = y_from_env, from_data = y_from_data)
+        ),
+        data_arg, call_args
+      )
       
       # Extract group names (only for two-sample tests)
       if (!is_one_sample) {
