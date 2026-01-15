@@ -12,7 +12,8 @@ table2(
   dnn = NULL,
   deparse.level = 1,
   prop = NULL,
-  digits = 3
+  digits = 3,
+  chi = FALSE
 )
 }
 \arguments{
@@ -45,12 +46,21 @@ If \code{NULL} (default), returns frequency counts.}
 \item{digits}{Number of decimal places to display when \code{prop} is specified.
 Default is 3. Values are displayed as proportions without leading zero (e.g., .100, .110, .111).
 Only applies when \code{prop} is not \code{NULL}.}
+
+\item{chi}{Logical. If \code{TRUE}, performs a chi-square test of independence
+on the frequency table and reports the results in APA format after the tables.
+Default is \code{FALSE}.}
 }
 \value{
-A contingency table (an object of class "table") with enhanced
-  dimnames when variables come from a dataframe. If \code{prop} is specified,
-  the table contains proportions (between 0 and 1) instead of counts, and
-  values are displayed without leading zero (e.g., .100 instead of 0.100).
+A list (object of class "table2") with the following components:
+  \itemize{
+    \item \code{freq}: The frequency table (always present)
+    \item \code{prop}: The proportion table (only if \code{prop} is specified)
+    \item \code{chisq}: The chi-square test result (only if \code{chi=TRUE})
+  }
+  Tables have enhanced dimnames when variables come from a dataframe.
+  If \code{prop} is specified, the proportion table contains values between 0 and 1,
+  displayed without leading zero (e.g., .100 instead of 0.100).
 }
 \description{
 Identical to base R's \code{table()}, except that when tabulating two or three variables
@@ -96,5 +106,8 @@ table2(df$group, df$status, prop = 1, digits = 3)  # Row proportions with 3 deci
 
 # Using data argument with unquoted variable names
 table2(group, status, data = df, prop = "col")
+
+# Table with chi-square test
+table2(df$group, df$status, chi = TRUE)
 
 }

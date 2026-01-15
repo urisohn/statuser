@@ -16,7 +16,7 @@
           
       #While developing:
          packageStartupMessage ("#######################################################\n",
-                              "This Version 2026 01 14 - 04.53PM\n" )
+                              "This Version 2026 01 15 - 10.21AM\n" )
 
 
   invisible()

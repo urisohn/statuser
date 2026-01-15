@@ -182,8 +182,10 @@ test_that("table2 prop='ALL' Total row sums to 1.0", {
 })
 
 test_that("table2 chi parameter returns chi-square test", {
-  x <- c("A", "A", "B", "B", "A", "B")
-  y <- c("X", "Y", "X", "Y", "X", "Y")
+  # Use larger sample to avoid chi-squared approximation warning
+  set.seed(123)
+  x <- sample(c("A", "B"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
   
   # Without chi test
   result_no_chi <- table2(x, y)

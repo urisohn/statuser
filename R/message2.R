@@ -257,7 +257,8 @@ message2 <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = TRUE
   if (appendLF) {
     message(msg_obj)
   } else {
-    message(msg_obj, appendLF = FALSE)
+    # Use cat to stderr for no newline (message() always adds newline)
+    cat(msg, file = stderr())
   }
   
   # Stop execution if requested (without printing "Error:")
