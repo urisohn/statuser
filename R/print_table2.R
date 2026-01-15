@@ -34,6 +34,11 @@ print.table2 <- function(x, ...) {
     attr(freq_table, "is_frequency") <- TRUE
     # Ensure it's NOT marked as proportion
     attr(freq_table, "is_proportion") <- FALSE
+    # Copy chi_test attribute from the proportion table to freq_table so it prints after frequency table
+    chi_test_from_prop <- attr(x, "chi_test")
+    if (!is.null(chi_test_from_prop)) {
+      attr(freq_table, "chi_test") <- chi_test_from_prop
+    }
     # Add class for custom printing if it has the right structure
     if (length(dim(freq_table)) == 2 || length(dim(freq_table)) == 3) {
       freq_dimn <- dimnames(freq_table)
@@ -45,19 +50,21 @@ print.table2 <- function(x, ...) {
       }
     }
     # Print header for frequency table
-    cat("\nTable 1. Frequencies\n")
-    # Print the frequency table
+    cat("\n1. Frequencies")
+    # Print the frequency table (this will also print the chi-square test)
     print.table2(freq_table, ...)
     
     # Print header for proportion table
-    cat("\nTable 2. ")
+    cat("\n2. ")
     if (prop_type == 0) {
-      cat("Relative frequencies\n")
+      cat("Relative frequencies")
     } else if (prop_type == 1) {
-      cat("Relative frequencies by '", var1_name, "'\n", sep = "")
+      cat("Relative frequencies by '", var1_name, "'", sep = "")
     } else if (prop_type == 2) {
-      cat("Relative frequencies by '", var2_name, "'\n", sep = "")
+      cat("Relative frequencies by '", var2_name, "'", sep = "")
     }
+    # Remove chi_test attribute from proportion table so it doesn't print again
+    attr(x, "chi_test") <- NULL
   }
   
   # Handle 3D tables
@@ -100,6 +107,48 @@ print.table2 <- function(x, ...) {
       print.table2(slice, ...)
     }
     
+    return(invisible(x))
+  }
+  
+  # Handle 1D tables
+  if (n_dims == 1) {
+    # For 1D tables, use default print but then add chi-square test if available
+    # Check if we have chi_test attribute
+    chi_test <- attr(x, "chi_test")
+    if (!is.null(chi_test) && !is.null(chi_test$statistic) && !is.null(chi_test$p.value)) {
+      # Print the table using default method
+      NextMethod()
+      # Then print chi-square test with label (left-aligned)
+      cat("\nChi-squared test, null: equality of proportions\n")
+      chi_stat <- as.numeric(chi_test$statistic)
+      chi_df <- as.numeric(chi_test$parameter)
+      chi_p <- as.numeric(chi_test$p.value)
+      
+      chi_stat_formatted <- if (!is.na(chi_stat)) sprintf("%.2f", round(chi_stat, 2)) else "NA"
+      chi_df_formatted <- if (!is.na(chi_df)) sprintf("%.0f", round(chi_df, 0)) else "NA"
+      
+      # Format p-value using format_pvalue (same approach as t.test2)
+      chi_p_formatted <- if (!is.na(chi_p)) {
+        p_str <- format_pvalue(chi_p, include_p = TRUE)
+        # format_pvalue returns "p = .05", "p < .0001", or "p > .9999" format
+        # Remove spaces to get "p=.05", "p<.0001", or "p>.9999"
+        p_str <- gsub(" = ", "=", p_str)
+        p_str <- gsub(" < ", "<", p_str)
+        p_str <- gsub(" > ", ">", p_str)
+        p_str
+      } else {
+        "p=NA"
+      }
+      
+      # Create APA formatted string: χ²(df)=value, p=value
+      apa_string <- paste0("χ²(", chi_df_formatted, ")=", chi_stat_formatted, ", ", chi_p_formatted)
+      
+      # Print left-aligned APA formatting
+      cat(paste0("\n", apa_string, "\n"))
+    } else {
+      # No chi-square test, just use default print
+      NextMethod()
+    }
     return(invisible(x))
   }
   
@@ -243,6 +292,40 @@ print.table2 <- function(x, ...) {
   }
   
   cat("\n")
+  
+  # Print chi-square test result if available
+  chi_test <- attr(x, "chi_test")
+  if (!is.null(chi_test) && !is.null(chi_test$statistic) && !is.null(chi_test$p.value)) {
+    # Print header for 2D tables (independence test)
+    cat("Chi-squared test, null: independence\n")
+    # Format chi-square statistic to 2 decimal places
+    chi_stat <- as.numeric(chi_test$statistic)
+    chi_df <- as.numeric(chi_test$parameter)
+    chi_p <- as.numeric(chi_test$p.value)
+    
+    chi_stat_formatted <- if (!is.na(chi_stat)) sprintf("%.2f", round(chi_stat, 2)) else "NA"
+    chi_df_formatted <- if (!is.na(chi_df)) sprintf("%.0f", round(chi_df, 0)) else "NA"
+    
+    # Format p-value using format_pvalue (same approach as t.test2)
+    chi_p_formatted <- if (!is.na(chi_p)) {
+      p_str <- format_pvalue(chi_p, include_p = TRUE)
+      # format_pvalue returns "p = .05", "p < .0001", or "p > .9999" format
+      # Remove spaces to get "p=.05", "p<.0001", or "p>.9999"
+      p_str <- gsub(" = ", "=", p_str)
+      p_str <- gsub(" < ", "<", p_str)
+      p_str <- gsub(" > ", ">", p_str)
+      p_str
+    } else {
+      "p=NA"
+    }
+    
+    # Create APA formatted string: χ²(df)=value, p=value
+    # Use Unicode chi-square symbol
+    apa_string <- paste0("χ²(", chi_df_formatted, ")=", chi_stat_formatted, ", ", chi_p_formatted)
+    
+    # Print left-aligned APA formatting
+    cat(paste0(apa_string, "\n"))
+  }
   
   invisible(x)
 }

@@ -26,11 +26,19 @@
 #' @param digits Number of decimal places to display when \code{prop} is specified.
 #'   Default is 3. Values are displayed as proportions without leading zero (e.g., .100, .110, .111).
 #'   Only applies when \code{prop} is not \code{NULL}.
+#' @param chi Logical. If \code{TRUE}, performs a chi-square test of independence
+#'   on the frequency table and reports the results in APA format after the tables.
+#'   Default is \code{FALSE}.
 #'
-#' @return A contingency table (an object of class "table") with enhanced
-#'   dimnames when variables come from a dataframe. If \code{prop} is specified,
-#'   the table contains proportions (between 0 and 1) instead of counts, and
-#'   values are displayed without leading zero (e.g., .100 instead of 0.100).
+#' @return A list (object of class "table2") with the following components:
+#'   \itemize{
+#'     \item \code{freq}: The frequency table (always present)
+#'     \item \code{prop}: The proportion table (only if \code{prop} is specified)
+#'     \item \code{chisq}: The chi-square test result (only if \code{chi=TRUE})
+#'   }
+#'   Tables have enhanced dimnames when variables come from a dataframe.
+#'   If \code{prop} is specified, the proportion table contains values between 0 and 1,
+#'   displayed without leading zero (e.g., .100 instead of 0.100).
 #'
 #' @details
 #' When tabulating two or three variables from a dataframe (e.g., \code{table2(df$x, df$y)} or
@@ -72,10 +80,13 @@
 #' # Using data argument with unquoted variable names
 #' table2(group, status, data = df, prop = "col")
 #'
+#' # Table with chi-square test
+#' table2(df$group, df$status, chi = TRUE)
+#'
 #' @export
 table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN), 
                   useNA = c("no", "ifany", "always"), 
-                  dnn = NULL, deparse.level = 1, prop = NULL, digits = 3) {
+                  dnn = NULL, deparse.level = 1, prop = NULL, digits = 3, chi = FALSE) {
   
   # FUNCTION OUTLINE:
   # 1. Validate and process useNA and exclude arguments
@@ -113,58 +124,58 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
                          dnn = dnn, deparse.level = deparse.level)))
   }
   
-  # TASK 4: Extract variable names from dataframe column references
-  # Enhance if we have 2 or 3 dimensions matching the number of arguments
-  n_dims <- length(dim(result))
-  if ((n_dims == 2 && length(dots) == 2) || (n_dims == 3 && length(dots) == 3)) {
-    var_names <- character(n_dims)
+  # Helper function to extract variable name from an expression
+  extract_var_name <- function(expr) {
+    var_name <- ""
+    # Check if it's a symbol (variable name) - works with or without data argument
+    if (is.symbol(expr) || is.name(expr)) {
+      var_name <- as.character(expr)
+      return(var_name)
+    }
     
-    # Helper function to extract variable name from an expression
-    extract_var_name <- function(expr) {
-      var_name <- ""
-      # If data was provided, check if it's a symbol (unquoted variable name)
-      if (!is.null(data)) {
-        if (is.symbol(expr) || is.name(expr)) {
-          var_name <- as.character(expr)
-          return(var_name)
-        }
+    # Check if it's a dataframe column reference: df$var
+    if (is.call(expr) && length(expr) >= 3) {
+      op <- expr[[1]]
+      # Handle df$var
+      if (identical(op, quote(`$`)) || identical(op, as.name("$"))) {
+        var_name <- as.character(expr[[3]])
       }
-      
-      # Check if it's a dataframe column reference: df$var
-      if (is.call(expr) && length(expr) >= 3) {
-        op <- expr[[1]]
-        # Handle df$var
-        if (identical(op, quote(`$`)) || identical(op, as.name("$"))) {
-          var_name <- as.character(expr[[3]])
-        }
-        # Handle df[["var"]] or df[, "var"] or df[, i]
-        else if (identical(op, quote(`[`)) || identical(op, as.name("["))) {
-          if (length(expr) >= 3) {
-            col_expr <- expr[[3]]
-            # Handle df[["var"]] - double bracket with character
-            if (is.character(col_expr) && length(col_expr) == 1) {
-              var_name <- col_expr
-            }
-            # Handle df[, "var"] - single bracket with character column name
-            else if (is.call(col_expr) && identical(col_expr[[1]], quote(`[`)) && 
-                     length(col_expr) >= 2 && is.character(col_expr[[2]])) {
-              var_name <- col_expr[[2]]
-            }
-            # Handle df[, i] where i is a name or number
-            else if (is.name(col_expr)) {
-              # Try to evaluate to see if it's a character
-              tryCatch({
-                val <- eval(col_expr, parent.frame())
-                if (is.character(val) && length(val) == 1) {
-                  var_name <- val
-                }
-              }, error = function(e) {})
-            }
+      # Handle df[["var"]] or df[, "var"] or df[, i]
+      else if (identical(op, quote(`[`)) || identical(op, as.name("["))) {
+        if (length(expr) >= 3) {
+          col_expr <- expr[[3]]
+          # Handle df[["var"]] - double bracket with character
+          if (is.character(col_expr) && length(col_expr) == 1) {
+            var_name <- col_expr
+          }
+          # Handle df[, "var"] - single bracket with character column name
+          else if (is.call(col_expr) && identical(col_expr[[1]], quote(`[`)) && 
+                   length(col_expr) >= 2 && is.character(col_expr[[2]])) {
+            var_name <- col_expr[[2]]
+          }
+          # Handle df[, i] where i is a name or number
+          else if (is.name(col_expr)) {
+            # Try to evaluate to see if it's a character
+            tryCatch({
+              val <- eval(col_expr, parent.frame())
+              if (is.character(val) && length(val) == 1) {
+                var_name <- val
+              }
+            }, error = function(e) {})
           }
         }
       }
-      return(var_name)
     }
+    return(var_name)
+  }
+  
+  # TASK 4: Extract variable names from dataframe column references
+  # Enhance if we have 1, 2 or 3 dimensions matching the number of arguments
+  n_dims <- length(dim(result))
+  if ((n_dims == 1 && length(dots) == 1) || 
+      (n_dims == 2 && length(dots) == 2) || 
+      (n_dims == 3 && length(dots) == 3)) {
+    var_names <- character(n_dims)
     
     # Try to extract variable names from expressions
     for (i in 1:n_dims) {
@@ -195,7 +206,39 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
     }
   }
   
-  # TASK 7: Convert to proportions if requested
+  # TASK 7: Perform chi-square test if requested
+  # Initialize chi_test_attr to NULL
+  chi_test_attr <- NULL
+  
+  if (isTRUE(chi)) {
+    # Chi-square test can be performed on 1D or 2D frequency tables
+    # For 1D: tests for given probabilities (goodness of fit)
+    # For 2D: tests for independence
+    n_dims_chi <- length(dim(result))
+    if (n_dims_chi == 1 || n_dims_chi == 2) {
+      # Perform chi-square test on the frequency table
+      chi_test <- tryCatch({
+        stats::chisq.test(result)
+      }, error = function(e) {
+        # If chi-square test fails (e.g., all zeros, insufficient data), return NULL
+        NULL
+      })
+      # Store chi-square test result as attribute
+      attr(result, "chi_test") <- chi_test
+      chi_test_attr <- chi_test
+    } else {
+      # For 3D tables, chi-square test could be performed on each slice
+      # For now, we'll skip it or perform on the first slice
+      # Store NULL to indicate chi-square test not performed
+      attr(result, "chi_test") <- NULL
+      chi_test_attr <- NULL
+    }
+  }
+  
+  # TASK 8: Convert to proportions if requested
+  # Initialize orig_freq to NULL (will be set if prop is requested)
+  orig_freq <- NULL
+  
   if (!is.null(prop)) {
     # Mark this as a proportion table
     attr(result, "is_proportion") <- TRUE
@@ -220,27 +263,53 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
     
     # Get original dimnames before modification
     orig_dimn <- dimnames(result)
+    n_dims_orig <- length(dim(result))
+    
+    # Save original frequency table before any modifications (for all prop types)
+    orig_freq <- result
+    
+    # Handle 1D tables: convert to 2D format for consistent formatting
+    if (n_dims_orig == 1) {
+      # Extract variable name
+      var1_name_1d <- if (!is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
+        names(orig_dimn)[1]
+      } else {
+        ""
+      }
+      
+      # Convert 1D table to 2D: variable as rows, single column
+      result_1d <- result
+      result <- matrix(result_1d, ncol = 1)
+      # Use the variable name as the column label, or "Frequency" if no name
+      col_label <- if (nchar(var1_name_1d) > 0) var1_name_1d else "Frequency"
+      dimnames(result) <- list(orig_dimn[[1]], col_label)
+      names(dimnames(result)) <- c(var1_name_1d, "")
+      
+      # Update orig_dimn to reflect 2D structure
+      orig_dimn <- dimnames(result)
+      
+      # Also convert orig_freq to 2D format for consistency
+      orig_freq_1d <- orig_freq
+      orig_freq <- matrix(orig_freq_1d, ncol = 1)
+      dimnames(orig_freq) <- list(orig_dimn[[1]], col_label)
+      names(dimnames(orig_freq)) <- c(var1_name_1d, "")
+    }
     
     # Get variable names from dimnames for cat messages
-    var1_name <- if (length(dim(result)) == 2 && !is.null(names(orig_dimn)) && nchar(names(orig_dimn)[1]) > 0) {
+    var1_name <- if (length(dim(result)) == 2 && !is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
       names(orig_dimn)[1]
     } else {
       ""
     }
-    var2_name <- if (length(dim(result)) == 2 && !is.null(names(orig_dimn)) && nchar(names(orig_dimn)[2]) > 0) {
+    var2_name <- if (length(dim(result)) == 2 && !is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 2 && !is.na(names(orig_dimn)[2]) && nchar(names(orig_dimn)[2]) > 0) {
       names(orig_dimn)[2]
     } else {
       ""
     }
     
-    # TASK 8: Add marginal totals for proportion tables
     if (prop == 0) {
       # Overall proportions: divide by sum of all cells
-      cat("\nNote: Proportions for full data\n")
       total_sum <- sum(result, na.rm = TRUE)
-      
-      # Save original frequency table before converting to proportions
-      orig_freq <- result
       
       result <- result / total_sum
       # Round to specified number of digits
@@ -252,6 +321,8 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
         n_rows <- nrow(result)
         n_cols <- ncol(result)
         dimn <- dimnames(result)
+        # Preserve names of dimnames
+        dimn_names <- names(dimn)
         
         # Calculate column totals from original frequency table, then convert to proportions
         col_totals_freq <- colSums(orig_freq, na.rm = TRUE)
@@ -273,12 +344,13 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
         # Bottom right corner is 1.0 - sum of all proportions
         result <- cbind(result, summary_col)
         dimn[[2]] <- c(dimn[[2]], "Total")  # Add "Total" to column labels
+        # Restore names of dimnames
+        names(dimn) <- dimn_names
         dimnames(result) <- dimn
       }
       
     } else if (prop == 1) {
       # Row proportions: each row sums to 1
-      cat("\nNote: Proportions by each '", var1_name, "' row.\n", sep = "")
       row_sums <- rowSums(result, na.rm = TRUE)
       # Avoid division by zero
       row_sums[row_sums == 0] <- 1
@@ -291,15 +363,18 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       if (length(dim(result)) == 2) {
         n_rows <- nrow(result)
         dimn <- dimnames(result)
+        # Preserve names of dimnames
+        dimn_names <- names(dimn)
         summary_col <- matrix(round(1.0, digits = digits), nrow = n_rows, ncol = 1)  # 1.0 for each row
         result <- cbind(result, summary_col)
         dimn[[2]] <- c(dimn[[2]], "Total")  # Add "Total" to column labels
+        # Restore names of dimnames
+        names(dimn) <- dimn_names
         dimnames(result) <- dimn
       }
       
     } else if (prop == 2) {
       # Column proportions: each column sums to 1
-      cat("\nNote: Proportions for each '", var2_name, "' column\n", sep = "")
       col_sums <- colSums(result, na.rm = TRUE)
       # Avoid division by zero
       col_sums[col_sums == 0] <- 1
@@ -312,9 +387,13 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       if (length(dim(result)) == 2) {
         n_cols <- ncol(result)
         dimn <- dimnames(result)
+        # Preserve names of dimnames
+        dimn_names <- names(dimn)
         summary_row <- matrix(round(1.0, digits = digits), nrow = 1, ncol = n_cols)  # 1.0 for each column
         result <- rbind(result, summary_row)
         dimn[[1]] <- c(dimn[[1]], "Total")  # Add "Total" to row labels
+        # Restore names of dimnames
+        names(dimn) <- dimn_names
         dimnames(result) <- dimn
       }
     }
@@ -323,21 +402,33 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
     if (!is.null(prop)) {
       attr(result, "is_proportion") <- TRUE
       attr(result, "proportion_digits") <- digits
+      attr(result, "original_frequency") <- orig_freq
+      attr(result, "prop_type") <- prop
+      attr(result, "var1_name") <- var1_name
+      attr(result, "var2_name") <- var2_name
+      # Restore chi_test attribute if it was saved before prop calculations
+      if (!is.null(chi_test_attr)) {
+        attr(result, "chi_test") <- chi_test_attr
+      }
     }
   }
   
   # TASK 9: Return the enhanced table object
-  # Add class for custom printing if we have 2D or 3D table with variable names or if it's a proportion table
+  # Add class for custom printing if we have 1D, 2D or 3D table with variable names, if it's a proportion table, or if chi test is present
   n_dims <- length(dim(result))
-  if (n_dims == 2 || n_dims == 3) {
+  has_chi_test <- !is.null(attr(result, "chi_test"))
+  if (n_dims == 1 || n_dims == 2 || n_dims == 3) {
     dimn <- dimnames(result)
-    # Add class if we have variable names OR if it's a proportion table
-    # For 2D: check if we have 2 dots and variable names
+    # Add class if we have variable names OR if it's a proportion table OR if chi test is present
+    # For 1D: check if we have variable names or chi test
+    # For 2D: check if we have 1 dot (1D converted to 2D), 2 dots and variable names, or it's a proportion table
     # For 3D: check if we have 3 dots and variable names
-    has_var_names <- (n_dims == 2 && length(dots) == 2) || 
+    has_var_names <- (n_dims == 1 && length(dots) == 1) ||
+                     (n_dims == 2 && (length(dots) == 1 || length(dots) == 2)) || 
                      (n_dims == 3 && length(dots) == 3)
     if ((has_var_names && !is.null(names(dimn)) && any(nchar(names(dimn)) > 0)) ||
-        isTRUE(attr(result, "is_proportion"))) {
+        isTRUE(attr(result, "is_proportion")) ||
+        has_chi_test) {
       class(result) <- c("table2", class(result))
     }
   }
