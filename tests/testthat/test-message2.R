@@ -39,12 +39,9 @@ test_that("message2 handles stop parameter", {
 })
 
 test_that("message2 handles appendLF parameter", {
-  # Should work with both TRUE and FALSE
-  # Note: message() doesn't accept appendLF as named argument, so there's a warning
-  # but the function still works
+  # Should work with both TRUE and FALSE without warnings
   expect_warning(message2("With newline", appendLF = TRUE), NA)
-  expect_warning(message2("Without newline", appendLF = FALSE), 
-                 "additional arguments ignored")
+  expect_warning(message2("Without newline", appendLF = FALSE), NA)
 })
 
 test_that("message2 handles multiple message parts", {
