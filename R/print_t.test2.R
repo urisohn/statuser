@@ -34,18 +34,8 @@ print.t.test2 <- function(x, ...) {
     title_text <- "Two sample Student t-test"
   }
   
-  # Calculate total width of dataframe: sum of column name lengths + spaces between them
-  col_names <- names(x)
-  total_col_width <- sum(nchar(col_names))
-  n_spaces_between_cols <- length(col_names) - 1
-  total_df_width <- total_col_width + n_spaces_between_cols
-  
-  # Calculate spaces needed to center the title
-  title_length <- nchar(title_text)
-  spaces_needed <- max(0, floor((total_df_width - title_length) / 2))
-  
-  # Print centered title
-  cat(paste0(paste(rep(" ", spaces_needed), collapse = ""), title_text, "\n\n"))
+  # Print left-aligned title
+  cat(paste0(title_text, "\n\n"))
   
   # Get N column names before removing class
   name_N1 <- attr(x, "name_N1")
@@ -137,6 +127,36 @@ print.t.test2 <- function(x, ...) {
   # Remove the t.test2 class temporarily to avoid infinite recursion
   class(display_x) <- setdiff(class(display_x), "t.test2")
   print.data.frame(display_x, row.names = FALSE, ...)
+  
+  # Add APA formatting: t(df)=t.value, p=p.value
+  t_value <- x$t
+  df_value <- x$df
+  p_value <- x$p.value
+  
+  # Format t-value to 2 decimal places
+  t_formatted <- if (!is.na(t_value)) sprintf("%.2f", round(t_value, 2)) else "NA"
+  
+  # Format df to 1 decimal place (already rounded in display_x, but use original for APA)
+  df_formatted <- if (!is.na(df_value)) sprintf("%.1f", round(df_value, 1)) else "NA"
+  
+  # Format p-value using format_pvalue (same approach as used elsewhere in this function)
+  p_formatted <- if (!is.na(p_value)) {
+    p_str <- format_pvalue(p_value, include_p = TRUE)
+    # format_pvalue returns "p = .05", "p < .0001", or "p > .9999" format
+    # Remove spaces to get "p=.05", "p<.0001", or "p>.9999"
+    p_str <- gsub(" = ", "=", p_str)
+    p_str <- gsub(" < ", "<", p_str)
+    p_str <- gsub(" > ", ">", p_str)
+    p_str
+  } else {
+    "p=NA"
+  }
+  
+  # Create APA formatted string
+  apa_string <- paste0("t(", df_formatted, ")=", t_formatted, ", ", p_formatted)
+  
+  # Print left-aligned APA formatting
+  cat(paste0("\n", apa_string, "\n"))
   
   # Show group mapping if group names were replaced (but not for one-sample tests)
   show_group_mapping <- attr(x, "show_group_mapping")

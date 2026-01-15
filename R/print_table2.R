@@ -13,8 +13,52 @@ print.table2 <- function(x, ...) {
   # Check if this is a proportion table (check once)
   # Use !is.null() instead of isTRUE() to be more robust
   is_proportion <- !is.null(attr(x, "is_proportion")) && isTRUE(attr(x, "is_proportion"))
+  is_frequency <- !is.null(attr(x, "is_frequency")) && isTRUE(attr(x, "is_frequency"))
   proportion_digits <- attr(x, "proportion_digits")
   if (is.null(proportion_digits)) proportion_digits <- 3
+  
+  # Get original frequency table if this is a proportion table
+  orig_freq <- attr(x, "original_frequency")
+  prop_type <- attr(x, "prop_type")
+  var1_name <- attr(x, "var1_name")
+  var2_name <- attr(x, "var2_name")
+  
+  # If this is a proportion table, first print the frequency table
+  if (is_proportion && !is.null(orig_freq)) {
+    # Create a temporary table2 object from the original frequency table
+    # This will have the same dimnames structure but without proportion formatting
+    freq_table <- orig_freq
+    # Copy dimnames from original (before totals were added)
+    dimnames(freq_table) <- dimnames(orig_freq)
+    # Mark this as a frequency table (not proportion) so it formats correctly
+    attr(freq_table, "is_frequency") <- TRUE
+    # Ensure it's NOT marked as proportion
+    attr(freq_table, "is_proportion") <- FALSE
+    # Add class for custom printing if it has the right structure
+    if (length(dim(freq_table)) == 2 || length(dim(freq_table)) == 3) {
+      freq_dimn <- dimnames(freq_table)
+      if (!is.null(names(freq_dimn)) && any(nchar(names(freq_dimn)) > 0)) {
+        class(freq_table) <- c("table2", class(freq_table))
+      } else {
+        # Even without dimension names, add class to ensure custom printing
+        class(freq_table) <- c("table2", class(freq_table))
+      }
+    }
+    # Print header for frequency table
+    cat("\nTable 1. Frequencies\n")
+    # Print the frequency table
+    print.table2(freq_table, ...)
+    
+    # Print header for proportion table
+    cat("\nTable 2. ")
+    if (prop_type == 0) {
+      cat("Relative frequencies\n")
+    } else if (prop_type == 1) {
+      cat("Relative frequencies by '", var1_name, "'\n", sep = "")
+    } else if (prop_type == 2) {
+      cat("Relative frequencies by '", var2_name, "'\n", sep = "")
+    }
+  }
   
   # Handle 3D tables
   if (n_dims == 3) {
@@ -41,6 +85,15 @@ print.table2 <- function(x, ...) {
       if (is_proportion) {
         attr(slice, "is_proportion") <- TRUE
         attr(slice, "proportion_digits") <- proportion_digits
+        # Copy original frequency slice if available
+        if (!is.null(orig_freq)) {
+          freq_slice <- orig_freq[, , k, drop = FALSE]
+          dim(freq_slice) <- dim(freq_slice)[1:2]
+          attr(slice, "original_frequency") <- freq_slice
+          attr(slice, "prop_type") <- prop_type
+          attr(slice, "var1_name") <- var1_name
+          attr(slice, "var2_name") <- var2_name
+        }
       }
       
       # Print the 2D slice using the same print method
@@ -51,12 +104,13 @@ print.table2 <- function(x, ...) {
   }
   
   # Handle 2D tables (original code)
-  # If we don't have dimension names and it's not a proportion table, fall back to default print
-  if ((is.null(dim_names) || length(dim_names) != 2) && !is_proportion) {
+  # If we don't have dimension names and it's not a proportion table and not a frequency table, fall back to default print
+  # But if it's a frequency table (marked with is_frequency), we want to use our custom formatting
+  if ((is.null(dim_names) || length(dim_names) != 2) && !is_proportion && !is_frequency) {
     return(NextMethod())
   }
   
-  # For proportion tables without dimension names, use default print but with custom formatting
+  # For proportion tables or frequency tables without dimension names, use default print but with custom formatting
   if (is.null(dim_names) || length(dim_names) != 2) {
     # Still use NextMethod but the formatting should be handled by the proportion logic
     # Actually, we need dimension names to format properly, so fall back
@@ -94,10 +148,18 @@ print.table2 <- function(x, ...) {
   for (i in seq_along(row_labels)) {
     for (j in seq_along(col_labels)) {
       val <- x[i, j]
+      # Format as integer if NOT a proportion table (frequencies should be integers)
       if (is_proportion) {
         val_str <- format_proportion(val, proportion_digits)
       } else {
-        val_str <- as.character(val)
+        # For frequencies, format as integer (no decimals)
+        if (is.na(val)) {
+          val_str <- "NA"
+        } else {
+          # Force integer formatting - use %d which always shows integers
+          val_int <- as.integer(round(val))
+          val_str <- sprintf("%d", val_int)
+        }
       }
       max_data_width <- max(max_data_width, nchar(val_str), na.rm = TRUE)
     }
@@ -158,10 +220,18 @@ print.table2 <- function(x, ...) {
     row_values <- character(length(col_labels))
     for (j in seq_along(col_labels)) {
       val <- x[i, j]
+      # Format as integer if NOT a proportion table (frequencies should be integers)
       if (is_proportion) {
         val_str <- format_proportion(val, proportion_digits)
       } else {
-        val_str <- as.character(val)
+        # For frequencies, format as integer (no decimals)
+        if (is.na(val)) {
+          val_str <- "NA"
+        } else {
+          # Force integer formatting - use %d which always shows integers
+          val_int <- as.integer(round(val))
+          val_str <- sprintf("%d", val_int)
+        }
       }
       # Right-align the value within max_col_width
       row_values[j] <- sprintf(paste0("%", max_col_width, "s"), val_str)
