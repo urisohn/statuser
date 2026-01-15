@@ -5,6 +5,49 @@
 #'
 #' @export
 print.table2 <- function(x, ...) {
+  # Check if x is the new list format (has freq, prop, chisq elements)
+  if (is.list(x) && "freq" %in% names(x) && "prop" %in% names(x) && "chisq" %in% names(x)) {
+    # Print freq table (with chi-square if present)
+    freq_to_print <- x$freq
+    if (!is.null(x$chisq)) {
+      attr(freq_to_print, "chi_test") <- x$chisq
+    }
+    class(freq_to_print) <- c("table2", class(freq_to_print))
+    
+    if (!is.null(x$prop)) {
+      cat("\n1. Frequencies")
+    }
+    print.table2(freq_to_print, ...)
+    
+    # Print prop table if present
+    if (!is.null(x$prop)) {
+      prop_to_print <- x$prop
+      # Remove chi_test so it doesn't print again
+      attr(prop_to_print, "chi_test") <- NULL
+      # Remove original_frequency to avoid triggering old logic that prints freq+prop
+      attr(prop_to_print, "original_frequency") <- NULL
+      # Keep is_proportion so formatting works correctly
+      class(prop_to_print) <- c("table2", class(prop_to_print))
+      
+      prop_type <- attr(prop_to_print, "prop_type")
+      var1_name <- attr(prop_to_print, "var1_name")
+      var2_name <- attr(prop_to_print, "var2_name")
+      
+      cat("\n2. ")
+      if (is.null(prop_type) || prop_type == 0) {
+        cat("Relative frequencies")
+      } else if (prop_type == 1) {
+        cat("Relative frequencies by '", var1_name, "'", sep = "")
+      } else if (prop_type == 2) {
+        cat("Relative frequencies by '", var2_name, "'", sep = "")
+      }
+      print.table2(prop_to_print, ...)
+    }
+    
+    return(invisible(x))
+  }
+  
+  # Legacy format: x is a table/matrix with attributes
   # Get dimension names
   dimn <- dimnames(x)
   dim_names <- names(dimn)

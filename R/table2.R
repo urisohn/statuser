@@ -114,6 +114,11 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
   dot_expressions <- validated$dot_expressions
   data_name <- validated$data_name
   
+  # Initialize return list elements
+  freq <- NULL
+  prop_out <- NULL
+  chisq <- NULL
+  
   # TASK 3: Call base table function
   # Let base::table handle dnn default (it uses list.names internally)
   if (is.null(dnn)) {
@@ -123,6 +128,9 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
     result <- do.call(base::table, c(dots, list(exclude = exclude, useNA = useNA, 
                          dnn = dnn, deparse.level = deparse.level)))
   }
+  
+  # Store frequency table
+  freq <- result
   
   # Helper function to extract variable name from an expression
   extract_var_name <- function(expr) {
@@ -226,6 +234,7 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       # Store chi-square test result as attribute
       attr(result, "chi_test") <- chi_test
       chi_test_attr <- chi_test
+      chisq <- chi_test
     } else {
       # For 3D tables, chi-square test could be performed on each slice
       # For now, we'll skip it or perform on the first slice
@@ -410,29 +419,23 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       if (!is.null(chi_test_attr)) {
         attr(result, "chi_test") <- chi_test_attr
       }
+      # Store proportion table (clean, without attributes)
+      prop_out <- result
+      attr(prop_out, "is_proportion") <- NULL
+      attr(prop_out, "proportion_digits") <- NULL
+      attr(prop_out, "original_frequency") <- NULL
+      attr(prop_out, "prop_type") <- NULL
+      attr(prop_out, "var1_name") <- NULL
+      attr(prop_out, "var2_name") <- NULL
+      attr(prop_out, "chi_test") <- NULL
     }
   }
   
-  # TASK 9: Return the enhanced table object
-  # Add class for custom printing if we have 1D, 2D or 3D table with variable names, if it's a proportion table, or if chi test is present
-  n_dims <- length(dim(result))
-  has_chi_test <- !is.null(attr(result, "chi_test"))
-  if (n_dims == 1 || n_dims == 2 || n_dims == 3) {
-    dimn <- dimnames(result)
-    # Add class if we have variable names OR if it's a proportion table OR if chi test is present
-    # For 1D: check if we have variable names or chi test
-    # For 2D: check if we have 1 dot (1D converted to 2D), 2 dots and variable names, or it's a proportion table
-    # For 3D: check if we have 3 dots and variable names
-    has_var_names <- (n_dims == 1 && length(dots) == 1) ||
-                     (n_dims == 2 && (length(dots) == 1 || length(dots) == 2)) || 
-                     (n_dims == 3 && length(dots) == 3)
-    if ((has_var_names && !is.null(names(dimn)) && any(nchar(names(dimn)) > 0)) ||
-        isTRUE(attr(result, "is_proportion")) ||
-        has_chi_test) {
-      class(result) <- c("table2", class(result))
-    }
-  }
-  
-  return(result)
+  # TASK 9: Return as list with class table2
+  output <- list2(freq = freq, prop = prop_out, chisq = chisq)
+  class(output) <- c("table2", class(output))
+  return(output)
 }
+
+
 
