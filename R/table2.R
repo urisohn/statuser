@@ -211,6 +211,9 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       # Third dimension labels: dimn[[3]] contains just values (e.g., "high", "low")
       # The variable names will appear in the margins via names(dimnames)
       dimnames(result) <- dimn
+      
+      # Update freq to have the enhanced dimnames
+      freq <- result
     }
   }
   
@@ -446,6 +449,14 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
   
   # TASK 9: Return as list with class table2
   output <- list2(freq = freq, prop = prop_out, chisq = chisq)
+  
+  # Store proportion metadata if prop was specified
+  if (!is.null(prop)) {
+    attr(output, "prop_type") <- prop
+    attr(output, "var1_name") <- var1_name
+    attr(output, "var2_name") <- var2_name
+  }
+  
   class(output) <- c("table2", class(output))
   return(output)
 }

@@ -26,7 +26,20 @@ print.table2 <- function(x, ...) {
       attr(prop_to_print, "proportion_digits") <- 3
       class(prop_to_print) <- c("table2", class(prop_to_print))
       
-      cat("\n2. Relative frequencies")
+      # Get prop_type from list attributes
+      prop_type_list <- attr(x, "prop_type")
+      
+      # Build proportion header based on prop type
+      cat("\n2. ")
+      if (!is.null(prop_type_list) && prop_type_list == 0) {
+        cat("Relative frequencies: overall")
+      } else if (!is.null(prop_type_list) && prop_type_list == 1) {
+        cat("Relative frequencies: by row")
+      } else if (!is.null(prop_type_list) && prop_type_list == 2) {
+        cat("Relative frequencies: by column")
+      } else {
+        cat("Relative frequencies")
+      }
       print.table2(prop_to_print, ...)
     }
     
@@ -123,11 +136,11 @@ print.table2 <- function(x, ...) {
     # Print header for proportion table
     cat("\n2. ")
     if (prop_type == 0) {
-      cat("Relative frequencies")
+      cat("Relative frequencies: overall")
     } else if (prop_type == 1) {
-      cat("Relative frequencies by '", var1_name, "'", sep = "")
+      cat("Relative frequencies: by row")
     } else if (prop_type == 2) {
-      cat("Relative frequencies by '", var2_name, "'", sep = "")
+      cat("Relative frequencies: by column")
     }
     # Remove chi_test attribute from proportion table so it doesn't print again
     attr(x, "chi_test") <- NULL
