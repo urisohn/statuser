@@ -1,3 +1,32 @@
+test_that("t.test2 is exported from the package namespace", {
+  # This test guards against a recurring issue where roxygen2 interprets
+
+  # t.test2 as an S3 method (t generic with test2 class) instead of a
+  # standalone function, causing it to only register S3method(t,test2)
+  # instead of export(t.test2) in NAMESPACE.
+  
+
+  # Check that t.test2 is exported in NAMESPACE
+  namespace_file <- system.file("NAMESPACE", package = "sohn")
+  if (namespace_file != "") {
+    namespace_content <- readLines(namespace_file)
+    expect_true(
+      any(grepl("^export\\(t\\.test2\\)", namespace_content)),
+      info = "t.test2 should be explicitly exported in NAMESPACE with export(t.test2)"
+    )
+  }
+  
+  # Verify the function is accessible as sohn::t.test2
+  expect_true(exists("t.test2", where = asNamespace("sohn"), mode = "function"))
+  
+  # Verify it can be called directly (not just via t() generic)
+  x <- rnorm(50)
+  y <- rnorm(50)
+  result <- t.test2(x, y)
+  expect_s3_class(result, "t.test2")
+  expect_s3_class(result, "data.frame")
+})
+
 test_that("t.test2 runs without errors for two-sample test", {
   y <- rnorm(100)
   group <- rep(c("A", "B"), 50)

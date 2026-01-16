@@ -45,7 +45,7 @@
 #'
 #' @seealso \code{\link[stats]{t.test}}
 #'
-#' @export
+#' @export t.test2
 t.test2 <- function(...) {
   
   # Get arguments and filter out digits (not a parameter for stats::t.test)

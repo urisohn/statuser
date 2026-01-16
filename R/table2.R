@@ -459,3 +459,4 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
 
 
 
+
