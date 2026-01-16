@@ -83,6 +83,22 @@ test_that("table2 handles prop parameter", {
   expect_true(!is.null(result_col$prop))
 })
 
+test_that("table2 prop prints with decimal formatting", {
+  x <- c("A", "A", "B", "B", "A")
+  y <- c("X", "Y", "X", "Y", "X")
+  
+  result <- table2(x, y, prop = 1)
+  
+  # Capture printed output
+  output <- capture.output(print(result))
+  
+
+  # Should contain decimal proportions (e.g., .500, .333), not just 0s and 1s
+  # Look for pattern like .XXX (decimal point followed by digits)
+  expect_true(any(grepl("\\.[0-9]{3}", output)), 
+              info = "Proportions should print with decimal formatting")
+})
+
 test_that("table2 handles digits parameter", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
