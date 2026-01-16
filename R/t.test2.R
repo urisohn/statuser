@@ -133,9 +133,9 @@ t.test2 <- function(...) {
       
       var_list <- paste0("'", impacted_vars, "'", collapse = ", ")
       if (length(impacted_vars) == 1) {
-        return(sprintf("Warning: you specified %s and data='%s' but that variable is not in that data.frame.\nThe t-test was run reading, instead, %s from the R environment, outside the data.frame.", var_list, data_name, var_list))
+        return(sprintf("Warning: you specified %s and data='%s' but that variable is not in that data set.\nThe t-test was run reading %s directly from the R environment.", var_list, data_name, var_list))
       } else {
-        return(sprintf("Warning: you specified %s and data='%s' but those variables are not in that data.frame.\nThe t-test was run reading, instead, %s from the R environment, outside the data.frame.", var_list, data_name, var_list))
+        return(sprintf("Warning: you specified %s and data='%s' but those variables are not in that data set.\nThe t-test was run reading %s directly from the R environment.", var_list, data_name, var_list))
       }
     }
     return(NULL)
