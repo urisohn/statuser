@@ -7,11 +7,8 @@
 print.table2 <- function(x, ...) {
   # Check if x is the new list format (has freq, prop, chisq elements)
   if (is.list(x) && "freq" %in% names(x) && "prop" %in% names(x) && "chisq" %in% names(x)) {
-    # Print freq table (with chi-square if present)
+    # Print freq table (without chi-square - we'll print that at the end)
     freq_to_print <- x$freq
-    if (!is.null(x$chisq)) {
-      attr(freq_to_print, "chi_test") <- x$chisq
-    }
     # Mark as frequency (not proportion) to avoid triggering legacy freq+prop logic
     attr(freq_to_print, "is_frequency") <- TRUE
     class(freq_to_print) <- c("table2", class(freq_to_print))
@@ -31,6 +28,38 @@ print.table2 <- function(x, ...) {
       
       cat("\n2. Relative frequencies")
       print.table2(prop_to_print, ...)
+    }
+    
+    # Print chi-square test at the end if present
+    if (!is.null(x$chisq)) {
+      chi_test <- x$chisq
+      n_dims <- length(dim(x$freq))
+      # Print header based on dimension
+      if (n_dims == 1) {
+        cat("Chi-squared test, null: equality of proportions\n")
+      } else {
+        cat("Chi-squared test, null: independence\n")
+      }
+      
+      chi_stat <- as.numeric(chi_test$statistic)
+      chi_df <- as.numeric(chi_test$parameter)
+      chi_p <- as.numeric(chi_test$p.value)
+      
+      chi_stat_formatted <- if (!is.na(chi_stat)) sprintf("%.2f", round(chi_stat, 2)) else "NA"
+      chi_df_formatted <- if (!is.na(chi_df)) sprintf("%.0f", round(chi_df, 0)) else "NA"
+      
+      chi_p_formatted <- if (!is.na(chi_p)) {
+        p_str <- format_pvalue(chi_p, include_p = TRUE)
+        p_str <- gsub(" = ", "=", p_str)
+        p_str <- gsub(" < ", "<", p_str)
+        p_str <- gsub(" > ", ">", p_str)
+        p_str
+      } else {
+        "p=NA"
+      }
+      
+      apa_string <- paste0("\u03C7\u00B2(", chi_df_formatted, ")=", chi_stat_formatted, ", ", chi_p_formatted)
+      cat(paste0(apa_string, "\n"))
     }
     
     return(invisible(x))
