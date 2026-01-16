@@ -62,16 +62,12 @@ print.table2 <- function(x, ...) {
       chi_df_formatted <- if (!is.na(chi_df)) sprintf("%.0f", round(chi_df, 0)) else "NA"
       
       chi_p_formatted <- if (!is.na(chi_p)) {
-        p_str <- format_pvalue(chi_p, include_p = TRUE)
-        p_str <- gsub(" = ", "=", p_str)
-        p_str <- gsub(" < ", "<", p_str)
-        p_str <- gsub(" > ", ">", p_str)
-        p_str
+        format_pvalue(chi_p, include_p = TRUE)
       } else {
-        "p=NA"
+        "p = NA"
       }
       
-      apa_string <- paste0("\u03C7\u00B2(", chi_df_formatted, ")=", chi_stat_formatted, ", ", chi_p_formatted)
+      apa_string <- paste0("\u03C7\u00B2(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
       cat(paste0(apa_string, "\n"))
       
       # Show warning if expected counts are low
@@ -208,19 +204,14 @@ print.table2 <- function(x, ...) {
       
       # Format p-value using format_pvalue (same approach as t.test2)
       chi_p_formatted <- if (!is.na(chi_p)) {
-        p_str <- format_pvalue(chi_p, include_p = TRUE)
         # format_pvalue returns "p = .05", "p < .0001", or "p > .9999" format
-        # Remove spaces to get "p=.05", "p<.0001", or "p>.9999"
-        p_str <- gsub(" = ", "=", p_str)
-        p_str <- gsub(" < ", "<", p_str)
-        p_str <- gsub(" > ", ">", p_str)
-        p_str
+        format_pvalue(chi_p, include_p = TRUE)
       } else {
-        "p=NA"
+        "p = NA"
       }
       
-      # Create APA formatted string: χ²(df)=value, p=value
-      apa_string <- paste0("χ²(", chi_df_formatted, ")=", chi_stat_formatted, ", ", chi_p_formatted)
+      # Create APA formatted string: χ²(df) = value, p = value
+      apa_string <- paste0("χ²(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
       
       # Print left-aligned APA formatting
       cat(paste0("\n", apa_string, "\n"))
@@ -387,20 +378,15 @@ print.table2 <- function(x, ...) {
     
     # Format p-value using format_pvalue (same approach as t.test2)
     chi_p_formatted <- if (!is.na(chi_p)) {
-      p_str <- format_pvalue(chi_p, include_p = TRUE)
       # format_pvalue returns "p = .05", "p < .0001", or "p > .9999" format
-      # Remove spaces to get "p=.05", "p<.0001", or "p>.9999"
-      p_str <- gsub(" = ", "=", p_str)
-      p_str <- gsub(" < ", "<", p_str)
-      p_str <- gsub(" > ", ">", p_str)
-      p_str
+      format_pvalue(chi_p, include_p = TRUE)
     } else {
-      "p=NA"
+      "p = NA"
     }
     
-    # Create APA formatted string: χ²(df)=value, p=value
+    # Create APA formatted string: χ²(df) = value, p = value
     # Use Unicode chi-square symbol
-    apa_string <- paste0("χ²(", chi_df_formatted, ")=", chi_stat_formatted, ", ", chi_p_formatted)
+    apa_string <- paste0("χ²(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
     
     # Print left-aligned APA formatting
     cat(paste0(apa_string, "\n"))

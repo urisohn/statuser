@@ -141,19 +141,14 @@ print.t.test2 <- function(x, ...) {
   
   # Format p-value using format_pvalue (same approach as used elsewhere in this function)
   p_formatted <- if (!is.na(p_value)) {
-    p_str <- format_pvalue(p_value, include_p = TRUE)
     # format_pvalue returns "p = .05", "p < .0001", or "p > .9999" format
-    # Remove spaces to get "p=.05", "p<.0001", or "p>.9999"
-    p_str <- gsub(" = ", "=", p_str)
-    p_str <- gsub(" < ", "<", p_str)
-    p_str <- gsub(" > ", ">", p_str)
-    p_str
+    format_pvalue(p_value, include_p = TRUE)
   } else {
-    "p=NA"
+    "p = NA"
   }
   
   # Create APA formatted string
-  apa_string <- paste0("t(", df_formatted, ")=", t_formatted, ", ", p_formatted)
+  apa_string <- paste0("t(", df_formatted, ") = ", t_formatted, ", ", p_formatted)
   
   # Print left-aligned APA formatting
   cat(paste0("\n", apa_string, "\n"))
