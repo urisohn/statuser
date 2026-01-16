@@ -151,7 +151,7 @@ print.t.test2 <- function(x, ...) {
   apa_string <- paste0("t(", df_formatted, ") = ", t_formatted, ", ", p_formatted)
   
   # Print left-aligned APA formatting
-  cat(paste0("\n", apa_string, "\n"))
+  cat(paste0("\nAPA Style:\n", apa_string, "\n"))
   
   # Show group mapping if group names were replaced (but not for one-sample tests)
   show_group_mapping <- attr(x, "show_group_mapping")
@@ -263,6 +263,14 @@ print.t.test2 <- function(x, ...) {
         }
       }
     }
+  }
+  
+  # Print environment variable warning at the end if present
+  env_warning <- attr(x, "env_warning")
+  if (!is.null(env_warning)) {
+    cat("\n")
+    message2("t.test2() says:", col = "red", font = 2)
+    message2(env_warning, col = "red")
   }
   
   # Restore class before returning

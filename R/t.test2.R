@@ -107,11 +107,12 @@ t.test2 <- function(...) {
     return(trimws(expr_str))
   }
   
-  # Helper function to warn if variables were read from environment when data= was specified
+  # Helper function to check if variables were read from environment when data= was specified
   # Takes a list of variable info: list(list(name="var1", from_env=TRUE, from_data=FALSE), ...)
-  warn_if_env_vars <- function(var_info_list, data_arg, call_args) {
+  # Returns warning message or NULL (warning is printed by print method at the end)
+  check_env_vars <- function(var_info_list, data_arg, call_args) {
     if (is.null(data_arg) || !is.data.frame(data_arg)) {
-      return(invisible(NULL))
+      return(NULL)
     }
     
     # Collect variables that need warnings
@@ -122,7 +123,7 @@ t.test2 <- function(...) {
       }
     }
     
-    # If any variables are impacted, report them
+    # If any variables are impacted, return the warning message
     if (length(impacted_vars) > 0) {
       data_name <- if ("data" %in% names(call_args)) {
         deparse(call_args$data)
@@ -130,16 +131,18 @@ t.test2 <- function(...) {
         "data"
       }
       
-      message2("t.test2() says:", col = "red", font = 2)
-      
       var_list <- paste0("'", impacted_vars, "'", collapse = ", ")
       if (length(impacted_vars) == 1) {
-        message2(sprintf("Warning: you specified %s and data='%s' but that variable is not in '%s'. The t-test was run reading, instead, data from a standalone vector with that name in the R environment.", var_list, data_name, data_name), col = "red")
+        return(sprintf("Warning: you specified %s and data='%s' but that variable is not in that data.frame.\nThe t-test was run reading, instead, %s from the R environment, outside the data.frame.", var_list, data_name, var_list))
       } else {
-        message2(sprintf("Warning: you specified %s and data='%s' but those variables are not in '%s'.\nThe t-test was run reading, instead, data from standalone vectors with those names in the R environment.", var_list, data_name, data_name), col = "red")
+        return(sprintf("Warning: you specified %s and data='%s' but those variables are not in that data.frame.\nThe t-test was run reading, instead, %s from the R environment, outside the data.frame.", var_list, data_name, var_list))
       }
     }
+    return(NULL)
   }
+  
+  # Variable to store env warning message (will be added as attribute)
+  env_warning_msg <- NULL
   
   # Try to extract data and group names
   tryCatch({
@@ -180,8 +183,8 @@ t.test2 <- function(...) {
         group_var <- eval(as.name(group_var_name), envir = calling_env)  # Will throw error if not found
       }
       
-      # Warn if data= is specified but variables were read from environment instead
-      warn_if_env_vars(
+      # Check if data= is specified but variables were read from environment instead
+      env_warning_msg <- check_env_vars(
         list(
           list(name = y_var_name, from_env = y_from_env, from_data = y_from_data),
           list(name = group_var_name, from_env = group_from_env, from_data = group_from_data)
@@ -317,8 +320,8 @@ t.test2 <- function(...) {
         }
       }
       
-      # Warn if data= is specified but variables were read from environment instead
-      warn_if_env_vars(
+      # Check if data= is specified but variables were read from environment instead
+      env_warning_msg <- check_env_vars(
         list(
           list(name = x_var_name, from_env = x_from_env, from_data = x_from_data),
           list(name = y_var_name, from_env = y_from_env, from_data = y_from_data)
@@ -480,6 +483,7 @@ t.test2 <- function(...) {
     attr(result, "orig_group1") <- orig_group1
     attr(result, "orig_group2") <- orig_group2
   }
+  attr(result, "env_warning") <- env_warning_msg
   
   # Add class for print method
   class(result) <- c("t.test2", class(result))
