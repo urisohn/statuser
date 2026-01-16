@@ -12,6 +12,8 @@ print.table2 <- function(x, ...) {
     if (!is.null(x$chisq)) {
       attr(freq_to_print, "chi_test") <- x$chisq
     }
+    # Mark as frequency (not proportion) to avoid triggering legacy freq+prop logic
+    attr(freq_to_print, "is_frequency") <- TRUE
     class(freq_to_print) <- c("table2", class(freq_to_print))
     
     if (!is.null(x$prop)) {
@@ -22,25 +24,12 @@ print.table2 <- function(x, ...) {
     # Print prop table if present
     if (!is.null(x$prop)) {
       prop_to_print <- x$prop
-      # Remove chi_test so it doesn't print again
-      attr(prop_to_print, "chi_test") <- NULL
-      # Remove original_frequency to avoid triggering old logic that prints freq+prop
-      attr(prop_to_print, "original_frequency") <- NULL
-      # Keep is_proportion so formatting works correctly
+      # Mark as proportion for formatting, but no original_frequency to avoid legacy logic
+      attr(prop_to_print, "is_proportion") <- TRUE
+      attr(prop_to_print, "proportion_digits") <- 3
       class(prop_to_print) <- c("table2", class(prop_to_print))
       
-      prop_type <- attr(prop_to_print, "prop_type")
-      var1_name <- attr(prop_to_print, "var1_name")
-      var2_name <- attr(prop_to_print, "var2_name")
-      
-      cat("\n2. ")
-      if (is.null(prop_type) || prop_type == 0) {
-        cat("Relative frequencies")
-      } else if (prop_type == 1) {
-        cat("Relative frequencies by '", var1_name, "'", sep = "")
-      } else if (prop_type == 2) {
-        cat("Relative frequencies by '", var2_name, "'", sep = "")
-      }
+      cat("\n2. Relative frequencies")
       print.table2(prop_to_print, ...)
     }
     

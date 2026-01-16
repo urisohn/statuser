@@ -419,12 +419,17 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       if (!is.null(chi_test_attr)) {
         attr(result, "chi_test") <- chi_test_attr
       }
-      # Store proportion table (strip only attributes not needed for printing)
+      # Store proportion table as plain table (no custom attributes)
+      # Keep only dim, dimnames, class
       prop_out <- result
-      # Keep is_proportion and proportion_digits for print formatting
-      # Remove attributes that would trigger double-printing or are redundant
+      attr(prop_out, "is_proportion") <- NULL
+      attr(prop_out, "proportion_digits") <- NULL
       attr(prop_out, "original_frequency") <- NULL
+      attr(prop_out, "prop_type") <- NULL
+      attr(prop_out, "var1_name") <- NULL
+      attr(prop_out, "var2_name") <- NULL
       attr(prop_out, "chi_test") <- NULL
+      class(prop_out) <- "table"
     }
   }
   
@@ -433,6 +438,8 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
   class(output) <- c("table2", class(output))
   return(output)
 }
+
+
 
 
 
