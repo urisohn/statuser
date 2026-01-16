@@ -60,6 +60,11 @@ print.table2 <- function(x, ...) {
       
       apa_string <- paste0("\u03C7\u00B2(", chi_df_formatted, ")=", chi_stat_formatted, ", ", chi_p_formatted)
       cat(paste0(apa_string, "\n"))
+      
+      # Show warning if expected counts are low
+      if (isTRUE(attr(chi_test, "low_expected"))) {
+        message2(col = "red", "Warning: some cells have less than 5 expected observations.\nThis makes the chi-square approximation less accurate; the p-value is questionable.")
+      }
     }
     
     return(invisible(x))

@@ -225,14 +225,25 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
     n_dims_chi <- length(dim(result))
     if (n_dims_chi == 1 || n_dims_chi == 2) {
       # Perform chi-square test on the frequency table
+      # Capture warning about small expected counts
+      chi_warning <- NULL
       chi_test <- tryCatch({
-        stats::chisq.test(result)
+        withCallingHandlers(
+          stats::chisq.test(result),
+          warning = function(w) {
+            if (grepl("Chi-squared approximation may be incorrect", w$message)) {
+              chi_warning <<- TRUE
+              invokeRestart("muffleWarning")
+            }
+          }
+        )
       }, error = function(e) {
         # If chi-square test fails (e.g., all zeros, insufficient data), return NULL
         NULL
       })
-      # Store chi-square test result as attribute
+      # Store chi-square test result and warning flag
       attr(result, "chi_test") <- chi_test
+      attr(chi_test, "low_expected") <- isTRUE(chi_warning)
       chi_test_attr <- chi_test
       chisq <- chi_test
     } else {
@@ -438,6 +449,10 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
   class(output) <- c("table2", class(output))
   return(output)
 }
+
+
+
+
 
 
 
