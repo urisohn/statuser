@@ -1,14 +1,15 @@
 Package: statuser
 Type: Package
-Title: R functions I wished existed, and now do
+Title: R Function Designed for Stats Users, Not Statisticians, Nor Other R Functions 
 Version: 0.1.5
 Author: Uri Simonsohn [aut, cre]
 Maintainer: Uri Simonsohn <urisohn@gmail.com>
-Description: Miscellaneous functions for data analysis, visualization, and statistical testing. 
-    Provides enhanced versions of common R functions with improved output formatting, 
-    additional features, and better integration with data frames. Functions include 
-    enhanced plotting (CDFs, densities, frequencies), statistical tests (t-tests with 
-    improved output), data manipulation utilities, and formatting helpers.
+Description: Improves basic R functios to produce output that is designed
+with end-users in mind, rather than barebones clunky output written for experts
+or for other functions to clean-up. For example, table2(), t.test2(), lm2() 
+improve the corresponding procedures. Other functions generate publication ready 
+plots in single lines of code  (plot_cdf(), plot_density(), plot_freq()). 
+    workspace.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
