@@ -12,11 +12,11 @@
 
      #Startup msgs
       #Version and URL for website
-          packageStartupMessage ("Attached: 'sohn' (Version: ",utils::packageVersion('sohn'),  ")") 
+          packageStartupMessage ("Attached: 'statuser' (Version: ",utils::packageVersion('statuser'),  ")") 
           
       #While developing:
          packageStartupMessage ("#######################################################\n",
-                              "This Version 2026 01 16 - 05.15PM\n" )
+                              "This Version 2026 01 20 - 09.43AM\n" )
 
 
   invisible()

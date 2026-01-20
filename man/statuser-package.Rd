@@ -4,14 +4,19 @@
 \name{statuser-package}
 \alias{statuser}
 \alias{statuser-package}
-\title{R functions I wished existed, and now do}
+\title{Tools Designed for Statistics Users, Not Statisticians}
 \description{
-The \pkg{statuser} package provides miscellaneous functions used in papers and
-blogposts by Uri Simonsohn. It includes functions for data visualization,
-statistical analysis, and data formatting.
+Enhanced versions of basic R functions like table2(), t.test2(), and lm2() 
+print output designed to be understood by, and useful to, stats users. 
+Default options are informed by best practices (e.g., lm2() uses robust 
+standard errors and flags possible regression problems). Functions like 
+plot_cdf(), plot_density(), and plot_freq() generate publication-ready 
+descriptive figures in one line of code. Syntax of existing functions is 
+augmented, so if lm(...) works, so does lm2(...), but with better defaults, 
+clearer output, and more options.
 }
 \details{
-This package contains various utility functions organized into the following categories:
+Functions are organized into the following categories:
 }
 \section{Graphing}{
 
