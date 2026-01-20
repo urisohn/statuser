@@ -1,4 +1,4 @@
-# sohn
+# statuser
 
 Miscellaneous R functions for papers, blogposts, & teaching by Uri Simonsohn.
 
@@ -6,10 +6,10 @@ Miscellaneous R functions for papers, blogposts, & teaching by Uri Simonsohn.
 
 ```r
 # Install from GitHub with `groundhog` (for version control)
-groundhog::groundhog.library("urisohn/sohn", date)   #date used for version control 
+groundhog::groundhog.library("urisohn/statuser", date)   #date used for version control 
 
 # Or install from GitHub with `devtools`
-devtools::install_github("urisohn/sohn")
+devtools::install_github("urisohn/statuser")
 ```
 
 ## Overview

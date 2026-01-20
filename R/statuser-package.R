@@ -1,7 +1,7 @@
 #' R functions I wished existed, and now do
 #'
 #' @description
-#' The \pkg{sohn} package provides miscellaneous functions used in papers and
+#' The \pkg{statuser} package provides miscellaneous functions used in papers and
 #' blogposts by Uri Simonsohn. It includes functions for data visualization,
 #' statistical analysis, and data formatting.
 #'
@@ -44,7 +44,7 @@
 #' @seealso
 #' Useful links:
 #' \itemize{
-#'   \item \url{https://github.com/urisohn/sohn}
+#'   \item \url{https://github.com/urisohn/statuser}
 #' }
 #'
 #' @importFrom grDevices adjustcolor dev.list dev.off png
