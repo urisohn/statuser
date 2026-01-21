@@ -12,6 +12,8 @@
 #'   returns an enhanced table with standardized coefficients and both robust and
 #'   classical standard errors. \code{"estimatr"} returns the standard
 #'   \code{lm_robust} output.
+#' @param notes Logical. If TRUE (default), print explanatory notes below the table
+#'   when the result is printed.
 #' @param ... Additional arguments passed to \code{\link[estimatr]{lm_robust}}.
 #'
 #' @return When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
@@ -25,7 +27,28 @@
 #'     \item \code{df}: Degrees of freedom
 #'     \item \code{p.value}: p-value (based on robust SE)
 #'     \item \code{B}: Standardized coefficient (beta)
+#'     \item \code{red.flag}: Diagnostic flags (see Details)
 #'   }
+#'
+#' @details
+#' The \code{red.flag} column provides diagnostic warnings:
+#' \itemize{
+#'   \item \code{!}, \code{!!}, \code{!!!}: Robust and classical standard errors differ by 
+#'     more than 25\%, 50\%, or 100\%, respectively. Large differences may suggest model 
+#'     misspecification or outliers (but they may also be benign). When encountering a redflag
+#'     authors should plot the distributions to look for outliers or skewed data, and do scatter.gam()
+#'     to look for possible nonlinearities in the relevant variables.
+#'     King & Roberts propose a higher cutoff, at 100%, and a bootstrapped significance test, 
+#'     \code{statuser} does not follow either recommendation. The latter seems too liberal, the 
+#'     latter too time consuming to include in every regression. 
+#'     See: King & Roberts (2015)  How robust standard errors expose methodological problems they do not fix, and what 
+#'     to do about it. Political Analysis, 23(2), 159-179.
+#'   \item \code{X} and \code{x*}: For interaction terms, the component variables are correlated with 
+#'     |r| > 0.3, * and p<.05, this can produce spurious interaction. Authors are advised
+#'     to not rely on the linear model and instead use GAM. 
+#'     See: Simonsohn, Uri . "Interacting with curves: How to validly test and probe 
+#'     interactions in the real (nonlinear) world." AMPPS 7(1), 1-22.
+#' }
 #'
 #' @examples
 #' # Basic usage with mtcars data
@@ -40,7 +63,7 @@
 #' @seealso \code{\link[estimatr]{lm_robust}}
 #'
 #' @export lm2
-lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", ...) {
+lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", notes = TRUE, ...) {
   
   # Capture the call
   cl <- match.call()
@@ -167,6 +190,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", ...)
   attr(result, "adj.r.squared") <- robust_fit$adj.r.squared
   attr(result, "na_counts") <- na_counts
   attr(result, "n_missing") <- n_missing
+  attr(result, "notes") <- notes
   
   # Add class for custom print method
   class(result) <- c("lm2", class(result))
@@ -177,11 +201,19 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", ...)
 #' Print method for lm2 objects
 #'
 #' @param x An object of class \code{lm2}
+#' @param notes Logical. If TRUE (default), print explanatory notes below the table.
+#'   If not specified, uses the value set when \code{lm2()} was called.
 #' @param ... Additional arguments (ignored)
 #'
 #' @return Invisibly returns the original object
 #' @export
-print.lm2 <- function(x, ...) {
+print.lm2 <- function(x, notes = NULL, ...) {
+  
+  # Use notes attribute from lm2() call if not explicitly specified
+  if (is.null(notes)) {
+    notes <- attr(x, "notes")
+    if (is.null(notes)) notes <- TRUE  
+  }
   
   # Helper: smart rounding based on magnitude
   # >=100: 1 decimal, >=10: 2 decimals, >=0.01: 3 decimals
@@ -227,25 +259,85 @@ print.lm2 <- function(x, ...) {
   # Get NA counts from attribute before modifying display_df
   na_counts <- attr(x, "na_counts")
   
+  # Get model data for correlation checks
+  model_data <- attr(x, "robust_fit")$model
+  if (is.null(model_data)) {
+    # Fallback: reconstruct from formula and data
+    model_data <- tryCatch(
+      stats::model.frame(attr(x, "formula"), data = attr(x, "classical_fit")$model),
+      error = function(e) NULL
+    )
+  }
+  
   # Calculate SE flag: ! if robust and classical differ by >25%, !! if >50%, !!! if >100%
+  # Also check for interaction term correlations (X, X*)
   se_flag <- character(nrow(x))
+  has_interactions <- FALSE
+  
   for (i in seq_len(nrow(x))) {
+    flags <- character(0)
+    
+    # Check SE difference
     se_classical <- x$SE.classical[i]
     se_robust <- x$SE.robust[i]
     if (!is.na(se_classical) && !is.na(se_robust) && se_classical != 0) {
       ratio_diff <- abs(se_classical - se_robust) / se_classical
       if (ratio_diff > 1) {
-        se_flag[i] <- "!!!"
+        flags <- c(flags, "!!!")
       } else if (ratio_diff > 0.5) {
-        se_flag[i] <- "!!"
+        flags <- c(flags, "!!")
       } else if (ratio_diff > 0.25) {
-        se_flag[i] <- "!"
-      } else {
-        se_flag[i] <- ""
+        flags <- c(flags, "!")
       }
-    } else {
-      se_flag[i] <- ""
     }
+    
+    # Check if this is an interaction term (contains ":")
+    term <- x$term[i]
+    if (grepl(":", term)) {
+      has_interactions <- TRUE
+      # Extract the component variable names
+      components <- strsplit(term, ":")[[1]]
+      
+      # Check correlation between components if we have 2 numeric variables
+      if (length(components) == 2 && !is.null(model_data)) {
+        var1_name <- components[1]
+        var2_name <- components[2]
+        
+        # Try to get the variables from model data or original data
+        var1 <- NULL
+        var2 <- NULL
+        
+        if (var1_name %in% names(model_data)) {
+          var1 <- model_data[[var1_name]]
+        }
+        if (var2_name %in% names(model_data)) {
+          var2 <- model_data[[var2_name]]
+        }
+        
+        # Calculate correlation if both are numeric
+        if (!is.null(var1) && !is.null(var2) && is.numeric(var1) && is.numeric(var2)) {
+          cor_test <- tryCatch(
+            stats::cor.test(var1, var2),
+            error = function(e) NULL
+          )
+          
+          if (!is.null(cor_test)) {
+            cor_val <- abs(cor_test$estimate)
+            cor_p <- cor_test$p.value
+            
+            # X* if correlation is significant at p < .05
+            if (!is.na(cor_p) && cor_p < 0.05) {
+              flags <- c(flags, "X*")
+            } else if (!is.na(cor_val) && cor_val > 0.3) {
+              # X if correlation > .3 (but not significant)
+              flags <- c(flags, "X")
+            }
+          }
+        }
+      }
+    }
+    
+    se_flag[i] <- paste(flags, collapse = " ")
   }
   
   # Format B column, using "--" for intercept instead of NA
@@ -309,10 +401,17 @@ print.lm2 <- function(x, ...) {
   cat("R² =", format(round(attr(x, "r.squared"), 3), nsmall = 3), " | ")
   cat("Adj. R² =", format(round(attr(x, "adj.r.squared"), 3), nsmall = 3), " | ")
   cat("SE type:", attr(x, "se_type"), "\n")
-  cat("\nNotes:\n")
-  cat("  - 'effect.size' is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
-  cat("  - 'missing' is the number of NA values for that variable\n")
-  cat("  - 'red.flag' indicates when robust and classical SEs differ by\n     <25% (--), >25% (!), >50% (!!) or >100% (!!!)\n")
+  if (notes) {
+    cat("\nNotes:\n")
+    cat("  - 'effect.size' is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
+    cat("  - 'missing' is the number of NA values for that variable\n")
+    cat("  - 'red.flag':\n")
+    cat("     !, !!, !!!: robust and classical SE differ by more than 25%, 50%, 100% (see King & Roberts 2015)\n")
+    if (has_interactions) {
+      cat("     X: terms in interaction are correlated r > .3 (see Simonsohn 2025)\n")
+      cat("     X*: terms in interaction are correlated p < .05 (see Simonsohn 2025)\n")
+    }
+  }
   
   invisible(x)
 }
