@@ -1,11 +1,12 @@
 #' Enhanced Linear Regression (lm)
 #'
-#' Runs a regression with robust stanard error  relying on 
-#' \code{\link[estimatr]{lm_robust}}. The output is formatted for enhanced readability, it 
-#' is richer, reporting both classical and robust errors, number of missing observations per
-#' variable, and a red.flag column per variable, 
-#' flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors,
-#' \code{lm_robust} relies on HC2, which can have inflated false-positive rates in smaller samples <add referece>
+#' Runs a linear regression with better defaults (robust SE), and richer & better 
+#' formatted output than \code{lm}. For robust and clustered errors it relies on \code{\link[estimatr]{lm_robust}}. 
+#' The output reports classical and robust errors, number of missing observations per
+#' variable, an effect size column (standardized regression coefficient), and a red.flag column per variable 
+#' flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors;
+#' \code{lm_robust} relies on HC2 (and Stata's 'reg y x, robust' on HC1), which can have
+#' inflated false-positive rates in smaller samples (Long & Ervin, 2000).
 #' 
 #' @param formula An object of class \code{\link{formula}}: a symbolic description
 #'   of the model to be fitted.
@@ -42,29 +43,77 @@
 #'     misspecification or outliers (but they may also be benign). When encountering a red flag,
 #'     authors should plot the distributions to look for outliers or skewed data, and use scatter.gam()
 #'     to look for possible nonlinearities in the relevant variables.
-#'     King & Roberts propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
+#'     King & Roberts (2015) propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
 #'     \code{statuser} does not follow either recommendation. The former seems too liberal, the 
-#'     latter too time consuming to include in every regression. 
-#'     See: King & Roberts (2015) How robust standard errors expose methodological problems they do not fix, and what 
-#'     to do about it. Political Analysis, 23(2), 159-179.
+#'     latter too time consuming to include in every regression.
 #'   \item \code{X} and \code{X*}: For interaction terms, the component variables are correlated with 
 #'     |r| > 0.3 (\code{X}) or p < .05 (\code{X*}); this can produce spurious interactions. Authors are advised
-#'     to not rely on the linear model and instead use GAM. 
-#'     See: Simonsohn, Uri. "Interacting with curves: How to validly test and probe 
-#'     interactions in the real (nonlinear) world." AMPPS 7(1), 1-22.
+#'     to not rely on the linear model and instead use GAM (Simonsohn, 2024).
 #' }
 #'
+#' @references
+#' King, G., & Roberts, M. E. (2015). How robust standard errors expose methodological 
+#' problems they do not fix, and what to do about it. \emph{Political Analysis}, 23(2), 159-179.
+#'
+#' Long, J. S., & Ervin, L. H. (2000). Using heteroscedasticity consistent standard errors 
+#' in the linear regression model. \emph{The American Statistician}, 54(3), 217-224.
+#'
+#' Simonsohn, U. (2024). Interacting with curves: How to validly test and probe 
+#' interactions in the real (nonlinear) world. \emph{Advances in Methods and Practices in 
+#' Psychological Science}, 7(1), 1-22.
+#'
 #' @examples
-#' # Basic usage with mtcars data
+#' # Basic usage with data argument
 #' lm2(mpg ~ wt + hp, data = mtcars)
 #'
-#' # Get estimatr's native output
-#' lm2(mpg ~ wt + hp, data = mtcars, output = "estimatr")
+#' # Without data argument (variables from environment)
+#' y <- mtcars$mpg
+#' x1 <- mtcars$wt
+#' x2 <- mtcars$hp
+#' lm2(y ~ x1 + x2)
 #'
-#' # Use different robust SE type
-#' lm2(mpg ~ wt + hp, data = mtcars, se_type = "HC2")
+#' # RED FLAG EXAMPLES
+#' 
+#' # Example 1: red flag catches a nonlinearity
+#' # True model is quadratic: y = x^2
+#' set.seed(123)
+#' x <- runif(200, -3, 3)
+#' y <- x^2 + rnorm(200, sd = 2)
+#' 
+#' # lm2() shows red flag due to misspecification
+#' lm2(y ~ x)
+#' 
+#' # Follow up with scatter.gam() to diagnose it
+#' scatter.gam(x, y)
 #'
-#' @seealso \code{\link[estimatr]{lm_robust}}
+#' # Example 2: red flag catches an outlier in y
+#' # True model is y = x, but one observation has a very large y value
+#' set.seed(123)
+#' x <- sort(rnorm(200))
+#' y <- round(x + rnorm(200, sd = 2), 1)
+#' y[200] <- 100  # Outlier
+#' 
+#' # lm2() flags x
+#' lm2(y ~ x)
+#' 
+#' # Look at distribution of y to spot the outlier
+#' plot_freq(y)
+#'
+#' # Example 3: red flag catches an outlier in one predictor
+#' # True model is y = x1 + x2, but x2 has an extreme value
+#' set.seed(123)
+#' x1 <- round(rnorm(200),.1)
+#' x2 <- round(rnorm(200),.1)
+#' y <- x1 + x2 + rnorm(200, sd = 0.5)
+#' x2[200] <- 50  # Outlier in x2
+#' 
+#' # lm2() flags x2 (but not x1)
+#' lm2(y ~ x1 + x2)
+#' 
+#' # Look at distribution of x2 to spot the outlier
+#' plot_freq(x2)
+#'
+#' @seealso \code{\link[estimatr]{lm_robust}}, \code{\link{scatter.gam}}
 #'
 #' @export lm2
 lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", notes = TRUE, ...) {
@@ -409,11 +458,13 @@ print.lm2 <- function(x, notes = NULL, ...) {
     cat("\nNotes:\n")
     cat("  - 'effect.size' is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
     cat("  - 'missing' is the number of NA values for that variable\n")
-    cat("  - 'red.flag':\n")
-    cat("     !, !!, !!!: robust and classical SE differ by more than 25%, 50%, 100% (see King & Roberts 2015)\n")
     if (has_interactions) {
+      cat("  - 'red.flag':\n")
+      cat("     !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
       cat("     X: terms in interaction are correlated r > .3 (see Simonsohn 2025)\n")
       cat("     X*: terms in interaction are correlated p < .05 (see Simonsohn 2025)\n")
+    } else {
+      cat("  - 'red.flag': !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
     }
   }
   

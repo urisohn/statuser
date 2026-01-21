@@ -2,7 +2,7 @@
 % Please edit documentation in R/lm2.R
 \name{lm2}
 \alias{lm2}
-\title{Enhanced Linear Model Function}
+\title{Enhanced Linear Regression (lm)}
 \usage{
 lm2(
   formula,
@@ -48,8 +48,13 @@ When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
   }
 }
 \description{
-A wrapper around \code{\link[estimatr]{lm_robust}} that provides richer output
-including standardized coefficients and both robust and classical standard errors.
+Runs a linear regression with better defaults (robust SE), and richer & better 
+formatted output than \code{lm}. For robust and clustered errors it relies on \code{\link[estimatr]{lm_robust}}. 
+The output reports classical and robust errors, number of missing observations per
+variable, an effect size column (standardized regression coefficient), and a red.flag column per variable 
+flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors;
+\code{lm_robust} relies on HC2 (and Stata's 'reg y x, robust' on HC1), which can have
+inflated false-positive rates in smaller samples (Long & Ervin, 2000).
 }
 \details{
 The \code{red.flag} column provides diagnostic warnings:
@@ -59,29 +64,77 @@ The \code{red.flag} column provides diagnostic warnings:
     misspecification or outliers (but they may also be benign). When encountering a red flag,
     authors should plot the distributions to look for outliers or skewed data, and use scatter.gam()
     to look for possible nonlinearities in the relevant variables.
-    King & Roberts propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
+    King & Roberts (2015) propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
     \code{statuser} does not follow either recommendation. The former seems too liberal, the 
-    latter too time consuming to include in every regression. 
-    See: King & Roberts (2015) How robust standard errors expose methodological problems they do not fix, and what 
-    to do about it. Political Analysis, 23(2), 159-179.
+    latter too time consuming to include in every regression.
   \item \code{X} and \code{X*}: For interaction terms, the component variables are correlated with 
     |r| > 0.3 (\code{X}) or p < .05 (\code{X*}); this can produce spurious interactions. Authors are advised
-    to not rely on the linear model and instead use GAM. 
-    See: Simonsohn, Uri. "Interacting with curves: How to validly test and probe 
-    interactions in the real (nonlinear) world." AMPPS 7(1), 1-22.
+    to not rely on the linear model and instead use GAM (Simonsohn, 2024).
 }
 }
 \examples{
-# Basic usage with mtcars data
+# Basic usage with data argument
 lm2(mpg ~ wt + hp, data = mtcars)
 
-# Get estimatr's native output
-lm2(mpg ~ wt + hp, data = mtcars, output = "estimatr")
+# Without data argument (variables from environment)
+y <- mtcars$mpg
+x1 <- mtcars$wt
+x2 <- mtcars$hp
+lm2(y ~ x1 + x2)
 
-# Use different robust SE type
-lm2(mpg ~ wt + hp, data = mtcars, se_type = "HC2")
+# RED FLAG EXAMPLES
+
+# Example 1: red flag catches a nonlinearity
+# True model is quadratic: y = x^2
+set.seed(123)
+x <- runif(200, -3, 3)
+y <- x^2 + rnorm(200, sd = 2)
+
+# lm2() shows red flag due to misspecification
+lm2(y ~ x)
+
+# Follow up with scatter.gam() to diagnose it
+scatter.gam(x, y)
+
+# Example 2: red flag catches an outlier in y
+# True model is y = x, but one observation has a very large y value
+set.seed(123)
+x <- sort(rnorm(200))
+y <- round(x + rnorm(200, sd = 2), 1)
+y[200] <- 100  # Outlier
+
+# lm2() flags x
+lm2(y ~ x)
+
+# Look at distribution of y to spot the outlier
+plot_freq(y)
+
+# Example 3: red flag catches an outlier in one predictor
+# True model is y = x1 + x2, but x2 has an extreme value
+set.seed(123)
+x1 <- rnorm(200)
+x2 <- rnorm(200)
+y <- x1 + x2 + rnorm(200, sd = 0.5)
+x2[200] <- 50  # Outlier in x2
+
+# lm2() flags x2 (but not x1)
+lm2(y ~ x1 + x2)
+
+# Look at distribution of x2 to spot the outlier
+plot_freq(x2)
 
 }
+\references{
+King, G., & Roberts, M. E. (2015). How robust standard errors expose methodological 
+problems they do not fix, and what to do about it. \emph{Political Analysis}, 23(2), 159-179.
+
+Long, J. S., & Ervin, L. H. (2000). Using heteroscedasticity consistent standard errors 
+in the linear regression model. \emph{The American Statistician}, 54(3), 217-224.
+
+Simonsohn, U. (2024). Interacting with curves: How to validly test and probe 
+interactions in the real (nonlinear) world. \emph{Advances in Methods and Practices in 
+Psychological Science}, 7(1), 1-22.
+}
 \seealso{
-\code{\link[estimatr]{lm_robust}}
+\code{\link[estimatr]{lm_robust}}, \code{\link{scatter.gam}}
 }
