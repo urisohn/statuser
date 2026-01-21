@@ -31,6 +31,7 @@ Functions are organized into the following categories:
 \section{Statistical Analyses}{
 
 \itemize{
+  \item \code{\link{lm2}}: Enhanced linear regression with robust SEs, standardized coefficients, and diagnostics
   \item \code{\link{t.test2}}: Enhanced t-test function returning dataframes
   \item \code{\link{desc_var}}: Descriptive statistics by group (or full dataset)
 }

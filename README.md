@@ -230,6 +230,33 @@ desc_var(score, condition, data = df, decimals = 2)
 </details>
 
 <details>
+<summary><code>lm2()</code>: Enhanced linear regression with robust SEs, standardized coefficients, and diagnostics</summary>
+
+```r
+# Basic usage - uses HC3 robust standard errors by default
+lm2(mpg ~ wt + hp, data = mtcars)
+
+# Works without data argument if variables exist in environment
+y <- rnorm(100)
+x1 <- rnorm(100)
+x2 <- rnorm(100)
+lm2(y ~ x1 + x2)
+
+# Output includes:
+# - Robust and classical standard errors side-by-side
+# - Standardized coefficients (effect.size)
+# - Missing value counts per variable
+# - Red flags when robust and classical SEs differ substantially
+
+# Get estimatr's native output instead
+lm2(mpg ~ wt + hp, data = mtcars, output = "estimatr")
+
+# Use different robust SE type (HC0, HC1, HC2, HC3)
+lm2(mpg ~ wt + hp, data = mtcars, se_type = "HC2")
+```
+</details>
+
+<details>
 <summary><code>t.test2()</code>: Enhances base t.test: (1) console shows mean diff & var names, (2) output is dataframe, not list</summary>
 
 ```r
@@ -318,6 +345,7 @@ message2("This is a cyan message", col = "cyan")
 - `magick` (for `resize_images()`)
 - `sandwich` (for `twolines()`)
 - `lmtest` (for `twolines()`)
+- `estimatr` (for `lm2()`)
 
 ## Author
 

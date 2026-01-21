@@ -311,8 +311,8 @@ print.lm2 <- function(x, ...) {
   cat("SE type:", attr(x, "se_type"), "\n")
   cat("\nNotes:\n")
   cat("  - 'effect.size' is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
-  cat("  - 'missing' is the number of NA values for that variable in the original data\n")
-  cat("  - 'red.flag' indicates robust and classical SEs differ by >25% (!), >50% (!!) or >100% (!!!)\n")
+  cat("  - 'missing' is the number of NA values for that variable\n")
+  cat("  - 'red.flag' indicates when robust and classical SEs differ by\n     <25% (--), >25% (!), >50% (!!) or >100% (!!!)\n")
   
   invisible(x)
 }
