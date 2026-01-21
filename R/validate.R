@@ -413,3 +413,109 @@ validate_t.test2 <- function(group_var_name, data = NULL, calling_env = parent.f
   return(group_var)
 }
 
+#' Validate Inputs for lm2() Function
+#'
+#' Validates se_type and clusters arguments for lm2().
+#' Also handles creating a data frame from vectors if data is not provided.
+#'
+#' @param formula A formula specifying the model.
+#' @param data An optional data frame containing the variables.
+#' @param se_type The type of standard error to use.
+#' @param se_type_missing Logical. Whether se_type was not explicitly provided by user.
+#' @param dots Additional arguments passed to lm_robust (to check for clusters).
+#' @param calling_env The environment in which to look for variables if data is not provided.
+#'
+#' @return A list containing:
+#' \itemize{
+#'   \item \code{data}: The data frame to use (either provided or constructed from vectors)
+#'   \item \code{se_type}: The validated/adjusted se_type
+#'   \item \code{has_clusters}: Logical indicating if clusters are being used
+#' }
+#'
+#' @keywords internal
+validate_lm2 <- function(formula, data = NULL, se_type = "HC3", se_type_missing = TRUE, 
+                         dots = list(), calling_env = parent.frame()) {
+  
+  # Check if clusters are specified
+  has_clusters <- "clusters" %in% names(dots)
+  
+  # Validate se_type based on whether clusters are used
+  if (has_clusters) {
+    # If clusters specified, se_type cannot be specified (we hardcode CR2)
+    if (!se_type_missing && toupper(se_type) != "HC3") {
+      message2("lm2() says: When using clusters, se_type cannot be specified. lm2() uses CR2 for clustered standard errors.", col = "red")
+      invokeRestart("abort")
+    }
+    se_type <- "CR2"
+  } else {
+    # Without clusters, only HC0-HC3 are valid
+    valid_se_types <- c("HC0", "HC1", "HC2", "HC3")
+    if (!toupper(se_type) %in% valid_se_types) {
+      message2(paste0("lm2() says: se_type must be one of: ", paste(valid_se_types, collapse = ", "), 
+           ". Got: '", se_type, "'"), col = "red")
+      invokeRestart("abort")
+    }
+    # Normalize to uppercase
+    se_type <- toupper(se_type)
+  }
+  
+  # If data is not provided, try to construct it from vectors in the environment
+  if (is.null(data)) {
+    # Extract variable names from formula
+    formula_vars <- all.vars(formula)
+    
+    # Check if all variables exist in the calling environment
+    all_exist <- all(sapply(formula_vars, function(v) exists(v, envir = calling_env, inherits = TRUE)))
+    
+    if (!all_exist) {
+      missing_vars <- formula_vars[!sapply(formula_vars, function(v) exists(v, envir = calling_env, inherits = TRUE))]
+      message2(paste0("lm2() says: Could not find variable(s): ", paste(missing_vars, collapse = ", "), 
+           ". Either provide a 'data' argument or ensure variables exist in the environment."), col = "red")
+      invokeRestart("abort")
+    }
+    
+    # Get all variables from environment
+    var_list <- lapply(formula_vars, function(v) {
+      eval(as.name(v), envir = calling_env)
+    })
+    names(var_list) <- formula_vars
+    
+    # Check all have the same length
+    lengths <- sapply(var_list, length)
+    if (length(unique(lengths)) > 1) {
+      length_info <- paste(sapply(seq_along(formula_vars), function(i) {
+        paste0(formula_vars[i], " (", lengths[i], ")")
+      }), collapse = ", ")
+      message2(paste0("lm2() says: All variables must have the same length. Lengths: ", length_info), col = "red")
+      invokeRestart("abort")
+    }
+    
+    # Create data frame
+    data <- as.data.frame(var_list, stringsAsFactors = FALSE)
+    
+    # Also check clusters variable if specified
+    if (has_clusters) {
+      cluster_var <- dots$clusters
+      # If clusters is a symbol/name, evaluate it
+      if (is.symbol(cluster_var) || is.name(cluster_var)) {
+        cluster_name <- as.character(cluster_var)
+        if (!exists(cluster_name, envir = calling_env, inherits = TRUE)) {
+          message2(paste0("lm2() says: Could not find clusters variable: ", cluster_name), col = "red")
+          invokeRestart("abort")
+        }
+        cluster_values <- eval(cluster_var, envir = calling_env)
+        if (length(cluster_values) != nrow(data)) {
+          message2("lm2() says: clusters variable must have the same length as other variables", col = "red")
+          invokeRestart("abort")
+        }
+        data[[cluster_name]] <- cluster_values
+      }
+    }
+  }
+  
+  list(
+    data = data,
+    se_type = se_type,
+    has_clusters = has_clusters
+  )
+}

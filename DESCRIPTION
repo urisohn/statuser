@@ -28,4 +28,5 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     crayon,
-    quantreg
+    quantreg,
+    estimatr
