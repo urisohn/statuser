@@ -102,3 +102,46 @@ test_that("lm2 validates output argument", {
     "should be one of"
   )
 })
+
+test_that("lm2 predict matches lm_robust predict with clustering", {
+  skip_if_not_installed("estimatr")
+  
+  # Create clustered data
+  set.seed(123)
+  cluster_id <- rep(1:10, each = 20)
+  x <- rnorm(200)
+  y <- x + rnorm(200) + rnorm(10)[cluster_id]
+  test_data <- data.frame(y = y, x = x, cluster_id = cluster_id)
+  
+  # Fit with lm2 and lm_robust
+ m1 <- lm2(y ~ x, data = test_data, clusters = cluster_id)
+  m2 <- estimatr::lm_robust(y ~ x, data = test_data, clusters = cluster_id)
+  
+  # Get predictions with SEs
+  yh1 <- predict(m1, newdata = test_data, se.fit = TRUE)
+  yh2 <- predict(m2, newdata = test_data, se.fit = TRUE)
+  
+  # Fitted values should be identical
+  expect_equal(mean(yh1$fit == yh2$fit), 1)
+  
+  # Standard errors should be identical
+  expect_equal(mean(yh1$se.fit == yh2$se.fit), 1)
+})
+
+test_that("lm2 predict matches lm_robust predict without clustering", {
+  skip_if_not_installed("estimatr")
+  
+  # Fit with lm2 and lm_robust
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m2 <- estimatr::lm_robust(mpg ~ wt + hp, data = mtcars, se_type = "HC3")
+  
+  # Get predictions with SEs
+  yh1 <- predict(m1, newdata = mtcars, se.fit = TRUE)
+  yh2 <- predict(m2, newdata = mtcars, se.fit = TRUE)
+  
+  # Fitted values should be identical
+  expect_equal(mean(yh1$fit == yh2$fit), 1)
+  
+  # Standard errors should be identical
+  expect_equal(mean(yh1$se.fit == yh2$se.fit), 1)
+})

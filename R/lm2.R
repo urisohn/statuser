@@ -268,7 +268,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
     }
   }
   
-  # Build output data frame
+  # Build output data frame (used by print method)
   result <- data.frame(
     term = term_names,
     estimate = estimates,
@@ -609,4 +609,21 @@ print.lm2 <- function(x, notes = NULL, ...) {
   }
   
   invisible(x)
+}
+
+#' Predict method for lm2 objects
+#'
+#' @param object An object of class \code{lm2}
+#' @param ... Additional arguments passed to \code{\link[estimatr]{predict.lm_robust}},
+#'   including \code{newdata}, \code{se.fit}, and \code{interval}.
+#'
+#' @return A vector of predicted values (or a data frame if \code{se.fit = TRUE} or 
+#'   \code{interval} is specified)
+#' @export
+predict.lm2 <- function(object, ...) {
+  robust_fit <- attr(object, "robust_fit")
+  if (is.null(robust_fit)) {
+    stop("Cannot predict: lm_robust fit not found in lm2 object")
+  }
+  predict(robust_fit, ...)
 }
