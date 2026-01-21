@@ -7,6 +7,12 @@
 #' flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors;
 #' \code{lm_robust} relies on HC2 (and Stata's 'reg y x, robust' on HC1), which can have
 #' inflated false-positive rates in smaller samples (Long & Ervin, 2000).
+#'
+#' When \code{clusters} is specified, the output includes three SE columns: \code{SE.cluster} (CR2),
+#' \code{SE.robust} (HC3), and \code{SE.classical}. The red flag diagnostics compare HC3 to classical SE,
+#' not the clustered SE, because clustered SEs are expected to be larger when there is within-cluster
+#' correlation (which is not a problem). Comparing HC3 to classical SE isolates heteroskedasticity
+#' and outlier issues from the expected clustering effect.
 #' 
 #' @param formula An object of class \code{\link{formula}}: a symbolic description
 #'   of the model to be fitted.
@@ -35,13 +41,16 @@
 #'   When \code{output = "statuser"}, returns a data frame with the following columns:
 #'   \itemize{
 #'     \item \code{estimate}: The coefficient estimate
-#'     \item \code{SE.robust}: Robust standard error (using \code{se_type})
+#'     \item \code{SE.cluster}: Cluster-robust standard error (CR2). Only present when 
+#'       \code{clusters} is specified.
+#'     \item \code{SE.robust}: Heteroskedasticity-robust standard error (HC3)
 #'     \item \code{SE.classical}: Classical (OLS) standard error
-#'     \item \code{t.value}: t-statistic (based on robust SE)
-#'     \item \code{p.value}: p-value (based on robust SE)
+#'     \item \code{t.value}: t-statistic (based on HC3 robust SE)
+#'     \item \code{p.value}: p-value (based on HC3 robust SE)
 #'     \item \code{effect.size}: Standardized coefficient (beta)
 #'     \item \code{missing}: Number of NA values for that variable
-#'     \item \code{red.flag}: Diagnostic flags (see Details)
+#'     \item \code{red.flag}: Diagnostic flags (see Details). Based on comparing 
+#'       \code{SE.robust} (HC3) to \code{SE.classical}, not the clustered SE.
 #'   }
 #'
 #' @details
@@ -158,9 +167,14 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   data <- validated$data
   se_type <- validated$se_type
   
+
+  # Build arguments for lm_robust (only include non-NULL optional args)
+  lm_robust_args <- list(formula = formula, data = data, se_type = se_type, ...)
+  if (!is.null(clusters)) lm_robust_args$clusters <- clusters
+  if (!is.null(fixed_effects)) lm_robust_args$fixed_effects <- fixed_effects
+  
   # Run lm_robust with specified se_type
-  robust_fit <- estimatr::lm_robust(formula = formula, data = data, se_type = se_type, 
-                                     clusters = clusters, fixed_effects = fixed_effects, ...)
+  robust_fit <- do.call(estimatr::lm_robust, lm_robust_args)
   
   # If user wants estimatr output, return it directly
   if (output == "estimatr") {
@@ -171,10 +185,29 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   # Extract components from lm_robust object
   term_names <- names(robust_fit$coefficients)
   estimates <- as.numeric(robust_fit$coefficients)
-  robust_se <- robust_fit$std.error
-  t_values <- robust_fit$statistic
-  p_values <- robust_fit$p.value
-  df_values <- robust_fit$df
+  
+  # When clusters are used, we need both clustered SE and HC3 robust SE
+  # The clustered SE comes from robust_fit (CR2)
+  # The HC3 robust SE comes from a separate run without clusters
+  # This lets us flag heteroskedasticity/outliers separately from clustering effects
+  if (has_clusters) {
+    cluster_se <- robust_fit$std.error
+    # t-values and p-values based on clustered SE
+    t_values <- robust_fit$statistic
+    p_values <- robust_fit$p.value
+    df_values <- robust_fit$df
+    # Run HC3 without clusters to get heteroskedasticity-robust SE (for red flag only)
+    hc3_args <- list(formula = formula, data = data, se_type = "HC3", ...)
+    if (!is.null(fixed_effects)) hc3_args$fixed_effects <- fixed_effects
+    hc3_fit <- do.call(estimatr::lm_robust, hc3_args)
+    robust_se <- hc3_fit$std.error
+  } else {
+    cluster_se <- NULL
+    robust_se <- robust_fit$std.error
+    t_values <- robust_fit$statistic
+    p_values <- robust_fit$p.value
+    df_values <- robust_fit$df
+  }
   
   # Run classical OLS to get classical standard errors
   classical_fit <- stats::lm(formula = formula, data = data)
@@ -249,6 +282,11 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
     stringsAsFactors = FALSE
   )
   
+  # Add SE.cluster column if clusters were used
+  if (!is.null(cluster_se)) {
+    result$SE.cluster <- cluster_se
+  }
+  
   # Store the model objects as attributes for potential later use
   attr(result, "call") <- cl
   attr(result, "robust_fit") <- robust_fit
@@ -261,6 +299,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   attr(result, "na_counts") <- na_counts
   attr(result, "n_missing") <- n_missing
   attr(result, "notes") <- notes
+  attr(result, "has_clusters") <- has_clusters
   
   # Add class for custom print method
   class(result) <- c("lm2", class(result))
@@ -431,17 +470,89 @@ print.lm2 <- function(x, notes = NULL, ...) {
   # Add leading padding spaces to values for better column separation
   pad <- function(x, n) paste0(strrep(" ", n), x)
   
-  display_df <- data.frame(
-    term = gsub("^\\(Intercept\\)$", "Intercept", x$term),
-    estimate = pad(sapply(x$estimate, smart_round), 1),
-    SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
-    SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
-    t.value = pad(sapply(x$t, smart_round), 1),
-    p.value = pad(sapply(x$p.value, format_p), 1),
-    effect.size = pad(B_formatted, 1),
-    stringsAsFactors = FALSE,
-    check.names = FALSE
-  )
+  # Right-align values within column, then add trailing space
+  right_align <- function(x, trail = 1) {
+    max_width <- max(nchar(x))
+    formatted <- format(x, width = max_width, justify = "right")
+    paste0(formatted, strrep(" ", trail))
+  }
+  
+  # Check if we have clustered SE
+  has_clusters <- attr(x, "has_clusters")
+  if (is.null(has_clusters)) has_clusters <- FALSE
+  
+  # Format columns
+  estimate_vals <- sapply(x$estimate, smart_round)
+  t_vals <- sapply(x$t, smart_round)
+  
+  # Check if df varies across coefficients
+  df_vals <- x$df
+  df_varies <- length(unique(round(df_vals, 2))) > 1
+  
+  # Format term names: lowercase, with 2 trailing spaces
+  term_names_formatted <- paste0(tolower(gsub("^\\(Intercept\\)$", "intercept", x$term)), "  ")
+  
+  if (has_clusters) {
+    # With clusters: SE.cluster, SE.robust (HC3), SE.classical
+    if (df_varies) {
+      # df varies: include as column between t.value and p.value
+      display_df <- data.frame(
+        term = term_names_formatted,
+        estimate = right_align(estimate_vals, 1),
+        SE.cluster = pad(sapply(x$SE.cluster, smart_round), 2),
+        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        t.value = right_align(t_vals, 1),
+        df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
+        p.value = pad(sapply(x$p.value, format_p), 1),
+        effect.size = pad(B_formatted, 1),
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+    } else {
+      display_df <- data.frame(
+        term = term_names_formatted,
+        estimate = right_align(estimate_vals, 1),
+        SE.cluster = pad(sapply(x$SE.cluster, smart_round), 2),
+        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        t.value = right_align(t_vals, 1),
+        p.value = pad(sapply(x$p.value, format_p), 1),
+        effect.size = pad(B_formatted, 1),
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+    }
+  } else {
+    # Without clusters: SE.robust, SE.classical
+    if (df_varies) {
+      # df varies: include as column between t.value and p.value
+      display_df <- data.frame(
+        term = term_names_formatted,
+        estimate = right_align(estimate_vals, 1),
+        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        t.value = right_align(t_vals, 1),
+        df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
+        p.value = pad(sapply(x$p.value, format_p), 1),
+        effect.size = pad(B_formatted, 1),
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+    } else {
+      display_df <- data.frame(
+        term = term_names_formatted,
+        estimate = right_align(estimate_vals, 1),
+        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        t.value = right_align(t_vals, 1),
+        p.value = pad(sapply(x$p.value, format_p), 1),
+        effect.size = pad(B_formatted, 1),
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+    }
+  }
   
   # Add missing column if available
   if (!is.null(missing_formatted)) {
@@ -467,22 +578,33 @@ print.lm2 <- function(x, notes = NULL, ...) {
   cat("\n")
   cat("N =", attr(x, "nobs"), " | ")
   cat("missing =", attr(x, "n_missing"), " | ")
-  cat("df =", round(x$df[1], 0), " | ")
+  if (!df_varies) {
+    cat("df =", round(x$df[1], 0), " | ")
+  }
   cat("R² =", format(round(attr(x, "r.squared"), 3), nsmall = 3), " | ")
   cat("Adj. R² =", format(round(attr(x, "adj.r.squared"), 3), nsmall = 3), " | ")
-  cat("SE type:", attr(x, "se_type"), "\n")
+  if (has_clusters) {
+    cat("SE type: CR2 (cluster)\n")
+  } else {
+    cat("SE type:", attr(x, "se_type"), "\n")
+  }
   if (notes) {
     cat("\nNotes:\n")
-    cat("  - 't.value' & 'p.value' are based on robust SE\n")
-    cat("  - 'effect.size' is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
-    cat("  - 'missing' is the number of NA values for that variable\n")
+    if (has_clusters) {
+      cat("  - t.value & p.value are based on clustered SE (CR2)\n")
+      cat("  - SE.robust (HC3) used only to contrast with SE.classical to flag observations\n")
+    } else {
+      cat("  - t.value & p.value are based on robust SE (HC3)\n")
+    }
+    cat("  - effect.size is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
+    cat("  - missing: number of observations excluded due to missing values\n")
     if (has_interactions) {
-      cat("  - 'red.flag':\n")
+      cat("  - red.flag:\n")
       cat("     !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
       cat("     X: terms in interaction are correlated r > .3 (see Simonsohn 2025)\n")
       cat("     X*: terms in interaction are correlated p < .05 (see Simonsohn 2025)\n")
     } else {
-      cat("  - 'red.flag': !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
+      cat("  - red.flag: !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
     }
   }
   

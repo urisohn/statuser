@@ -436,8 +436,8 @@ validate_t.test2 <- function(group_var_name, data = NULL, calling_env = parent.f
 validate_lm2 <- function(formula, data = NULL, se_type = "HC3", se_type_missing = TRUE, 
                          dots = list(), calling_env = parent.frame()) {
   
-  # Check if clusters are specified
-  has_clusters <- "clusters" %in% names(dots)
+  # Check if clusters are specified (and not NULL)
+  has_clusters <- "clusters" %in% names(dots) && !is.null(dots$clusters)
   
   # Validate se_type based on whether clusters are used
   if (has_clusters) {

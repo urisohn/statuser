@@ -50,15 +50,17 @@ Passed to \code{\link[estimatr]{lm_robust}}.}
 When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
   When \code{output = "statuser"}, returns a data frame with the following columns:
   \itemize{
-    \item \code{term}: The predictor name
     \item \code{estimate}: The coefficient estimate
-    \item \code{SE.robust}: Robust standard error (using \code{se_type})
+    \item \code{SE.cluster}: Cluster-robust standard error (CR2). Only present when 
+      \code{clusters} is specified.
+    \item \code{SE.robust}: Heteroskedasticity-robust standard error (HC3)
     \item \code{SE.classical}: Classical (OLS) standard error
-    \item \code{t}: t-statistic (based on robust SE)
-    \item \code{df}: Degrees of freedom
-    \item \code{p.value}: p-value (based on robust SE)
-    \item \code{B}: Standardized coefficient (beta)
-    \item \code{red.flag}: Diagnostic flags (see Details)
+    \item \code{t.value}: t-statistic (based on HC3 robust SE)
+    \item \code{p.value}: p-value (based on HC3 robust SE)
+    \item \code{effect.size}: Standardized coefficient (beta)
+    \item \code{missing}: Number of NA values for that variable
+    \item \code{red.flag}: Diagnostic flags (see Details). Based on comparing 
+      \code{SE.robust} (HC3) to \code{SE.classical}, not the clustered SE.
   }
 }
 \description{
@@ -71,6 +73,13 @@ flagging the need to conduct specific diagnostics. It relies by default on HC3 f
 inflated false-positive rates in smaller samples (Long & Ervin, 2000).
 }
 \details{
+When \code{clusters} is specified, the output includes three SE columns: \code{SE.cluster} (CR2),
+\code{SE.robust} (HC3), and \code{SE.classical}. The red flag diagnostics compare HC3 to classical SE,
+not the clustered SE, because clustered SEs are expected to be larger when there is within-cluster
+correlation (which is not a problem). Comparing HC3 to classical SE isolates heteroskedasticity
+and outlier issues from the expected clustering effect.
+
+
 Robust standard errors and clustered standard errors are computed using 
 \code{\link[estimatr]{lm_robust}}; see the documentation of that function for details.
 
