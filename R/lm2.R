@@ -606,6 +606,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
     } else {
       cat("  - red.flag: !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
     }
+    cat("    (set notes=FALSE to prevent printing these notes)\n")
   }
   
   invisible(x)
