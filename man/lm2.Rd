@@ -4,7 +4,14 @@
 \alias{lm2}
 \title{Enhanced Linear Model Function}
 \usage{
-lm2(formula, data = NULL, se_type = "HC3", output = "statuser", ...)
+lm2(
+  formula,
+  data = NULL,
+  se_type = "HC3",
+  output = "statuser",
+  notes = TRUE,
+  ...
+)
 }
 \arguments{
 \item{formula}{An object of class \code{\link{formula}}: a symbolic description
@@ -20,6 +27,9 @@ returns an enhanced table with standardized coefficients and both robust and
 classical standard errors. \code{"estimatr"} returns the standard
 \code{lm_robust} output.}
 
+\item{notes}{Logical. If TRUE (default), print explanatory notes below the table
+when the result is printed.}
+
 \item{...}{Additional arguments passed to \code{\link[estimatr]{lm_robust}}.}
 }
 \value{
@@ -34,11 +44,32 @@ When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
     \item \code{df}: Degrees of freedom
     \item \code{p.value}: p-value (based on robust SE)
     \item \code{B}: Standardized coefficient (beta)
+    \item \code{red.flag}: Diagnostic flags (see Details)
   }
 }
 \description{
 A wrapper around \code{\link[estimatr]{lm_robust}} that provides richer output
 including standardized coefficients and both robust and classical standard errors.
+}
+\details{
+The \code{red.flag} column provides diagnostic warnings:
+\itemize{
+  \item \code{!}, \code{!!}, \code{!!!}: Robust and classical standard errors differ by 
+    more than 25\%, 50\%, or 100\%, respectively. Large differences may suggest model 
+    misspecification or outliers (but they may also be benign). When encountering a red flag,
+    authors should plot the distributions to look for outliers or skewed data, and use scatter.gam()
+    to look for possible nonlinearities in the relevant variables.
+    King & Roberts propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
+    \code{statuser} does not follow either recommendation. The former seems too liberal, the 
+    latter too time consuming to include in every regression. 
+    See: King & Roberts (2015) How robust standard errors expose methodological problems they do not fix, and what 
+    to do about it. Political Analysis, 23(2), 159-179.
+  \item \code{X} and \code{X*}: For interaction terms, the component variables are correlated with 
+    |r| > 0.3 (\code{X}) or p < .05 (\code{X*}); this can produce spurious interactions. Authors are advised
+    to not rely on the linear model and instead use GAM. 
+    See: Simonsohn, Uri. "Interacting with curves: How to validly test and probe 
+    interactions in the real (nonlinear) world." AMPPS 7(1), 1-22.
+}
 }
 \examples{
 # Basic usage with mtcars data

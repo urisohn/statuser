@@ -4,10 +4,13 @@
 \alias{print.lm2}
 \title{Print method for lm2 objects}
 \usage{
-\method{print}{lm2}(x, ...)
+\method{print}{lm2}(x, notes = NULL, ...)
 }
 \arguments{
 \item{x}{An object of class \code{lm2}}
+
+\item{notes}{Logical. If TRUE (default), print explanatory notes below the table.
+If not specified, uses the value set when \code{lm2()} was called.}
 
 \item{...}{Additional arguments (ignored)}
 }

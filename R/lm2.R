@@ -1,8 +1,12 @@
-#' Enhanced Linear Model Function
+#' Enhanced Linear Regression (lm)
 #'
-#' A wrapper around \code{\link[estimatr]{lm_robust}} that provides richer output
-#' including standardized coefficients and both robust and classical standard errors.
-#'
+#' Runs a regression with robust stanard error  relying on 
+#' \code{\link[estimatr]{lm_robust}}. The output is formatted for enhanced readability, it 
+#' is richer, reporting both classical and robust errors, number of missing observations per
+#' variable, and a red.flag column per variable, 
+#' flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors,
+#' \code{lm_robust} relies on HC2, which can have inflated false-positive rates in smaller samples <add referece>
+#' 
 #' @param formula An object of class \code{\link{formula}}: a symbolic description
 #'   of the model to be fitted.
 #' @param data A data frame containing the variables in the model.
@@ -35,18 +39,18 @@
 #' \itemize{
 #'   \item \code{!}, \code{!!}, \code{!!!}: Robust and classical standard errors differ by 
 #'     more than 25\%, 50\%, or 100\%, respectively. Large differences may suggest model 
-#'     misspecification or outliers (but they may also be benign). When encountering a redflag
-#'     authors should plot the distributions to look for outliers or skewed data, and do scatter.gam()
+#'     misspecification or outliers (but they may also be benign). When encountering a red flag,
+#'     authors should plot the distributions to look for outliers or skewed data, and use scatter.gam()
 #'     to look for possible nonlinearities in the relevant variables.
-#'     King & Roberts propose a higher cutoff, at 100%, and a bootstrapped significance test, 
-#'     \code{statuser} does not follow either recommendation. The latter seems too liberal, the 
+#'     King & Roberts propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
+#'     \code{statuser} does not follow either recommendation. The former seems too liberal, the 
 #'     latter too time consuming to include in every regression. 
-#'     See: King & Roberts (2015)  How robust standard errors expose methodological problems they do not fix, and what 
+#'     See: King & Roberts (2015) How robust standard errors expose methodological problems they do not fix, and what 
 #'     to do about it. Political Analysis, 23(2), 159-179.
-#'   \item \code{X} and \code{x*}: For interaction terms, the component variables are correlated with 
-#'     |r| > 0.3, * and p<.05, this can produce spurious interaction. Authors are advised
+#'   \item \code{X} and \code{X*}: For interaction terms, the component variables are correlated with 
+#'     |r| > 0.3 (\code{X}) or p < .05 (\code{X*}); this can produce spurious interactions. Authors are advised
 #'     to not rely on the linear model and instead use GAM. 
-#'     See: Simonsohn, Uri . "Interacting with curves: How to validly test and probe 
+#'     See: Simonsohn, Uri. "Interacting with curves: How to validly test and probe 
 #'     interactions in the real (nonlinear) world." AMPPS 7(1), 1-22.
 #' }
 #'
