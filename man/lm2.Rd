@@ -10,6 +10,8 @@ lm2(
   se_type = "HC3",
   output = "statuser",
   notes = TRUE,
+  clusters = NULL,
+  fixed_effects = NULL,
   ...
 )
 }
@@ -17,10 +19,13 @@ lm2(
 \item{formula}{An object of class \code{\link{formula}}: a symbolic description
 of the model to be fitted.}
 
-\item{data}{A data frame containing the variables in the model.}
+\item{data}{An optional data frame, list or environment containing the variables 
+in the model. If not found in \code{data}, the variables are taken from the 
+environment from which \code{lm2} is called.}
 
 \item{se_type}{The type of standard error to use. Default is \code{"HC3"}.
-See \code{\link[estimatr]{lm_robust}} for options.}
+Without clusters: \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
+When \code{clusters} is specified, \code{se_type} is automatically set to \code{"CR2"}.}
 
 \item{output}{Character string specifying output format. \code{"statuser"} (default)
 returns an enhanced table with standardized coefficients and both robust and
@@ -29,6 +34,15 @@ classical standard errors. \code{"estimatr"} returns the standard
 
 \item{notes}{Logical. If TRUE (default), print explanatory notes below the table
 when the result is printed.}
+
+\item{clusters}{An optional variable indicating clusters for cluster-robust standard 
+errors. When specified, \code{se_type} is automatically set to \code{"CR2"} 
+(bias-reduced cluster-robust estimator). Passed to \code{\link[estimatr]{lm_robust}}.}
+
+\item{fixed_effects}{An optional right-sided formula containing the fixed effects 
+to be projected out (absorbed) before estimation. Useful for models with many 
+fixed effect groups (e.g., \code{~ firm_id} or \code{~ firm_id + year}). 
+Passed to \code{\link[estimatr]{lm_robust}}.}
 
 \item{...}{Additional arguments passed to \code{\link[estimatr]{lm_robust}}.}
 }
@@ -57,6 +71,9 @@ flagging the need to conduct specific diagnostics. It relies by default on HC3 f
 inflated false-positive rates in smaller samples (Long & Ervin, 2000).
 }
 \details{
+Robust standard errors and clustered standard errors are computed using 
+\code{\link[estimatr]{lm_robust}}; see the documentation of that function for details.
+
 The \code{red.flag} column provides diagnostic warnings:
 \itemize{
   \item \code{!}, \code{!!}, \code{!!!}: Robust and classical standard errors differ by 
@@ -112,8 +129,8 @@ plot_freq(y)
 # Example 3: red flag catches an outlier in one predictor
 # True model is y = x1 + x2, but x2 has an extreme value
 set.seed(123)
-x1 <- rnorm(200)
-x2 <- rnorm(200)
+x1 <- round(rnorm(200),.1)
+x2 <- round(rnorm(200),.1)
 y <- x1 + x2 + rnorm(200, sd = 0.5)
 x2[200] <- 50  # Outlier in x2
 

@@ -10,32 +10,44 @@
 #' 
 #' @param formula An object of class \code{\link{formula}}: a symbolic description
 #'   of the model to be fitted.
-#' @param data A data frame containing the variables in the model.
+#' @param data An optional data frame, list or environment containing the variables 
+#'   in the model. If not found in \code{data}, the variables are taken from the 
+#'   environment from which \code{lm2} is called.
 #' @param se_type The type of standard error to use. Default is \code{"HC3"}.
-#'   See \code{\link[estimatr]{lm_robust}} for options.
+#'   Without clusters: \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
+#'   When \code{clusters} is specified, \code{se_type} is automatically set to \code{"CR2"}.
 #' @param output Character string specifying output format. \code{"statuser"} (default)
 #'   returns an enhanced table with standardized coefficients and both robust and
 #'   classical standard errors. \code{"estimatr"} returns the standard
 #'   \code{lm_robust} output.
 #' @param notes Logical. If TRUE (default), print explanatory notes below the table
 #'   when the result is printed.
+#' @param clusters An optional variable indicating clusters for cluster-robust standard 
+#'   errors. When specified, \code{se_type} is automatically set to \code{"CR2"} 
+#'   (bias-reduced cluster-robust estimator). Passed to \code{\link[estimatr]{lm_robust}}.
+#' @param fixed_effects An optional right-sided formula containing the fixed effects 
+#'   to be projected out (absorbed) before estimation. Useful for models with many 
+#'   fixed effect groups (e.g., \code{~ firm_id} or \code{~ firm_id + year}). 
+#'   Passed to \code{\link[estimatr]{lm_robust}}.
 #' @param ... Additional arguments passed to \code{\link[estimatr]{lm_robust}}.
 #'
 #' @return When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
 #'   When \code{output = "statuser"}, returns a data frame with the following columns:
 #'   \itemize{
-#'     \item \code{term}: The predictor name
 #'     \item \code{estimate}: The coefficient estimate
 #'     \item \code{SE.robust}: Robust standard error (using \code{se_type})
 #'     \item \code{SE.classical}: Classical (OLS) standard error
-#'     \item \code{t}: t-statistic (based on robust SE)
-#'     \item \code{df}: Degrees of freedom
+#'     \item \code{t.value}: t-statistic (based on robust SE)
 #'     \item \code{p.value}: p-value (based on robust SE)
-#'     \item \code{B}: Standardized coefficient (beta)
+#'     \item \code{effect.size}: Standardized coefficient (beta)
+#'     \item \code{missing}: Number of NA values for that variable
 #'     \item \code{red.flag}: Diagnostic flags (see Details)
 #'   }
 #'
 #' @details
+#' Robust standard errors and clustered standard errors are computed using 
+#' \code{\link[estimatr]{lm_robust}}; see the documentation of that function for details.
+#'
 #' The \code{red.flag} column provides diagnostic warnings:
 #' \itemize{
 #'   \item \code{!}, \code{!!}, \code{!!!}: Robust and classical standard errors differ by 
@@ -116,7 +128,8 @@
 #' @seealso \code{\link[estimatr]{lm_robust}}, \code{\link{scatter.gam}}
 #'
 #' @export lm2
-lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", notes = TRUE, ...) {
+lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", notes = TRUE, 
+                clusters = NULL, fixed_effects = NULL, ...) {
   
   # Capture the call
   cl <- match.call()
@@ -129,13 +142,16 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   # Validate output argument
   output <- match.arg(output, choices = c("statuser", "estimatr"))
   
+  # Check if clusters are specified (either as argument or in ...)
+  has_clusters <- !is.null(clusters) || "clusters" %in% names(list(...))
+  
   # Validate inputs and construct data frame if needed
   validated <- validate_lm2(
     formula = formula,
     data = data,
     se_type = se_type,
     se_type_missing = missing(se_type),
-    dots = list(...),
+    dots = list(..., clusters = clusters),
     calling_env = parent.frame()
   )
   
@@ -143,7 +159,8 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   se_type <- validated$se_type
   
   # Run lm_robust with specified se_type
-  robust_fit <- estimatr::lm_robust(formula = formula, data = data, se_type = se_type, ...)
+  robust_fit <- estimatr::lm_robust(formula = formula, data = data, se_type = se_type, 
+                                     clusters = clusters, fixed_effects = fixed_effects, ...)
   
   # If user wants estimatr output, return it directly
   if (output == "estimatr") {
@@ -456,6 +473,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
   cat("SE type:", attr(x, "se_type"), "\n")
   if (notes) {
     cat("\nNotes:\n")
+    cat("  - 't.value' & 'p.value' are based on robust SE\n")
     cat("  - 'effect.size' is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
     cat("  - 'missing' is the number of NA values for that variable\n")
     if (has_interactions) {
