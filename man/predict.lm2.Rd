@@ -4,15 +4,13 @@
 \alias{predict.lm2}
 \title{Predict method for lm2 objects}
 \usage{
-\method{predict}{lm2}(object, newdata = NULL, ...)
+\method{predict}{lm2}(object, ...)
 }
 \arguments{
 \item{object}{An object of class \code{lm2}}
 
-\item{newdata}{An optional data frame in which to look for variables with which 
-to predict. If omitted, the fitted values are returned.}
-
-\item{...}{Additional arguments passed to \code{\link[estimatr]{predict.lm_robust}}}
+\item{...}{Additional arguments passed to \code{\link[estimatr]{predict.lm_robust}},
+including \code{newdata}, \code{se.fit}, and \code{interval}.}
 }
 \value{
 A vector of predicted values (or a data frame if \code{se.fit = TRUE} or 

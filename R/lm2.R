@@ -612,6 +612,19 @@ print.lm2 <- function(x, notes = NULL, ...) {
   invisible(x)
 }
 
+#' Summary method for lm2 objects
+#'
+#' @param object An object of class \code{lm2}
+#' @param ... Additional arguments passed to \code{\link{print.lm2}}
+#'
+#' @return Invisibly returns the original object
+#' @export
+summary.lm2 <- function(object, ...) {
+  print(object, ...)
+  message2("print() and summary() show the same information for lm2()", col = "blue")
+  invisible(object)
+}
+
 #' Predict method for lm2 objects
 #'
 #' @param object An object of class \code{lm2}
