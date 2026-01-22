@@ -295,15 +295,23 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
     plot_args$xaxt <- "n"
   }
   
+  # Extract main title if provided, use default if not
+  user_main <- plot_args$main
+  plot_args$main <- NULL  # Remove main from plot_args to avoid double title
+  
   # Create plot frame first (without drawing the line yet)
   # We'll draw the line after the data points so it appears on top
   plot_args_frame <- c(list(x = newdat$x, y = yh, type = 'n', ylim = ylim), 
                        plot_args)
   do.call(plot, plot_args_frame)
   
-  # Add title on top
-  mtext(side = 3, text = paste0("Scatter GAM - ", x_name, " & ", y_name), 
-        line = 1, font = 2, cex = 1.2)
+  # Add title on top - use user-provided main if specified, otherwise default
+  if (!is.null(user_main)) {
+    mtext(side = 3, text = user_main, line = 1, font = 2, cex = 1.2)
+  } else {
+    mtext(side = 3, text = paste0("Scatter GAM - ", x_name, " & ", y_name), 
+          line = 1, font = 2, cex = 1.2)
+  }
   
   # Add data points if requested (draw these first, before the line)
   if (data.dots == TRUE) {
