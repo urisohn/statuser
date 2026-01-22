@@ -26,8 +26,9 @@ scatter.gam(
 \item{data.dots}{Logical. If TRUE, displays the original data points on the
 plot. Default is FALSE.}
 
-\item{three.dots}{Logical. If TRUE, displays three summary points representing
-the mean x and y values for each tertile of x. Default is FALSE.}
+\item{three.dots}{Logical. If TRUE, displays three summary points where x is
+divided into tertiles (three equal-range bins), and each point shows the
+mean x and mean y within that bin. Default is FALSE.}
 
 \item{data}{An optional data frame containing the variables \code{x} and \code{y}.}
 
@@ -51,7 +52,15 @@ Default is 16 (filled circle).}
 \item{jitter}{Logical. If TRUE, applies a small amount of jitter to data points
 to reduce overplotting. Default is FALSE.}
 
-\item{...}{Additional arguments passed to \code{plot()} and \code{gam()}.}
+\item{...}{Additional arguments passed to \code{plot()} and \code{gam()}.
+Common plot arguments include:
+\itemize{
+  \item \code{main}: Custom title for the plot (e.g., \code{main = "My Title"})
+  \item \code{col}: Color of the GAM smooth line (e.g., \code{col = "red"})
+  \item \code{lwd}: Line width of the GAM smooth line (e.g., \code{lwd = 2})
+  \item \code{xlim}, \code{ylim}: Axis limits (e.g., \code{xlim = c(0, 10)})
+  \item \code{xlab}, \code{ylab}: Axis labels (e.g., \code{xlab = "Age"})
+}}
 }
 \value{
 Invisibly returns the fitted GAM model object.
@@ -59,6 +68,7 @@ Invisibly returns the fitted GAM model object.
 \description{
 Creates a scatter plot with a GAM (Generalized Additive Model) smooth line,
 with options to display data points and three-way spline summary points.
+Supports both \code{scatter.gam(x, y)} and formula syntax \code{scatter.gam(y ~ x)}.
 }
 \details{
 This function fits a GAM model with a smooth term for x and plots the fitted
@@ -69,34 +79,26 @@ groups (tertiles), and the mean x and y values for each group are plotted as
 points. This provides a simple summary of the relationship across the range of x.
 }
 \examples{
-# Basic usage
+# Generate sample data for examples
 x <- rnorm(100)
 y <- 2*x + rnorm(100)
+
+# Plot GAM smooth line only
 scatter.gam(x, y)
 
-# Using formula syntax
+# Equivalent call using formula syntax (y ~ x)
 scatter.gam(y ~ x)
 
-# With data points
+# Include scatter plot with underlying data points behind the GAM line
 scatter.gam(x, y, data.dots = TRUE)
 
-# With three-way spline points
+# Include summary points showing mean x and y for each tertile bin
 scatter.gam(x, y, three.dots = TRUE)
 
-# Both options
-scatter.gam(x, y, data.dots = TRUE, three.dots = TRUE)
-
-# Using data frame
-df <- data.frame(x = rnorm(100), y = 2*rnorm(100) + rnorm(100))
-scatter.gam(x, y, data = df, data.dots = TRUE)
-
-# Using formula syntax with data frame
-scatter.gam(y ~ x, data = df, data.dots = TRUE)
-
-# Custom styling
+# Customize the plot with a custom title, line color, and line width
 scatter.gam(x, y, data.dots = TRUE, col = "red", lwd = 2, main = "GAM Fit")
 
-# With custom basis dimension
+# Control smoothness of the GAM line by specifying the basis dimension
 scatter.gam(x, y, k = 10)
 
 }
