@@ -131,3 +131,37 @@ test_that("plot_cdf error message shows correct dataset name", {
   )
 })
 
+# ============================================================================
+# EDGE CASES
+# ============================================================================
+
+test_that("plot_cdf handles single group", {
+  y <- rnorm(50)
+  group <- rep("A", 50)  # Only one group
+  
+  result <- plot_cdf(y ~ group)
+  
+  expect_true(is.list(result))
+  expect_equal(length(result$ecdfs), 1)
+})
+
+test_that("plot_cdf handles all-NA values gracefully", {
+  y <- c(rnorm(40), rep(NA, 10))
+  group <- rep(c("A", "B"), 25)
+  
+  # Should handle without error
+  result <- plot_cdf(y ~ group)
+  
+  expect_true(is.list(result))
+  expect_equal(length(result$ecdfs), 2)
+})
+
+test_that("plot_cdf handles very small samples per group", {
+  y <- c(1, 2, 3, 4, 5, 6)
+  group <- c("A", "A", "A", "B", "B", "B")
+  
+  result <- plot_cdf(y ~ group)
+  
+  expect_true(is.list(result))
+  expect_equal(length(result$ecdfs), 2)
+})

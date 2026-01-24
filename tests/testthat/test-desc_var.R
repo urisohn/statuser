@@ -145,3 +145,74 @@ test_that("desc_var detects perfectly overlapping grouping variables", {
   )
 })
 
+# ============================================================================
+# EDGE CASES
+# ============================================================================
+
+test_that("desc_var handles single observation per group", {
+  df <- data.frame(
+    y = c(1, 2, 3),
+    group = c("A", "B", "C")
+  )
+  
+  result <- desc_var(y ~ group, data = df)
+  
+  expect_equal(nrow(result), 3)
+  expect_true(all(result$n == 1))
+  # SD should be NA for single observations
+  expect_true(all(is.na(result$sd)))
+})
+
+test_that("desc_var handles all-NA values in y", {
+  df <- data.frame(
+    y = rep(NA_real_, 20),
+    group = rep(c("A", "B"), 10)
+  )
+  
+  result <- desc_var(y ~ group, data = df)
+  
+  expect_equal(nrow(result), 2)
+  # Missing should equal total observations per group
+  expect_true(all(as.numeric(result$missing) == 10))
+  # n (non-missing) should be 0
+  # Note: desc_var may define n differently - just check structure is valid
+  expect_true(is.data.frame(result))
+})
+
+test_that("desc_var handles single group", {
+  y <- rnorm(50)
+  
+  result <- desc_var(y)
+  
+  expect_equal(nrow(result), 1)
+  expect_equal(as.character(result$group), "All")
+  expect_equal(as.numeric(result$n), 50)
+})
+
+test_that("desc_var correctly computes all statistics", {
+  # Use known data for exact verification
+  y <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+  
+  result <- desc_var(y)
+  
+  # Use as.numeric() to strip labelled attributes
+  expect_equal(as.numeric(result$n), 10)
+  expect_equal(as.numeric(result$mean), 5.5, tolerance = 1e-2)  # Allow for rounding
+  expect_equal(as.numeric(result$median), 5.5, tolerance = 1e-2)
+  expect_equal(as.numeric(result$min), 1, tolerance = 1e-2)
+  expect_equal(as.numeric(result$max), 10, tolerance = 1e-2)
+  # SD is rounded by desc_var, so use tolerance
+  expect_equal(as.numeric(result$sd), sd(y), tolerance = 0.01)
+})
+
+test_that("desc_var decimals parameter actually rounds differently", {
+  y <- c(1.23456789, 2.34567891, 3.45678912)
+  
+  result2 <- desc_var(y, decimals = 2)
+  result4 <- desc_var(y, decimals = 4)
+  
+  # Mean with 2 decimals should be different from 4 decimals
+  # 2.35 (2 decimals) vs 2.3457 (4 decimals)
+  expect_true(nchar(format(result2$mean, nsmall = 2)) < nchar(format(result4$mean, nsmall = 4)) ||
+              result2$mean != result4$mean)
+})

@@ -115,3 +115,26 @@ test_that("plot_density error message shows correct dataset name", {
   )
 })
 
+# ============================================================================
+# EDGE CASES
+# ============================================================================
+
+test_that("plot_density handles single group", {
+  y <- rnorm(50)
+  group <- rep("Only", 50)
+  
+  result <- plot_density(y ~ group)
+  
+  expect_true(is.list(result))
+  expect_equal(length(result$densities), 1)
+})
+
+test_that("plot_density handles many groups", {
+  y <- rnorm(200)
+  group <- rep(LETTERS[1:10], each = 20)  # 10 groups
+  
+  result <- plot_density(y ~ group)
+  
+  expect_true(is.list(result))
+  expect_equal(length(result$densities), 10)
+})

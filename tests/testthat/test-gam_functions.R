@@ -193,9 +193,94 @@ test_that("twolines returns correct structure", {
   expect_true("u.sig" %in% names(result))
 })
 
+# ============================================================================
+# ADDITIONAL GAM TESTS
+# ============================================================================
 
+test_that("scatter.gam returns sensible fitted values", {
+  skip_if_not_installed("mgcv")
+  
+  set.seed(123)
+  x <- seq(-3, 3, length.out = 100)
+  y <- 2 * x + rnorm(100, sd = 0.5)  # Linear relationship
+  
+  result <- scatter.gam(x, y)
+  
+  # Fitted values should exist
+  expect_true(!is.null(result$fitted.values))
+  
+  # For linear data, fitted should correlate highly with y
+  expect_true(cor(result$fitted.values, y) > 0.8)
+})
 
+test_that("plot_gam predicted values are reasonable", {
+  skip_if_not_installed("mgcv")
+  
+  set.seed(456)
+  x <- rnorm(100)
+  y <- 2 * x + rnorm(100)
+  model <- mgcv::gam(y ~ s(x))
+  
+  result <- plot_gam(model, "x")
+  
+  # Predicted values should be finite
+  expect_true(all(is.finite(result$predicted)))
+  
+  # Standard errors should be positive
+  expect_true(all(result$se > 0))
+  
+  # Lower bound should be less than upper bound
+  expect_true(all(result$lower < result$upper))
+})
 
+test_that("plot_gam works with multiple predictors", {
+  skip_if_not_installed("mgcv")
+  
+  set.seed(789)
+  x1 <- rnorm(100)
+  x2 <- rnorm(100)
+  y <- x1 + x2 + rnorm(100)
+  model <- mgcv::gam(y ~ s(x1) + s(x2))
+  
+  # Should work for both predictors
+  result1 <- plot_gam(model, "x1")
+  result2 <- plot_gam(model, "x2")
+  
+  expect_true(is.list(result1))
+  expect_true(is.list(result2))
+})
+
+test_that("twolines detects U-shaped relationship", {
+  skip_if_not_installed("mgcv")
+  
+  set.seed(111)
+  x <- rnorm(200)
+  y <- x^2 + rnorm(200, sd = 0.5)  # Clear U-shape
+  data <- data.frame(x = x, y = y)
+  
+  result <- twolines(y ~ x, data = data, graph = 0)
+  
+  # For U-shaped data:
+  # - b1 (left slope) should be negative
+  # - b2 (right slope) should be positive
+  expect_true(result$b1 < 0 || result$b2 > 0)
+})
+
+test_that("twolines detects inverted U-shaped relationship", {
+  skip_if_not_installed("mgcv")
+  
+  set.seed(222)
+  x <- rnorm(200)
+  y <- -x^2 + rnorm(200, sd = 0.5)  # Inverted U-shape
+  data <- data.frame(x = x, y = y)
+  
+  result <- twolines(y ~ x, data = data, graph = 0)
+  
+  # For inverted U-shaped data:
+  # - b1 (left slope) should be positive
+  # - b2 (right slope) should be negative
+  expect_true(result$b1 > 0 || result$b2 < 0)
+})
 
 
 

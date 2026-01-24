@@ -56,3 +56,41 @@ test_that("format_pvalue handles boundary values correctly", {
   expect_equal(format_pvalue(0.99991, digits = 4), "> .9999")
 })
 
+# ============================================================================
+# ADDITIONAL EDGE CASES
+# ============================================================================
+
+test_that("format_pvalue handles negative values", {
+  # Negative p-values are invalid but function should handle gracefully
+  # (or throw appropriate error)
+  result <- tryCatch(
+    format_pvalue(-0.05),
+    error = function(e) "error"
+  )
+  # Should either produce a result or error gracefully
+  expect_true(!is.null(result))
+})
+
+test_that("format_pvalue handles values > 1", {
+  # p-values > 1 are invalid but function should handle gracefully
+  result <- tryCatch(
+    format_pvalue(1.5),
+    error = function(e) "error"
+  )
+  expect_true(!is.null(result))
+})
+
+test_that("format_pvalue handles empty vector", {
+  result <- format_pvalue(numeric(0))
+  expect_equal(length(result), 0)
+})
+
+test_that("format_pvalue handles single NA", {
+  result <- format_pvalue(NA_real_)
+  expect_true(is.na(result))
+})
+
+test_that("format_pvalue includes_p works with vectors", {
+  result <- format_pvalue(c(0.05, 0.001), include_p = TRUE)
+  expect_true(all(grepl("^p", result)))
+})

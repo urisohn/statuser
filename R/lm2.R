@@ -38,20 +38,20 @@
 #' @param ... Additional arguments passed to \code{\link[estimatr]{lm_robust}}.
 #'
 #' @return When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
-#'   When \code{output = "statuser"}, returns a data frame with the following columns:
+#'   When \code{output = "statuser"}, returns an object that inherits from \code{lm_robust}
+#'   (for compatibility with packages like \code{marginaleffects}) with class \code{c("lm2", "lm_robust", ...)}
+#'   and additional attributes for enhanced display:
 #'   \itemize{
-#'     \item \code{estimate}: The coefficient estimate
-#'     \item \code{SE.cluster}: Cluster-robust standard error (CR2). Only present when 
-#'       \code{clusters} is specified.
-#'     \item \code{SE.robust}: Heteroskedasticity-robust standard error (HC3)
-#'     \item \code{SE.classical}: Classical (OLS) standard error
-#'     \item \code{t.value}: t-statistic (based on HC3 robust SE)
-#'     \item \code{p.value}: p-value (based on HC3 robust SE)
-#'     \item \code{effect.size}: Standardized coefficient (beta)
-#'     \item \code{missing}: Number of NA values for that variable
-#'     \item \code{red.flag}: Diagnostic flags (see Details). Based on comparing 
-#'       \code{SE.robust} (HC3) to \code{SE.classical}, not the clustered SE.
+#'     \item \code{statuser_table}: A data frame with columns for display (estimate, SE.robust, 
+#'       SE.classical, SE.cluster if clustered, t, df, p.value, B, term)
+#'     \item \code{classical_fit}: The classical OLS fit for comparison
+#'     \item \code{na_counts}: Number of NA values per variable
+#'     \item \code{n_missing}: Total observations excluded due to missing values
+#'     \item \code{notes}: Whether to print notes
+#'     \item \code{has_clusters}: Whether clustered SE was used
 #'   }
+#'   The print method displays an enhanced table with standardized coefficients (effect sizes),
+#'   both robust and classical standard errors, and diagnostic red flags.
 #'
 #' @details
 #' Robust standard errors and clustered standard errors are computed using 
@@ -181,7 +181,9 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
     return(robust_fit)
   }
   
-  # For statuser output, build enhanced table
+  # For statuser output, build enhanced object that inherits from lm_robust
+  # This allows packages like marginaleffects to work with it seamlessly
+  
   # Extract components from lm_robust object
   term_names <- names(robust_fit$coefficients)
   estimates <- as.numeric(robust_fit$coefficients)
@@ -268,8 +270,8 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
     }
   }
   
-  # Build output data frame (used by print method)
-  result <- data.frame(
+  # Build display table data frame (used by print method)
+  statuser_table <- data.frame(
     term = term_names,
     estimate = estimates,
     SE.robust = robust_se,
@@ -284,24 +286,23 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   
   # Add SE.cluster column if clusters were used
   if (!is.null(cluster_se)) {
-    result$SE.cluster <- cluster_se
+    statuser_table$SE.cluster <- cluster_se
   }
   
-  # Store the model objects as attributes for potential later use
-  attr(result, "call") <- cl
-  attr(result, "robust_fit") <- robust_fit
+  # Start with the robust_fit object so we inherit from lm_robust
+  # This ensures compatibility with marginaleffects and other packages
+  result <- robust_fit
+  
+  # Store the statuser-specific attributes
+ attr(result, "statuser_table") <- statuser_table
+  attr(result, "lm2_call") <- cl
   attr(result, "classical_fit") <- classical_fit
-  attr(result, "se_type") <- se_type
-  attr(result, "formula") <- formula
-  attr(result, "nobs") <- robust_fit$nobs
-  attr(result, "r.squared") <- robust_fit$r.squared
-  attr(result, "adj.r.squared") <- robust_fit$adj.r.squared
   attr(result, "na_counts") <- na_counts
   attr(result, "n_missing") <- n_missing
   attr(result, "notes") <- notes
   attr(result, "has_clusters") <- has_clusters
   
-  # Add class for custom print method
+  # Prepend "lm2" class so our print method is used, but keep lm_robust inheritance
   class(result) <- c("lm2", class(result))
   
   return(result)
@@ -323,6 +324,9 @@ print.lm2 <- function(x, notes = NULL, ...) {
     notes <- attr(x, "notes")
     if (is.null(notes)) notes <- TRUE  
   }
+  
+  # Get the statuser table from attribute
+  tbl <- attr(x, "statuser_table")
   
   # Helper: smart rounding based on magnitude
   # >=100: 1 decimal, >=10: 2 decimals, >=0.01: 3 decimals
@@ -368,27 +372,27 @@ print.lm2 <- function(x, notes = NULL, ...) {
   # Get NA counts from attribute before modifying display_df
   na_counts <- attr(x, "na_counts")
   
-  # Get model data for correlation checks
-  model_data <- attr(x, "robust_fit")$model
+  # Get model data for correlation checks (x itself is now the lm_robust object)
+  model_data <- x$model
   if (is.null(model_data)) {
     # Fallback: reconstruct from formula and data
     model_data <- tryCatch(
-      stats::model.frame(attr(x, "formula"), data = attr(x, "classical_fit")$model),
+      stats::model.frame(x$terms, data = attr(x, "classical_fit")$model),
       error = function(e) NULL
     )
   }
   
   # Calculate SE flag: ! if robust and classical differ by >25%, !! if >50%, !!! if >100%
   # Also check for interaction term correlations (X, X*)
-  se_flag <- character(nrow(x))
+  se_flag <- character(nrow(tbl))
   has_interactions <- FALSE
   
-  for (i in seq_len(nrow(x))) {
+  for (i in seq_len(nrow(tbl))) {
     flags <- character(0)
     
     # Check SE difference
-    se_classical <- x$SE.classical[i]
-    se_robust <- x$SE.robust[i]
+    se_classical <- tbl$SE.classical[i]
+    se_robust <- tbl$SE.robust[i]
     if (!is.na(se_classical) && !is.na(se_robust) && se_classical != 0) {
       ratio_diff <- abs(se_classical - se_robust) / se_classical
       if (ratio_diff > 1) {
@@ -401,7 +405,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
     }
     
     # Check if this is an interaction term (contains ":")
-    term <- x$term[i]
+    term <- tbl$term[i]
     if (grepl(":", term)) {
       has_interactions <- TRUE
       # Extract the component variable names
@@ -450,15 +454,15 @@ print.lm2 <- function(x, notes = NULL, ...) {
   }
   
   # Format B column, using "--" for intercept instead of NA
-  B_formatted <- sapply(seq_along(x$B), function(i) {
-    if (x$term[i] == "(Intercept)") return("--")
-    smart_round(x$B[i])
+  B_formatted <- sapply(seq_along(tbl$B), function(i) {
+    if (tbl$term[i] == "(Intercept)") return("--")
+    smart_round(tbl$B[i])
   })
   
   # Format missing column, using "--" for intercept instead of NA
-  missing_formatted <- if (!is.null(na_counts) && length(na_counts) == nrow(x)) {
+  missing_formatted <- if (!is.null(na_counts) && length(na_counts) == nrow(tbl)) {
     sapply(seq_along(na_counts), function(i) {
-      if (x$term[i] == "(Intercept)") return("--")
+      if (tbl$term[i] == "(Intercept)") return("--")
       if (is.na(na_counts[i])) return("--")
       as.character(na_counts[i])
     })
@@ -482,15 +486,15 @@ print.lm2 <- function(x, notes = NULL, ...) {
   if (is.null(has_clusters)) has_clusters <- FALSE
   
   # Format columns
-  estimate_vals <- sapply(x$estimate, smart_round)
-  t_vals <- sapply(x$t, smart_round)
+  estimate_vals <- sapply(tbl$estimate, smart_round)
+  t_vals <- sapply(tbl$t, smart_round)
   
   # Check if df varies across coefficients
-  df_vals <- x$df
+  df_vals <- tbl$df
   df_varies <- length(unique(round(df_vals, 2))) > 1
   
   # Format term names: lowercase, with 2 trailing spaces
-  term_names_formatted <- paste0(tolower(gsub("^\\(Intercept\\)$", "intercept", x$term)), "  ")
+  term_names_formatted <- paste0(tolower(gsub("^\\(Intercept\\)$", "intercept", tbl$term)), "  ")
   
   if (has_clusters) {
     # With clusters: SE.cluster, SE.robust (HC3), SE.classical
@@ -499,12 +503,12 @@ print.lm2 <- function(x, notes = NULL, ...) {
       display_df <- data.frame(
         term = term_names_formatted,
         estimate = right_align(estimate_vals, 1),
-        SE.cluster = pad(sapply(x$SE.cluster, smart_round), 2),
-        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
-        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        SE.cluster = pad(sapply(tbl$SE.cluster, smart_round), 2),
+        SE.robust = pad(sapply(tbl$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
         df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
-        p.value = pad(sapply(x$p.value, format_p), 1),
+        p.value = pad(sapply(tbl$p.value, format_p), 1),
         effect.size = pad(B_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
@@ -513,11 +517,11 @@ print.lm2 <- function(x, notes = NULL, ...) {
       display_df <- data.frame(
         term = term_names_formatted,
         estimate = right_align(estimate_vals, 1),
-        SE.cluster = pad(sapply(x$SE.cluster, smart_round), 2),
-        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
-        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        SE.cluster = pad(sapply(tbl$SE.cluster, smart_round), 2),
+        SE.robust = pad(sapply(tbl$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
-        p.value = pad(sapply(x$p.value, format_p), 1),
+        p.value = pad(sapply(tbl$p.value, format_p), 1),
         effect.size = pad(B_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
@@ -530,11 +534,11 @@ print.lm2 <- function(x, notes = NULL, ...) {
       display_df <- data.frame(
         term = term_names_formatted,
         estimate = right_align(estimate_vals, 1),
-        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
-        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        SE.robust = pad(sapply(tbl$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
         df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
-        p.value = pad(sapply(x$p.value, format_p), 1),
+        p.value = pad(sapply(tbl$p.value, format_p), 1),
         effect.size = pad(B_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
@@ -543,10 +547,10 @@ print.lm2 <- function(x, notes = NULL, ...) {
       display_df <- data.frame(
         term = term_names_formatted,
         estimate = right_align(estimate_vals, 1),
-        SE.robust = pad(sapply(x$SE.robust, smart_round), 2),
-        SE.classical = pad(sapply(x$SE.classical, smart_round), 3),
+        SE.robust = pad(sapply(tbl$SE.robust, smart_round), 2),
+        SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
-        p.value = pad(sapply(x$p.value, format_p), 1),
+        p.value = pad(sapply(tbl$p.value, format_p), 1),
         effect.size = pad(B_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
@@ -566,9 +570,9 @@ print.lm2 <- function(x, notes = NULL, ...) {
   rownames(display_df) <- display_df$term
   display_df$term <- NULL
   
-  # Print the original call
+  # Print the original call (use lm2_call attribute which stores the lm2() call)
   cat("Call: ")
-  print(attr(x, "call"))
+  print(attr(x, "lm2_call"))
   cat("\n")
   
   # Print the table
@@ -576,17 +580,17 @@ print.lm2 <- function(x, notes = NULL, ...) {
   
   # Print model summary info
   cat("\n")
-  cat("N =", attr(x, "nobs"), " | ")
+  cat("N =", x$nobs, " | ")
   cat("missing =", attr(x, "n_missing"), " | ")
   if (!df_varies) {
-    cat("df =", round(x$df[1], 0), " | ")
+    cat("df =", round(tbl$df[1], 0), " | ")
   }
-  cat("R² =", format(round(attr(x, "r.squared"), 3), nsmall = 3), " | ")
-  cat("Adj. R² =", format(round(attr(x, "adj.r.squared"), 3), nsmall = 3), " | ")
+  cat("R² =", format(round(x$r.squared, 3), nsmall = 3), " | ")
+  cat("Adj. R² =", format(round(x$adj.r.squared, 3), nsmall = 3), " | ")
   if (has_clusters) {
     cat("SE type: CR2 (cluster)\n")
   } else {
-    cat("SE type:", attr(x, "se_type"), "\n")
+    cat("SE type:", x$se_type, "\n")
   }
   if (notes) {
     cat("\nNotes:\n")
@@ -635,9 +639,7 @@ summary.lm2 <- function(object, ...) {
 #'   \code{interval} is specified)
 #' @export
 predict.lm2 <- function(object, ...) {
-  robust_fit <- attr(object, "robust_fit")
-  if (is.null(robust_fit)) {
-    stop("Cannot predict: lm_robust fit not found in lm2 object")
-  }
-  predict(robust_fit, ...)
+  # The lm2 object inherits from lm_robust, so we can use NextMethod()
+  # to call predict.lm_robust
+  NextMethod("predict")
 }

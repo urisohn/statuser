@@ -77,9 +77,62 @@ test_that("validate_plot handles df$var syntax", {
   expect_equal(result$group_name, "group")
 })
 
+# ============================================================================
+# ERROR MESSAGE QUALITY TESTS
+# ============================================================================
 
+test_that("validate_plot error includes variable name", {
+  df <- data.frame(value = rnorm(10))
+  
+  expect_error(
+    validate_plot(missing_var ~ group, data = df),
+    "missing_var"
+  )
+})
 
+test_that("validate_plot error message includes function name", {
+  y <- letters[1:10]  # Non-numeric
+  
+  expect_error(
+    validate_plot(y, NULL, func_name = "my_func", require_group = FALSE),
+    "my_func"
+  )
+})
 
+test_that("validate_plot error for length mismatch includes lengths", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 25)  # Length 50
+  
+  expect_error(
+    validate_plot(y, group, require_group = TRUE),
+    "100"
+  )
+  expect_error(
+    validate_plot(y, group, require_group = TRUE),
+    "50"
+  )
+})
+
+# ============================================================================
+# ADDITIONAL VALIDATION TESTS
+# ============================================================================
+
+test_that("validate_plot handles formula with no group (y ~ 1)", {
+  df <- data.frame(value = rnorm(50))
+  
+  # Formula with just y ~ 1 should work when group not required
+  result <- validate_plot(value ~ 1, data = df, require_group = FALSE)
+  expect_equal(length(result$y), 50)
+  expect_null(result$group)
+})
+
+test_that("validate_plot with explicit data_name parameter", {
+  my_data <- data.frame(value = rnorm(50), group = rep("A", 50))
+  
+  # When data_name is explicitly provided, it should be used
+  result <- validate_plot(value ~ group, data = my_data, require_group = TRUE, data_name = "my_data")
+  expect_equal(result$data_name, "my_data")
+})
 
 
 

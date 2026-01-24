@@ -218,3 +218,139 @@ test_that("table2 chi parameter returns chi-square test", {
   expect_true(!is.null(result_chi_prop$prop))
   expect_true(!is.null(result_chi_prop$freq))
 })
+
+# ============================================================================
+# EDGE CASES AND ADDITIONAL TESTS
+# ============================================================================
+
+test_that("table2 handles factors", {
+  x <- factor(c("A", "A", "B", "B"))
+  y <- factor(c("X", "Y", "X", "Y"))
+  
+  result <- table2(x, y)
+  
+  expect_true(inherits(result, "table2"))
+  expect_equal(dim(result$freq), c(2, 2))
+})
+
+test_that("table2 handles numeric variables", {
+  x <- c(1, 1, 2, 2)
+  y <- c(10, 20, 10, 20)
+  
+  result <- table2(x, y)
+  
+  expect_true(inherits(result, "table2"))
+  expect_true(inherits(result$freq, "table"))
+})
+
+test_that("table2 handles many categories", {
+  x <- sample(LETTERS[1:5], 100, replace = TRUE)
+  y <- sample(letters[1:4], 100, replace = TRUE)
+  
+  result <- table2(x, y)
+  
+  expect_equal(dim(result$freq), c(5, 4))
+})
+
+test_that("table2 chi-square test produces valid statistics", {
+  set.seed(456)
+  # Create data with known association
+  x <- sample(c("A", "B"), 200, replace = TRUE)
+  y <- ifelse(x == "A", 
+              sample(c("X", "Y"), 200, replace = TRUE, prob = c(0.8, 0.2)),
+              sample(c("X", "Y"), 200, replace = TRUE, prob = c(0.2, 0.8)))
+  
+  result <- table2(x, y, chi = TRUE)
+  
+  # Chi-square statistic should be positive
+  expect_true(result$chisq$statistic > 0)
+  # p-value should be between 0 and 1
+  expect_true(result$chisq$p.value >= 0 && result$chisq$p.value <= 1)
+})
+
+test_that("table2 prop values sum correctly for row proportions", {
+  x <- c("A", "A", "A", "B", "B")
+  y <- c("X", "X", "Y", "X", "Y")
+  
+  result <- table2(x, y, prop = 1)  # Row proportions
+  
+  # Each row (excluding Total) should sum to 1
+  prop_matrix <- result$prop
+  n_rows <- nrow(prop_matrix)
+  n_cols <- ncol(prop_matrix)
+  
+  # Check first row sums to 1 (excluding Total column)
+  row1_sum <- sum(prop_matrix[1, 1:(n_cols-1)], na.rm = TRUE)
+  expect_equal(row1_sum, 1.0, tolerance = 0.001)
+})
+
+test_that("table2 prop values sum correctly for column proportions", {
+  x <- c("A", "A", "A", "B", "B")
+  y <- c("X", "X", "Y", "X", "Y")
+  
+  result <- table2(x, y, prop = 2)  # Column proportions
+  
+  # Each column (excluding Total row) should sum to 1
+  prop_matrix <- result$prop
+  n_rows <- nrow(prop_matrix)
+  n_cols <- ncol(prop_matrix)
+  
+  # Check first column sums to 1 (excluding Total row)
+  col1_sum <- sum(prop_matrix[1:(n_rows-1), 1], na.rm = TRUE)
+  expect_equal(col1_sum, 1.0, tolerance = 0.001)
+})
+
+# ============================================================================
+# SNAPSHOT TESTS FOR OUTPUT FORMAT
+# ============================================================================
+
+test_that("table2 print output for frequency table is stable", {
+  set.seed(42)
+  gender <- sample(c("Male", "Female"), 100, replace = TRUE)
+  response <- sample(c("Yes", "No", "Maybe"), 100, replace = TRUE)
+  
+  result <- table2(gender, response)
+  
+  expect_snapshot(print(result))
+})
+
+test_that("table2 print output with row proportions is stable", {
+  set.seed(42)
+  gender <- sample(c("Male", "Female"), 100, replace = TRUE)
+  response <- sample(c("Yes", "No"), 100, replace = TRUE)
+  
+  result <- table2(gender, response, prop = 1)
+  
+  expect_snapshot(print(result))
+})
+
+test_that("table2 print output with column proportions is stable", {
+  set.seed(42)
+  gender <- sample(c("Male", "Female"), 100, replace = TRUE)
+  response <- sample(c("Yes", "No"), 100, replace = TRUE)
+  
+  result <- table2(gender, response, prop = 2)
+  
+  expect_snapshot(print(result))
+})
+
+test_that("table2 print output with chi-square test is stable", {
+  set.seed(42)
+  gender <- sample(c("Male", "Female"), 100, replace = TRUE)
+  response <- sample(c("Yes", "No"), 100, replace = TRUE)
+  
+  result <- table2(gender, response, chi = TRUE)
+  
+  expect_snapshot(print(result))
+})
+
+test_that("table2 print output for three-way table is stable", {
+  set.seed(42)
+  x <- sample(c("A", "B"), 60, replace = TRUE)
+  y <- sample(c("X", "Y"), 60, replace = TRUE)
+  z <- sample(c("High", "Low"), 60, replace = TRUE)
+  
+  result <- table2(x, y, z)
+  
+  expect_snapshot(print(result))
+})
