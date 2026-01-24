@@ -1,47 +1,23 @@
-#' text() wrapper: Adds intuitive text-alignment & background color
+#' Adds background color and verbal alignment (e.g., 'center') to text()
 #'
 #'
-#' @param x Numeric vector of x coordinates where the text should be placed.
-#' @param y Numeric vector of y coordinates where the text should be placed.
-#' @param labels Character vector of text labels to display.
-#' @param bg Character string or vector specifying the background color(s). Default is "yellow".
-#'   Can be recycled if length is less than length of x.
-#' @param cex Numeric character expansion factor. Default is 1.
-#' @param pad Percentage of padding to add to background to left & right side of the text. Default is 0.03.
-#' @param pad_v Percentage of padding to add to background to top & bottom of the text. Default is 0.03.
-#' @param align Character string or vector specifying text alignment.
-#'   Options are \code{"left"}, \code{"center"}, or \code{"right"}.
-#'   \describe{
-#'     \item{"left"}{Aligns text so the left edge is at the x coordinate.}
-#'     \item{"center"}{Aligns text so the center is at the x coordinate (default).}
-#'     \item{"right"}{Aligns text so the right edge is at the x coordinate.}
-#'   }
+#' @param x,y coordinates for text placement 
+#' @param labels text to display
+#' @param bg background color
+#' @param pad left/right padding in percentage (e.g., .03)
+#' @param pad_v top/bottom padding in percenrage (e.g., .025)
+#' @param align ('left','center','right')
 #' @param ... Additional arguments passed to \code{\link[graphics]{text}}.
-#'
-#' @details
-#' This function is designed for use with base R plots. It draws a colored background
-#' rectangle behind text labels, making them more readable when overlaid on plots.
-#' The background rectangle is automatically sized based on the text dimensions and padding.
-#'
-#' The \code{align} parameter controls how the text is positioned relative to the x coordinate:
-#' \itemize{
-#'   \item \code{"left"}: The left edge of the text aligns with x
-#'   \item \code{"center"}: The center of the text aligns with x (default behavior)
-#'   \item \code{"right"}: The right edge of the text aligns with x
-#' }
 #'
 #' @examples
 #' # Create a simple plot
-#' plot(1:10, 1:10, type = "n", main = "text2 Examples")
+#' plot(1:10, 1:10, type = "n", main = "text2() - Alignment & Color")
 #' 
-#' # Left-aligned text
-#' text2(2, 8, "Left", align = "left", bg = "lightblue")
-#' 
-#' # Center-aligned text (default)
-#' text2(5, 8, "Center", align = "center", bg = "lightgreen")
-#' 
-#' # Right-aligned text
-#' text2(8, 8, "Right", align = "right", bg = "lightyellow")
+#' # Alignment respect to x=5
+#' text2(5, 8, "align='left' from 5", align = "left", bg = "yellow1")
+#' text2(5, 7, "align='right' from 5", align = "right", bg = "blue", col = "white")
+#' text2(5, 6, "align='center' from 5", align = "center", bg = "black", col = "white")
+#' abline(v = 5, lty = 2)
 #' 
 #' # Multiple labels with different alignments
 #' text2(c(2, 5, 8), c(5, 5, 5), 
@@ -51,6 +27,21 @@
 #' 
 #' # Text with custom font color (passed through ...)
 #' text2(5, 3, "Red Text", col = "red", bg = "white")
+#' 
+#' # Padding examples
+#' plot(1:10, 1:10, type = "n", main = "Padding Examples")
+#' 
+#' # Default padding (pad=0.03, pad_v=0.25)
+#' text2(5, 8, "Default padding", bg = "lightblue")
+#' 
+#' # More horizontal padding
+#' text2(5, 6, "Wide padding", pad = 0.2, bg = "lightgreen")
+#' 
+#' # More vertical padding
+#' text2(5, 4, "Tall padding", pad_v = 0.8, bg = "lightyellow")
+#' 
+#' # Both padding increased
+#' text2(5, 2, "Extra padding", pad = 0.15, pad_v = 0.6, bg = "pink")
 #'
 #' @export
 text2 <- function(x, y, labels, bg="papayawhip", cex=1, pad=0.03, pad_v=0.25, align="center", ...) {
