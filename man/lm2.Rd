@@ -48,20 +48,20 @@ Passed to \code{\link[estimatr]{lm_robust}}.}
 }
 \value{
 When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
-  When \code{output = "statuser"}, returns a data frame with the following columns:
+  When \code{output = "statuser"}, returns an object that inherits from \code{lm_robust}
+  (for compatibility with packages like \code{marginaleffects}) with class \code{c("lm2", "lm_robust", ...)}
+  and additional attributes for enhanced display:
   \itemize{
-    \item \code{estimate}: The coefficient estimate
-    \item \code{SE.cluster}: Cluster-robust standard error (CR2). Only present when 
-      \code{clusters} is specified.
-    \item \code{SE.robust}: Heteroskedasticity-robust standard error (HC3)
-    \item \code{SE.classical}: Classical (OLS) standard error
-    \item \code{t.value}: t-statistic (based on HC3 robust SE)
-    \item \code{p.value}: p-value (based on HC3 robust SE)
-    \item \code{effect.size}: Standardized coefficient (beta)
-    \item \code{missing}: Number of NA values for that variable
-    \item \code{red.flag}: Diagnostic flags (see Details). Based on comparing 
-      \code{SE.robust} (HC3) to \code{SE.classical}, not the clustered SE.
+    \item \code{statuser_table}: A data frame with columns for display (estimate, SE.robust, 
+      SE.classical, SE.cluster if clustered, t, df, p.value, B, term)
+    \item \code{classical_fit}: The classical OLS fit for comparison
+    \item \code{na_counts}: Number of NA values per variable
+    \item \code{n_missing}: Total observations excluded due to missing values
+    \item \code{notes}: Whether to print notes
+    \item \code{has_clusters}: Whether clustered SE was used
   }
+  The print method displays an enhanced table with standardized coefficients (effect sizes),
+  both robust and classical standard errors, and diagnostic red flags.
 }
 \description{
 Runs a linear regression with better defaults (robust SE), and richer & better 
