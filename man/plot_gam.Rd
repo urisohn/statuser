@@ -55,25 +55,13 @@ Invisibly returns a list containing:
 Plots fitted GAM values for focal predictor,
 keeping any other predictors in the model at a specified quantile  (default: median)
 }
-\details{
-This function:
-\itemize{
-  \item Validates that the model is from \code{mgcv::gam()}
-  \item Extracts all variables from the GAM model
-  \item Sets all variables except \code{predictor} to their specified quantile
-    (default: median)
-  \item Generates 100 equally spaced values for \code{predictor} between its
-    minimum and maximum values in the model data
-  \item Computes predicted values and standard errors using \code{predict()}
-  \item Plots the predicted values with confidence bands (2 standard errors)
-}
-}
 \examples{
 \dontrun{
 library(mgcv)
 # Fit a GAM model
 data(mtcars)
-model <- gam(mpg ~ s(hp) + s(wt) + factor(cyl), data = mtcars)
+mtcars$cyl <- factor(mtcars$cyl)  # Convert to factor before fitting GAM
+model <- gam(mpg ~ s(hp) + s(wt) + cyl, data = mtcars)
 
 # Plot effect of hp (with other variables at median)
 plot_gam(model, "hp")
