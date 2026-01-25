@@ -49,7 +49,7 @@ clear <- function() {
   
   # Print confirmation message
   
-  message2("sohn::clear()", font=2,col = "red4")
+  message2("statuser::clear()", font=2,col = "red4")
   message2("Cleared console, plot, and environment",col = "red4")
   
   invisible(NULL)
