@@ -20,31 +20,18 @@ A character vector of formatted p-values.
 \description{
 Formats p-values for clean display in figures and tables. e.g., p = .0231, p<.0001
 }
-\details{
-This function formats p-values by:
-\itemize{
-  \item Rounding to the specified number of decimal places
-  \item Removing the leading zero (e.g., "0.05" becomes ".05")
-  \item Handling edge cases: p < 0.0001 becomes "< .0001", p > 0.9999 becomes "> .9999"
-  \item Handling NA values gracefully
-}
-}
 \examples{
 # Basic usage
 format_pvalue(0.05)
 format_pvalue(0.0001)
-format_pvalue(0.9999)
+
+# More rounding
+format_pvalue(0.0001,digits=2)
 
 # Vector input
 format_pvalue(c(0.05, 0.001, 0.00001, 0.99))
 
 # With p prefix
 format_pvalue(0.05, include_p = TRUE)
-
-# Different precision
-format_pvalue(0.05, digits = 3)
-
-# Edge cases
-format_pvalue(c(0, 0.00005, 0.5, 0.99999, 1, NA))
 
 }

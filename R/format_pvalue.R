@@ -9,32 +9,19 @@
 #'
 #' @return A character vector of formatted p-values.
 #'
-#' @details
-#' This function formats p-values by:
-#' \itemize{
-#'   \item Rounding to the specified number of decimal places
-#'   \item Removing the leading zero (e.g., "0.05" becomes ".05")
-#'   \item Handling edge cases: p < 0.0001 becomes "< .0001", p > 0.9999 becomes "> .9999"
-#'   \item Handling NA values gracefully
-#' }
-#'
 #' @examples
 #' # Basic usage
 #' format_pvalue(0.05)
 #' format_pvalue(0.0001)
-#' format_pvalue(0.9999)
+#' 
+#' # More rounding
+#' format_pvalue(0.0001,digits=2)
 #'
 #' # Vector input
 #' format_pvalue(c(0.05, 0.001, 0.00001, 0.99))
 #'
 #' # With p prefix
 #' format_pvalue(0.05, include_p = TRUE)
-#'
-#' # Different precision
-#' format_pvalue(0.05, digits = 3)
-#'
-#' # Edge cases
-#' format_pvalue(c(0, 0.00005, 0.5, 0.99999, 1, NA))
 #'
 #' @name format_pvalue
 #' @export format_pvalue
@@ -47,8 +34,15 @@ format_pvalue <- function(p, digits = 4, include_p = FALSE) {
   p_prefix <- if (include_p) "p " else ""
   
   # Handle edge cases first
-  result[p < 10^(-digits)] <- paste0(p_prefix, "< .0001")
-  result[p > (1 - 10^(-digits))] <- paste0(p_prefix, "> .9999")
+
+  # Create dynamic threshold strings based on digits (e.g., ".01" for digits=2, ".001" for digits=3)
+  min_threshold <- 10^(-digits)
+  max_threshold <- 1 - 10^(-digits)
+  min_str <- sub("^0\\.", ".", format(min_threshold, nsmall = digits, scientific = FALSE))
+  max_str <- sub("^0\\.", ".", format(max_threshold, nsmall = digits, scientific = FALSE))
+  
+  result[p < min_threshold] <- paste0(p_prefix, "< ", min_str)
+  result[p > max_threshold] <- paste0(p_prefix, "> ", max_str)
   
   # Handle regular p-values
   regular <- !is_na & p >= 10^(-digits) & p <= (1 - 10^(-digits))

@@ -420,7 +420,6 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
         if (requireNamespace("quantreg", quietly = TRUE)) {
         # Show message about independence assumption (only once per session)
         if (is.null(getOption("sohn.plot_cdf.message.shown"))) {
-          message2("", appendLF = FALSE)  # Breakline
           message2("The p-values are based on quantile regressions that assume all observations are independent", col='red')
           options(sohn.plot_cdf.message.shown = TRUE)
         }

@@ -1,17 +1,9 @@
-#' Improves message() by adding color, font weight, and ability to stop execution
+#' Enhanced alternative to message()
+#' 
+#' Add options to set color and to end execution of code (to be used as error message)
 #'
-#' @param ... One or more R objects that can be coerced to character and pasted together.
-#' @param col Character string specifying the color. Can be any R color name (e.g., "dodgerblue", 
-#'   "red4", "red1"). Default is "cyan". 
-#'   Supports ALL named R colors by converting them to RGB. If the terminal supports 256-color 
-#'   mode, colors are mapped directly to 256-color ANSI codes (allowing distinct colors like 
-#'   red1 vs red4). Otherwise, colors are mapped to the closest of 16 ANSI colors (black, red, 
-#'   green, yellow, blue, magenta, cyan, white, with both standard and bright variants). 
-#'   If conversion fails, defaults to "cyan".
+#' @param col text color. Default is "cyan". 
 #' @param font Integer. 1 for plain text (default), 2 for bold text.
-#' @param domain See \code{\link[base]{gettext}}. If \code{NA}, messages will not be translated.
-#' @param appendLF Logical. Should a newline be appended to the message?
-#' @param quiet Logical. If TRUE, the function returns invisibly without printing.
 #' @param stop Logical. If TRUE, stops execution (like \code{stop()}) but without printing "Error:".
 #'
 #' @details
@@ -31,12 +23,7 @@
 #'
 #' @importFrom grDevices col2rgb
 #' @export
-message2 <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = TRUE, 
-                     quiet = FALSE, stop = FALSE) {
-  
-  if (quiet) {
-    return(invisible())
-  }
+message2 <- function(..., col = "cyan", font = 1, stop = FALSE) {
   
   # Check if ANSI is supported
   supportsANSI <- isTRUE(getOption("crayon.enabled", default = TRUE)) && 
@@ -189,24 +176,14 @@ message2 <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = TRUE
         color_code <- closest_code
       }
     }, error = function(e) {
-      # If col2rgb fails, default to cyan
-      if (supports256) {
-        color_code <- "38;5;51"  # Cyan in 256-color mode
-        use_256color <- TRUE
-      } else {
-        color_code <- "36"
-      }
+      # If col2rgb fails, default to basic ANSI cyan (same as col='cyan')
+      color_code <<- "36"
     })
   }
   
-  # Fallback to cyan if still null
+  # Fallback to basic ANSI cyan if still null (same as col='cyan')
   if (is.null(color_code)) {
-    if (supports256) {
-      color_code <- "38;5;51"  # Cyan in 256-color mode
-      use_256color <- TRUE
-    } else {
-      color_code <- "36"
-    }
+    color_code <- "36"
   }
   
   # Build ANSI escape sequence
@@ -245,21 +222,9 @@ message2 <- function(..., col = "cyan", font = 1, domain = NULL, appendLF = TRUE
     msg <- paste0("\n", msg_text)
   }
   
-  # Handle domain translation (similar to .makeMessage behavior)
-  if (!is.null(domain)) {
-    msg <- gettext(msg, domain = domain)
-  }
-  
-  # Create message object
+  # Create message object and print
   msg_obj <- simpleMessage(msg)
-  
-  # Print message with appendLF handling
-  if (appendLF) {
-    message(msg_obj)
-  } else {
-    # Use cat to stderr for no newline (message() always adds newline)
-    cat(msg, file = stderr())
-  }
+  message(msg_obj)
   
   # Stop execution if requested (without printing "Error:")
   if (stop) {

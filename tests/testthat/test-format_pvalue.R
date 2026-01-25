@@ -53,7 +53,24 @@ test_that("format_pvalue handles boundary values correctly", {
   expect_equal(format_pvalue(0.00009, digits = 4), "< .0001")
   expect_equal(format_pvalue(0.0001, digits = 4), "= .0001")
   expect_equal(format_pvalue(0.9999, digits = 4), "= .9999")
+
   expect_equal(format_pvalue(0.99991, digits = 4), "> .9999")
+})
+
+test_that("format_pvalue threshold adapts to digits parameter", {
+  # Very small p-value should use threshold based on digits
+  expect_equal(format_pvalue(0.0000001, digits = 2), "< .01")
+  expect_equal(format_pvalue(0.0000001, digits = 3), "< .001")
+  expect_equal(format_pvalue(0.0000001, digits = 4), "< .0001")
+  
+  # Very large p-value should use threshold based on digits
+  expect_equal(format_pvalue(0.9999999, digits = 2), "> .99")
+  expect_equal(format_pvalue(0.9999999, digits = 3), "> .999")
+  expect_equal(format_pvalue(0.9999999, digits = 4), "> .9999")
+  
+  # With include_p
+  expect_equal(format_pvalue(0.0000001, digits = 2, include_p = TRUE), "p < .01")
+  expect_equal(format_pvalue(0.0000001, digits = 3, include_p = TRUE), "p < .001")
 })
 
 # ============================================================================

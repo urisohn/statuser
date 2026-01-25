@@ -7,7 +7,7 @@
 #' @param group Optional grouping variable, if not provided computed for the full data.
 #'   Ignored if \code{y} is a formula.
 #' @param data Optional data frame containing the variable(s).
-#' @param decimals Number of decimal to round to. Default is 3.
+#' @param digits Number of decimal places to round to. Default is 3.
 #'
 #' @return A data frame with one row per group (or one row if no group is specified) containing:
 #'   \itemize{
@@ -42,7 +42,7 @@
 #' desc_var(y, group)
 #'
 #' # With custom decimal places
-#' desc_var(y, group, data = df, decimals = 2)
+#' desc_var(y, group, data = df, digits = 2)
 #'
 #' # Using formula syntax: y ~ x
 #' desc_var(y ~ group, data = df)
@@ -52,7 +52,7 @@
 #' desc_var(y ~ x1 + x2, data = df2)
 #'
 #' @export
-desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
+desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
   
   # FUNCTION OUTLINE:
   # 1. Check if y is a formula and extract variables (formula vs non-formula syntax)
@@ -501,7 +501,7 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
   # 5. Round numeric columns to specified decimal places
     numeric_cols <- c("mean", "sd", "se", "median", "mode", "mode2", "min", "max")
     numeric_cols <- numeric_cols[numeric_cols %in% names(result_df)]
-    result_df[numeric_cols] <- lapply(result_df[numeric_cols], round, digits = decimals)
+    result_df[numeric_cols] <- lapply(result_df[numeric_cols], round, digits = digits)
   
   # 5b. Replace NA mode values with "-" and flag if all modes are NA
     all_modes_na <- all(is.na(result_df$mode))

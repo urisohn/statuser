@@ -4,14 +4,6 @@ test_that("message2 prints messages without errors", {
   expect_error(message2("Test", "message", "with", "multiple", "parts"), NA)
 })
 
-test_that("message2 handles quiet parameter", {
-  # When quiet=TRUE, should return invisibly without printing
-  result <- message2("Test", quiet = TRUE)
-  expect_null(result)
-  
-  # When quiet=FALSE, should print (we can't easily test output, but it shouldn't error)
-  expect_error(message2("Test", quiet = FALSE), NA)
-})
 
 test_that("message2 handles different colors", {
   # Test various color options
@@ -38,11 +30,6 @@ test_that("message2 handles stop parameter", {
   expect_error(message2("This doesn't stop", stop = FALSE), NA)
 })
 
-test_that("message2 handles appendLF parameter", {
-  # Should work with both TRUE and FALSE without warnings
-  expect_warning(message2("With newline", appendLF = TRUE), NA)
-  expect_warning(message2("Without newline", appendLF = FALSE), NA)
-})
 
 test_that("message2 handles multiple message parts", {
   # Multiple arguments should be combined
@@ -56,10 +43,7 @@ test_that("message2 handles multiple message parts", {
 })
 
 test_that("message2 returns invisibly", {
-  result <- message2("Test", quiet = TRUE)
-  expect_null(result)
-  
-  result <- message2("Test", quiet = FALSE)
+  result <- message2("Test")
   expect_null(result)
 })
 

@@ -54,19 +54,19 @@ test_that("desc_var handles missing values", {
   expect_true(sum(result$missing) == 10)
 })
 
-test_that("desc_var respects decimals parameter", {
+test_that("desc_var respects digits parameter", {
   y <- rnorm(100)
   group <- rep(c("A", "B"), 50)
   
-  result1 <- desc_var(y, group, decimals = 2)
-  result2 <- desc_var(y, group, decimals = 4)
+  result1 <- desc_var(y, group, digits = 2)
+  result2 <- desc_var(y, group, digits = 4)
   
   # Check that rounding is applied (mean should be rounded)
   expect_true(is.numeric(result1$mean))
   expect_true(is.numeric(result2$mean))
   
-  # With different decimals, values should differ (unless they happen to round the same)
-  # This is a weak test, but ensures decimals parameter is used
+  # With different digits, values should differ (unless they happen to round the same)
+  # This is a weak test, but ensures digits parameter is used
   expect_true(is.data.frame(result1))
   expect_true(is.data.frame(result2))
 })
@@ -219,14 +219,14 @@ test_that("desc_var correctly computes all statistics", {
   expect_equal(as.numeric(result$sd), sd(y), tolerance = 0.01)
 })
 
-test_that("desc_var decimals parameter actually rounds differently", {
+test_that("desc_var digits parameter actually rounds differently", {
   y <- c(1.23456789, 2.34567891, 3.45678912)
   
-  result2 <- desc_var(y, decimals = 2)
-  result4 <- desc_var(y, decimals = 4)
+  result2 <- desc_var(y, digits = 2)
+  result4 <- desc_var(y, digits = 4)
   
-  # Mean with 2 decimals should be different from 4 decimals
-  # 2.35 (2 decimals) vs 2.3457 (4 decimals)
+  # Mean with 2 digits should be different from 4 digits
+  # 2.35 (2 digits) vs 2.3457 (4 digits)
   expect_true(nchar(format(result2$mean, nsmall = 2)) < nchar(format(result4$mean, nsmall = 4)) ||
               result2$mean != result4$mean)
 })

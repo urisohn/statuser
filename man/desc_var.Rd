@@ -4,7 +4,7 @@
 \alias{desc_var}
 \title{Describe a variable, optionally by groups}
 \usage{
-desc_var(y, group = NULL, data = NULL, decimals = 3)
+desc_var(y, group = NULL, data = NULL, digits = 3)
 }
 \arguments{
 \item{y}{A numeric vector of values, a column name (character string or unquoted) if \code{data} is provided,
@@ -15,7 +15,7 @@ Ignored if \code{y} is a formula.}
 
 \item{data}{Optional data frame containing the variable(s).}
 
-\item{decimals}{Number of decimal to round to. Default is 3.}
+\item{digits}{Number of decimal places to round to. Default is 3.}
 }
 \value{
 A data frame with one row per group (or one row if no group is specified) containing:
@@ -53,7 +53,7 @@ group <- rep(c("A", "B"), 50)
 desc_var(y, group)
 
 # With custom decimal places
-desc_var(y, group, data = df, decimals = 2)
+desc_var(y, group, data = df, digits = 2)
 
 # Using formula syntax: y ~ x
 desc_var(y ~ group, data = df)
