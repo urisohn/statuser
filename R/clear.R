@@ -14,6 +14,7 @@
 #' global environment. Save anything that you wish to keep before running.
 #'
 #' @examples
+#' \dontrun{
 #' # Create some objects
 #' x <- 1:10
 #' y <- rnorm(10)
@@ -21,6 +22,7 @@
 #'
 #' # Clear everything
 #' clear()
+#' }
 #'
 #' @export
 clear <- function() {

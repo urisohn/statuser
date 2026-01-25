@@ -24,6 +24,7 @@ This function performs three cleanup operations:
 global environment. Save anything that you wish to keep before running.
 }
 \examples{
+\dontrun{
 # Create some objects
 x <- 1:10
 y <- rnorm(10)
@@ -31,5 +32,6 @@ plot(x, y)
 
 # Clear everything
 clear()
+}
 
 }

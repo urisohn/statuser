@@ -1,7 +1,7 @@
 Package: statuser
 Type: Package
 Title: Stats Functions for Stats Users, Not Statisticians
-Version: 0.1.5
+Version: 0.1.6
 Author: Uri Simonsohn [aut, cre]
 Maintainer: Uri Simonsohn <urisohn@gmail.com>
 Description: Enhanced versions of basic R functions like table2(), t.test2(), and lm2(), 
