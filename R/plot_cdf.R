@@ -19,6 +19,22 @@
 #'   Common parameters include \code{col}, \code{lwd}, \code{lty}, \code{pch},
 #'   \code{type}, etc.
 #'
+#' @return Invisibly returns a list containing:
+#'   \itemize{
+#'     \item \code{ecdfs}: A list of ECDF function objects, one per group. Each can be
+#'       called as a function to compute cumulative probabilities (e.g., \code{result$ecdfs[[1]](5)}
+#'       returns P(X <= 5) for group 1).
+#'     \item \code{ks_test}: (Only when exactly 2 groups) The Kolmogorov-Smirnov test result
+#'       comparing the two distributions. Access p-value with \code{result$ks_test$p.value}.
+#'     \item \code{quantile_regression_25}: (Only when exactly 2 groups) Quantile regression
+#'       model for the 25th percentile.
+#'     \item \code{quantile_regression_50}: (Only when exactly 2 groups) Quantile regression
+#'       model for the 50th percentile (median).
+#'     \item \code{quantile_regression_75}: (Only when exactly 2 groups) Quantile regression
+#'       model for the 75th percentile.
+#'     \item \code{warnings}: Any warnings captured during execution (if any).
+#'   }
+#'
 #' @examples
 #' # Basic usage with single variable (no grouping)
 #' y <- rnorm(100)
@@ -49,6 +65,19 @@
 #' widgetness <- rnorm(100)
 #' gender <- rep(c("M", "F"), 50)
 #' plot_cdf(widgetness ~ gender)
+#'
+#' # Using the returned object
+#' df <- data.frame(value = c(rnorm(50, 0), rnorm(50, 1)), group = rep(c("A", "B"), each = 50))
+#' result <- plot_cdf(value ~ group, data = df)
+#' 
+#' # Use ECDF to find P(X <= 0.5) for group A
+#' result$ecdfs[[1]](0.5)
+#' 
+#' # Access KS test p-value
+#' result$ks_test$p.value
+#' 
+#' # Summarize median quantile regression
+#' summary(result$quantile_regression_50)
 #'
 #' @export
 plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
