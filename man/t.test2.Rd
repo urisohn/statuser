@@ -2,36 +2,18 @@
 % Please edit documentation in R/t.test2.R
 \name{t.test2}
 \alias{t.test2}
-\title{Enhanced t-test function}
+\title{Enhanced alternative to t.test()}
 \usage{
-\method{t}{test2}(...)
-}
-\arguments{
-\item{...}{Arguments passed to \code{\link[stats]{t.test}}}
-}
-\value{
-A dataframe (single row) with the following columns:
-\itemize{
-  \item Variable-named columns: For standard syntax (\code{t.test2(x1, x2)}),
-    columns are named after the variables (e.g., \code{x1}, \code{x2}).
-    For formula syntax (\code{t.test2(y ~ group, data=df)}), columns are
-    named after the group values (e.g., \code{A}, \code{B}).
-  \item \code{diff}: Difference of means (mean1 - mean2, NA for one-sample test)
-  \item \code{ci}: Confidence level (e.g., "95%")
-  \item \code{ci.L}: Lower bound of confidence interval
-  \item \code{ci.H}: Upper bound of confidence interval
-  \item \code{t}: t-statistic
-  \item \code{df}: Degrees of freedom
-  \item \code{p.value}: p-value
-  \item \code{N1} or \code{N <group>}: Sample size of first group
-  \item \code{N2} or \code{N <group>}: Sample size of second group (NA for one-sample test)
-  \item \code{corr}: Correlation between groups (only for paired tests, NA otherwise)
-}
+Identical to t.test()
 }
 \description{
-Runs \code{\link[stats]{t.test}} and returns results as a dataframe
-with group names, means, differences, confidence intervals, test statistics,
-sample sizes, and correlation (for paired tests).
+The basic t-test function in R, \code{\link[stats]{t.test}}, does not report 
+ the observed difference of means, does not stipulate which mean
+ is subtracted from which (i.e., whether it computed A-B or B-A), and
+ presents the test results on the console in a verbose unorganized 
+ paragraph of text. \code{t.test2} improves on all those counts, and 
+ in addition, it reports the number of observations per group and if any observations 
+ are missing it issues a warning. It returns a dataframe instead of a list.
 }
 \examples{
 # Two-sample t-test
@@ -52,7 +34,4 @@ t.test2(data, mu = 0)
 data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 t.test2(y ~ group, data = data)
 
-}
-\seealso{
-\code{\link[stats]{t.test}}
 }

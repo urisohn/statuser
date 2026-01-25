@@ -2,77 +2,40 @@
 % Please edit documentation in R/table2.R
 \name{table2}
 \alias{table2}
-\title{Enhanced table() by showing variable name and allowing proportions as results}
+\title{Enhanced alternative to table()}
 \usage{
-table2(
-  ...,
-  data = NULL,
-  exclude = if (useNA == "no") c(NA, NaN),
-  useNA = c("no", "ifany", "always"),
-  dnn = NULL,
-  deparse.level = 1,
-  prop = NULL,
-  digits = 3,
-  chi = FALSE
-)
+Same basic set of arguments as \code{\link[stats]{table}}, plus the 
+enhanced arguments shown below
 }
 \arguments{
-\item{...}{One or more objects which can be interpreted as factors (including
-character strings), or a list (or data frame) whose components can be so
-interpreted. For the default method, either all arguments are vectors of
-the same length, or one argument is a data frame and the rest are vectors
-that can be matched by name. If \code{data} is provided, variables can be
-specified as unquoted names (e.g., \code{table2(group, status, data = df)}).}
+\item{prop}{If specified, reports (in addition table with frequencies), 
+a table with proportions:
+  \itemize{
+    \item \code{prop="all"}: Proportions for full table (each cell / total)
+    \item \code{prop="row"}: Proportions by row  ('rows' also accepted)
+    \item \code{prop="col"}: Proportions by columns ('cols', 'column', 'columns' also accepted)
+  }}
 
-\item{data}{Optional data frame containing the variables. If provided, variables
-in \code{...} can be specified as unquoted column names.}
+\item{digits}{Number of decimal values to show for proportions}
 
-\item{exclude}{Levels to remove from all factors in \code{...}.}
-
-\item{useNA}{Whether to include NA values in the table.}
-
-\item{dnn}{The names to be given to the dimensions in the result.}
-
-\item{deparse.level}{Controls how the default \code{dnn} is constructed.}
-
-\item{prop}{Numeric or character. If specified, converts table to proportions:
-\itemize{
-  \item \code{prop=0} or \code{prop="all"}: Proportions of the whole table (each cell / total)
-  \item \code{prop=1}, \code{prop="row"}, or \code{prop="rows"}: Proportions by rows (each row sums to 1)
-  \item \code{prop=2}, \code{prop="col"}, \code{prop="column"}, or \code{prop="columns"}: Proportions by columns (each column sums to 1)
-}
-If \code{NULL} (default), returns frequency counts.}
-
-\item{digits}{Number of decimal places to display when \code{prop} is specified.
-Default is 3. Values are displayed as proportions without leading zero (e.g., .100, .110, .111).
-Only applies when \code{prop} is not \code{NULL}.}
-
-\item{chi}{Logical. If \code{TRUE}, performs a chi-square test of independence
-on the frequency table and reports the results in APA format after the tables.
-Default is \code{FALSE}.}
+\item{chi}{Logical. If \code{TRUE}, performs a chi-square test on frequency table,
+reports results in APA format}
 }
 \value{
 A list (object of class "table2") with the following components:
   \itemize{
-    \item \code{freq}: The frequency table (always present)
-    \item \code{prop}: The proportion table (only if \code{prop} is specified)
-    \item \code{chisq}: The chi-square test result (only if \code{chi=TRUE})
+    \item \code{freq}: frequency table 
+    \item \code{prop}: proportions table 
+    \item \code{chisq}: chi-square test  
   }
-  Tables have enhanced dimnames when variables come from a dataframe.
-  If \code{prop} is specified, the proportion table contains values between 0 and 1,
-  displayed without leading zero (e.g., .100 instead of 0.100).
 }
 \description{
-Identical to base R's \code{table()}, except that when tabulating two or three variables
-from a dataframe, the variable names are displayed in the dimension names, and that
-\code{prop} argument allows reporting proportions, bypassing need for \code{prop.table(table())}
-}
-\details{
-When tabulating two or three variables from a dataframe (e.g., \code{table2(df$x, df$y)} or
-\code{table2(df$x, df$y, df$z)}), the variable names appear as dimension names in the table
-margins, while row and column labels show only the values. This creates a cleaner cross-tabulation
-format with variable names as headers. For 3D tables, the third variable name appears in the
-slice headers (e.g., \code{, , var = value}).
+The function \code{\link[stats]{table()}} does not show variable 
+ names when tabulating from a dataframe, requires running another
+ function, \code{\link[stats]{prop.table()}},  to tabulate proportions 
+ and yet another function,\code{\link[stats]{chisq.test()}} to test difference of 
+ proportions.  \code{table2} does what those three functions do, producing easier to 
+ read output, and always shows variable names.
 }
 \examples{
 # Create example data
@@ -92,22 +55,12 @@ df3 <- data.frame(
 )
 table2(df3$x, df3$y, df3$z)
 
-# Regular table (no variable names)
-x <- c("A", "A", "B")
-y <- c("X", "Y", "X")
-table2(x, y)
-
 # Table with proportions
-table2(df$group, df$status, prop = 0)  # Overall proportions
-table2(df$group, df$status, prop = 1)  # Row proportions
-table2(df$group, df$status, prop = 2)  # Column proportions
-table2(df$group, df$status, prop = "row")  # Row proportions (character)
-table2(df$group, df$status, prop = 1, digits = 3)  # Row proportions with 3 decimals
-
-# Using data argument with unquoted variable names
-table2(group, status, data = df, prop = "col")
+table2(df$group, df$status, prop = 'all')  # Overall proportions
+table2(df$group, df$status, prop = 'row')  # Row proportions
+table2(df$group, df$status, prop = 'col')  # Column proportions
 
 # Table with chi-square test
-table2(df$group, df$status, chi = TRUE)
+table2(df$group, df$status, chi = TRUE,prop='all')
 
 }

@@ -36,7 +36,7 @@ Adds background color and verbal alignment (e.g., 'center') to text()
 }
 \examples{
 # Create a simple plot
-plot(1:10, 1:10, type = "n", main = "text2 Examples")
+plot(1:10, 1:10, type = "n", main = "text2() - Alignment & Color")
 
 # Alignment respect to x=5
 text2(5, 8, "align='left' from 5", align = "left", bg = "yellow1")
