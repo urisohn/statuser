@@ -2,24 +2,16 @@
 % Please edit documentation in R/text2.R
 \name{text2}
 \alias{text2}
-\title{Adds background color and verbal alignment (e.g., 'center') to text()}
+\title{Enhanced alternative to text()}
 \usage{
-text2(
-  x,
-  y,
-  labels,
-  bg = "papayawhip",
-  cex = 1,
-  pad = 0.03,
-  pad_v = 0.25,
-  align = "center",
-  ...
-)
+text2(x,y,labels="text to show on figure",bg='papayawhip',align='left',...)
 }
 \arguments{
 \item{x, y}{coordinates for text placement}
 
 \item{labels}{text to display}
+
+\item{align}{alignment in relation to x coordinate ('left','center','right')}
 
 \item{bg}{background color}
 
@@ -27,12 +19,10 @@ text2(
 
 \item{pad_v}{top/bottom padding in percenrage (e.g., .025)}
 
-\item{align}{('left','center','right')}
-
 \item{...}{Additional arguments passed to \code{\link[graphics]{text}}.}
 }
 \description{
-Adds background color and verbal alignment (e.g., 'center') to text()
+Adds to text() optional background color and verbal alignment (align='center')
 }
 \examples{
 # Create a simple plot
@@ -67,5 +57,4 @@ text2(5, 4, "Tall padding", pad_v = 0.8, bg = "lightyellow")
 
 # Both padding increased
 text2(5, 2, "Extra padding", pad = 0.15, pad_v = 0.6, bg = "pink")
-
 }

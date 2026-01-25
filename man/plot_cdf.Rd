@@ -91,5 +91,4 @@ result$ks_test$p.value
 
 # Summarize median quantile regression
 summary(result$quantile_regression_50)
-
 }

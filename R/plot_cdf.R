@@ -78,7 +78,7 @@
 #' 
 #' # Summarize median quantile regression
 #' summary(result$quantile_regression_50)
-#'
+
 #' @export
 plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
   # Extract plotting parameters from ...
