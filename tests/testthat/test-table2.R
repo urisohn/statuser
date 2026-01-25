@@ -354,3 +354,174 @@ test_that("table2 print output for three-way table is stable", {
   
   expect_snapshot(print(result))
 })
+
+# ============================================================================
+# CONSISTENCY TESTS WITH BASE R FUNCTIONS
+# ============================================================================
+
+test_that("table2 freq matches table() output", {
+  set.seed(123)
+  x <- sample(c("A", "B", "C"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
+  
+  result <- table2(x, y)
+  base_table <- table(x, y)
+  
+
+  # Frequencies should match exactly
+  expect_equal(as.vector(result$freq), as.vector(base_table))
+  
+  # Dimensions should match
+  expect_equal(dim(result$freq), dim(base_table))
+})
+
+test_that("table2 freq matches table() for single variable", {
+  set.seed(456)
+  x <- sample(c("A", "B", "C"), 50, replace = TRUE)
+  
+  result <- table2(x)
+  base_table <- table(x)
+  
+  # Frequencies should match exactly
+  expect_equal(as.vector(result$freq), as.vector(base_table))
+})
+
+test_that("table2 freq matches table() for three-way table", {
+  set.seed(789)
+  x <- sample(c("A", "B"), 80, replace = TRUE)
+  y <- sample(c("X", "Y"), 80, replace = TRUE)
+  z <- sample(c("High", "Low"), 80, replace = TRUE)
+  
+  result <- table2(x, y, z)
+  base_table <- table(x, y, z)
+  
+  # Frequencies should match exactly
+  expect_equal(as.vector(result$freq), as.vector(base_table))
+  
+  # Dimensions should match
+  expect_equal(dim(result$freq), dim(base_table))
+})
+
+test_that("table2 prop='all' matches prop.table() overall proportions", {
+  set.seed(111)
+  x <- sample(c("A", "B", "C"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
+  
+  result <- table2(x, y, prop = "all")
+  base_table <- table(x, y)
+  base_prop <- prop.table(base_table)
+  
+ # For prop="all", table2 adds both Total row and Total column
+  # Extract inner part by excluding "Total" from both dimensions
+  prop_matrix <- result$prop
+  row_names <- rownames(prop_matrix)
+  col_names <- colnames(prop_matrix)
+  inner_rows <- row_names[row_names != "Total"]
+  inner_cols <- col_names[col_names != "Total"]
+  inner_prop <- prop_matrix[inner_rows, inner_cols]
+  
+  # table2 rounds to 3 decimal places for display
+  # Compare element-by-element (same row/column order)
+  for (r in inner_rows) {
+    for (c in inner_cols) {
+      expect_true(abs(inner_prop[r, c] - base_prop[r, c]) < 0.001,
+                  info = paste("Mismatch at row", r, "col", c, 
+                               "table2:", inner_prop[r, c], "prop.table:", base_prop[r, c]))
+    }
+  }
+})
+
+test_that("table2 prop=1 matches prop.table(margin=1) row proportions", {
+  set.seed(222)
+  x <- sample(c("A", "B", "C"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
+  
+  result <- table2(x, y, prop = 1)
+  base_table <- table(x, y)
+  base_prop <- prop.table(base_table, margin = 1)
+  
+  # For prop=1 (row), table2 adds only Total column (no Total row)
+  prop_matrix <- result$prop
+  col_names <- colnames(prop_matrix)
+  inner_cols <- col_names[col_names != "Total"]
+  inner_prop <- prop_matrix[, inner_cols]
+  
+  # table2 rounds to 3 decimal places for display
+  # Compare element-by-element (same row/column order)
+  for (r in rownames(inner_prop)) {
+    for (c in inner_cols) {
+      expect_true(abs(inner_prop[r, c] - base_prop[r, c]) < 0.001,
+                  info = paste("Mismatch at row", r, "col", c,
+                               "table2:", inner_prop[r, c], "prop.table:", base_prop[r, c]))
+    }
+  }
+})
+
+test_that("table2 prop=2 matches prop.table(margin=2) column proportions", {
+  set.seed(333)
+  x <- sample(c("A", "B", "C"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
+  
+  result <- table2(x, y, prop = 2)
+  base_table <- table(x, y)
+  base_prop <- prop.table(base_table, margin = 2)
+  
+  # For prop=2 (column), table2 adds only Total row (no Total column)
+  prop_matrix <- result$prop
+  row_names <- rownames(prop_matrix)
+  inner_rows <- row_names[row_names != "Total"]
+  inner_prop <- prop_matrix[inner_rows, ]
+  
+  # table2 rounds to 3 decimal places for display
+  # Compare element-by-element (same row/column order)
+  for (r in inner_rows) {
+    for (c in colnames(inner_prop)) {
+      expect_true(abs(inner_prop[r, c] - base_prop[r, c]) < 0.001,
+                  info = paste("Mismatch at row", r, "col", c,
+                               "table2:", inner_prop[r, c], "prop.table:", base_prop[r, c]))
+    }
+  }
+})
+
+test_that("table2 chi=TRUE matches chisq.test() results", {
+  set.seed(444)
+  x <- sample(c("A", "B", "C"), 150, replace = TRUE)
+  y <- sample(c("X", "Y", "Z"), 150, replace = TRUE)
+  
+  result <- table2(x, y, chi = TRUE)
+  base_table <- table(x, y)
+  base_chisq <- chisq.test(base_table)
+  
+  # Chi-square statistic should match
+  expect_equal(
+    as.numeric(result$chisq$statistic), 
+    as.numeric(base_chisq$statistic), 
+    tolerance = 1e-10
+  )
+  
+  # Degrees of freedom should match
+  expect_equal(result$chisq$parameter, base_chisq$parameter)
+  
+  # p-value should match
+  expect_equal(result$chisq$p.value, base_chisq$p.value, tolerance = 1e-10)
+})
+
+test_that("table2 chi=TRUE matches chisq.test() for 2x2 table", {
+  set.seed(555)
+  x <- sample(c("A", "B"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
+  
+  result <- table2(x, y, chi = TRUE)
+  base_table <- table(x, y)
+  base_chisq <- chisq.test(base_table)
+  
+  # Chi-square statistic should match
+  expect_equal(
+    as.numeric(result$chisq$statistic), 
+    as.numeric(base_chisq$statistic), 
+    tolerance = 1e-10
+  )
+  
+  # p-value should match
+  expect_equal(result$chisq$p.value, base_chisq$p.value, tolerance = 1e-10)
+})

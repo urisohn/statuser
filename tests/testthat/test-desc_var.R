@@ -7,7 +7,7 @@ test_that("desc_var computes statistics correctly", {
   expect_true(is.data.frame(result))
   expect_equal(nrow(result), 2)
   expect_true("group" %in% names(result))
-  expect_true("n" %in% names(result))
+  expect_true("n.total" %in% names(result))
   expect_true("mean" %in% names(result))
   expect_true("sd" %in% names(result))
   expect_true("median" %in% names(result))
@@ -50,8 +50,8 @@ test_that("desc_var handles missing values", {
   group <- rep(c("A", "B"), 50)
   
   result <- desc_var(y, group)
-  expect_true(all(result$missing >= 0))
-  expect_true(sum(result$missing) == 10)
+  expect_true(all(result$n.missing >= 0))
+  expect_true(sum(result$n.missing) == 10)
 })
 
 test_that("desc_var respects digits parameter", {
@@ -77,7 +77,7 @@ test_that("desc_var returns all expected columns", {
   
   result <- desc_var(y, group)
   
-  expected_cols <- c("group", "n", "mean", "sd", "se", "median", "missing", "unique",
+  expected_cols <- c("group", "n.total", "mean", "sd", "se", "median", "n.missing", "n.unique",
                      "mode", "freq_mode", "mode2", "freq_mode2",
                      "min", "max")
   

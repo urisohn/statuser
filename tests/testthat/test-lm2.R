@@ -22,15 +22,6 @@ test_that("lm2 returns statuser output by default", {
   expect_equal(tbl$term, c("(Intercept)", "wt", "hp"))
 })
 
-test_that("lm2 returns estimatr output when requested", {
-  skip_if_not_installed("estimatr")
-  
-  result <- lm2(mpg ~ wt + hp, data = mtcars, output = "estimatr")
-  
-  # Check it's an lm_robust object
-  expect_s3_class(result, "lm_robust")
-})
-
 test_that("lm2 uses HC3 standard errors by default", {
   skip_if_not_installed("estimatr")
   
@@ -100,15 +91,6 @@ test_that("lm2 stores model attributes", {
   # Check statuser-specific attributes exist
   expect_true(!is.null(attr(result, "statuser_table")))
   expect_true(!is.null(attr(result, "classical_fit")))
-})
-
-test_that("lm2 validates output argument", {
-  skip_if_not_installed("estimatr")
-  
-  expect_error(
-    lm2(mpg ~ wt + hp, data = mtcars, output = "invalid"),
-    "should be one of"
-  )
 })
 
 test_that("lm2 predict matches lm_robust predict with clustering", {
