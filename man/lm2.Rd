@@ -103,6 +103,40 @@ lm2(y ~ x1 + x2)
 # Look at distribution of x2 to spot the outlier
 plot_freq(x2)
 
+# CLUSTERED STANDARD ERRORS
+# When observations are grouped (e.g., students within schools),
+# use clusters to account for within-group correlation
+set.seed(123)
+n_clusters <- 20
+n_per_cluster <- 15
+cluster_id <- rep(1:n_clusters, each = n_per_cluster)
+cluster_effect <- rnorm(n_clusters, sd = 2)[cluster_id]
+x <- rnorm(n_clusters * n_per_cluster)
+y <- 1 + 0.5 * x + cluster_effect + rnorm(n_clusters * n_per_cluster)
+mydata <- data.frame(y = y, x = x, cluster_id = cluster_id)
+
+# Clustered SE (CR2) - note the SE.cluster column in output
+lm2(y ~ x, data = mydata, clusters = cluster_id)
+
+# FIXED EFFECTS
+# Use fixed_effects to absorb group-level variation (e.g., firm or year effects)
+# This is useful for panel data or when you have many fixed effect levels
+set.seed(456)
+n_firms <- 30
+n_years <- 5
+firm_id <- rep(1:n_firms, each = n_years)
+year <- rep(2018:2022, times = n_firms)
+firm_effect <- rnorm(n_firms, sd = 3)[firm_id]
+x <- rnorm(n_firms * n_years)
+y <- 2 + 0.8 * x + firm_effect + rnorm(n_firms * n_years)
+panel <- data.frame(y = y, x = x, firm_id = factor(firm_id), year = factor(year))
+
+# Absorb firm fixed effects (coefficient on x is estimated, firm dummies are not shown)
+lm2(y ~ x, data = panel, fixed_effects = ~ firm_id)
+
+# Two-way fixed effects (firm and year)
+lm2(y ~ x, data = panel, fixed_effects = ~ firm_id + year)
+
 }
 \references{
 King, G., & Roberts, M. E. (2015). How robust standard errors expose methodological 

@@ -3,7 +3,7 @@
 #' Saves images to PNG with a specified width. As input it accepts (SVG, PDF, EPS, JPG, JPEG, TIF, TIFF, BMP, PNG)
 #' Saves to subdirectory '/resized' within input folder (or same directory as file if input is a single file)
 #'
-#' @param folder Character string. Path to a folder containing image files, or path to a single image file.
+#' @param path Character string. Path to a folder containing image files, or path to a single image file.
 #' @param width Numeric vector. Target width(s) in pixels for the output PNG files.
 #'   Can be a single value (recycled for all files) or a vector matching the number
 #'   of files found.
@@ -43,7 +43,7 @@
 #' }
 #'
 #' @export
-resize_images <- function(folder, width) {
+resize_images <- function(path, width) {
 
   # Dependencies: rsvg, magick, tools
 
@@ -51,17 +51,17 @@ resize_images <- function(folder, width) {
 
   # Check if input is a file or folder
 
-  if (file.exists(folder) && !dir.exists(folder)) {
+  if (file.exists(path) && !dir.exists(path)) {
 
     # Input is a single file
 
-    files <- folder
+    files <- path
 
     # Output directory is the same directory as the file
 
-    outdir <- file.path(dirname(folder), "resized")
+    outdir <- file.path(dirname(path), "resized")
 
-  } else if (dir.exists(folder)) {
+  } else if (dir.exists(path)) {
 
     # Input is a folder
 
@@ -69,7 +69,7 @@ resize_images <- function(folder, width) {
 
     files <- list.files(
 
-      folder,
+      path,
 
       pattern = "\\.(svg|pdf|eps|jpg|jpeg|tif|tiff|bmp|png)$",
 
@@ -83,7 +83,7 @@ resize_images <- function(folder, width) {
 
     # Output directory is subfolder within input folder
 
-    outdir <- file.path(folder, "resized")
+    outdir <- file.path(path, "resized")
 
   } else {
 

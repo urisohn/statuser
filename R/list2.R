@@ -1,16 +1,14 @@
-#' Improves list() by allowing not naming (some) objects.  
+#' Enhanced alternative to list()
 #' 
-#' @param ... Objects to include in the list. Can be named or unnamed.
+#' List with objects that are automatically named. 
+#' 
+#' list2(x , y)      is equivalent to list(x = x , y = y)
+#' 
+#' list2(x , y2 = y) is equivalent to list(x = x , y2 = y)
+#' 
+#' Based on: \url{https://stackoverflow.com/questions/16951080/can-lists-be-created-that-name-themselves-based-on-input-object-names}
 #'
-#' @return A list where unnamed objects are automatically named with their existing name.
-#'
-#' @details
-#' This function is based on a solution on Stack Overflow:
-#' \url{https://stackoverflow.com/questions/16951080/can-lists-be-created-that-name-themselves-based-on-input-object-names}
-#'
-#' If objects are passed with explicit names (e.g., \code{list2(a = x, b = y)}),
-#' those names are used. If objects are passed without names, the function
-#' attempts to use the variable names of the objects themselves.
+
 #'
 #' @examples
 #' x <- 1:5

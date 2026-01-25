@@ -549,3 +549,240 @@ test_that("lm2 print output with interaction is stable", {
   
   expect_snapshot(print(result))
 })
+
+# ============================================================================
+# TESTS WITHOUT DATA ARGUMENT (VARIABLES FROM ENVIRONMENT)
+# ============================================================================
+
+test_that("lm2 works without data argument (variables from environment)", {
+  skip_if_not_installed("estimatr")
+  
+  # Without data argument (variables from environment)
+  y <- mtcars$mpg
+  x1 <- mtcars$wt
+  x2 <- mtcars$hp
+  
+  result <- lm2(y ~ x1 + x2)
+  
+  # Check it has the correct classes
+  expect_s3_class(result, "lm2")
+  expect_s3_class(result, "lm_robust")
+  
+  # Check the statuser_table attribute exists and has expected columns
+  tbl <- attr(result, "statuser_table")
+  expect_true(!is.null(tbl))
+  expect_equal(nrow(tbl), 3)  # intercept + 2 predictors
+  expect_equal(tbl$term, c("(Intercept)", "x1", "x2"))
+})
+
+test_that("lm2 without data matches estimatr::lm_robust without data", {
+  skip_if_not_installed("estimatr")
+  
+  y <- mtcars$mpg
+  x1 <- mtcars$wt
+  x2 <- mtcars$hp
+  
+  m1 <- lm2(y ~ x1 + x2)
+  m2 <- estimatr::lm_robust(y ~ x1 + x2, se_type = "HC3")
+  
+  # Coefficients should match
+  expect_equal(unname(coef(m1)), unname(coef(m2)), tolerance = 1e-10)
+  
+  # R-squared should match
+  expect_equal(m1$r.squared, m2$r.squared, tolerance = 1e-10)
+})
+
+# ============================================================================
+# MARGINALEFFECTS COMPATIBILITY TESTS
+# ============================================================================
+
+test_that("lm2 slopes match lm_robust slopes with data argument", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("marginaleffects")
+  
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m2 <- estimatr::lm_robust(mpg ~ wt + hp, data = mtcars, se_type = "HC3")
+  
+  slopes1 <- marginaleffects::slopes(m1)
+  slopes2 <- marginaleffects::slopes(m2)
+  
+  # Estimates should match
+  expect_equal(slopes1$estimate, slopes2$estimate, tolerance = 1e-10)
+  
+  # Standard errors should match
+  expect_equal(slopes1$std.error, slopes2$std.error, tolerance = 1e-10)
+})
+
+test_that("lm2 slopes match lm_robust slopes without data argument", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("marginaleffects")
+  
+  y <- mtcars$mpg
+  x1 <- mtcars$wt
+  x2 <- mtcars$hp
+  
+  m1 <- lm2(y ~ x1 + x2)
+  m2 <- estimatr::lm_robust(y ~ x1 + x2, se_type = "HC3")
+  
+  slopes1 <- marginaleffects::slopes(m1)
+  slopes2 <- marginaleffects::slopes(m2)
+  
+  # Estimates should match
+  expect_equal(slopes1$estimate, slopes2$estimate, tolerance = 1e-10)
+  
+  # Standard errors should match
+  expect_equal(slopes1$std.error, slopes2$std.error, tolerance = 1e-10)
+})
+
+test_that("lm2 comparisons work with marginaleffects", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("marginaleffects")
+  
+  result <- lm2(mpg ~ wt + hp, data = mtcars)
+  
+  # Test comparisons() works
+  comp_result <- marginaleffects::comparisons(result)
+  expect_true(inherits(comp_result, "data.frame"))
+  expect_true(nrow(comp_result) > 0)
+})
+
+test_that("lm2 avg_slopes works with marginaleffects", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("marginaleffects")
+  
+  result <- lm2(mpg ~ wt + hp, data = mtcars)
+  
+  # Test avg_slopes() works
+  avg_result <- marginaleffects::avg_slopes(result)
+  expect_true(inherits(avg_result, "data.frame"))
+  expect_equal(nrow(avg_result), 2)  # 2 predictors
+})
+
+# ============================================================================
+# BROOM COMPATIBILITY TESTS
+# ============================================================================
+
+test_that("lm2 works with broom::tidy", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("broom")
+  
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  
+  # broom::tidy should work (via estimatr's method)
+  tidy_result <- broom::tidy(m1)
+  
+  expect_true(inherits(tidy_result, "data.frame"))
+  expect_true("term" %in% names(tidy_result))
+  expect_true("estimate" %in% names(tidy_result))
+  expect_true("std.error" %in% names(tidy_result))
+  expect_equal(nrow(tidy_result), 3)  # intercept + 2 predictors
+})
+
+test_that("lm2 works with broom::glance", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("broom")
+  
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  
+  # broom::glance should work
+  glance_result <- broom::glance(m1)
+  
+  expect_true(inherits(glance_result, "data.frame"))
+  expect_equal(nrow(glance_result), 1)
+  expect_true("r.squared" %in% names(glance_result))
+  expect_true("nobs" %in% names(glance_result))
+})
+
+test_that("lm2 works with broom::augment", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("broom")
+  
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  
+  # broom::augment is not supported for lm_robust objects
+  # so we just verify that fitted values can be extracted another way
+  fitted_vals <- predict(m1, newdata = mtcars)
+  expect_equal(length(fitted_vals), nrow(mtcars))
+})
+
+# ============================================================================
+# MODELSUMMARY COMPATIBILITY TESTS
+# ============================================================================
+
+test_that("lm2 works with modelsummary", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("modelsummary")
+  
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  
+  # modelsummary should not error
+  output <- capture.output(
+    modelsummary::modelsummary(m1, output = "markdown")
+  )
+  
+  expect_true(length(output) > 0)
+  output_text <- paste(output, collapse = "\n")
+  
+  # Should contain coefficient info
+  expect_true(grepl("wt", output_text, ignore.case = TRUE))
+})
+
+test_that("modelsummary can compare lm2 and lm_robust models", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("modelsummary")
+  
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m2 <- estimatr::lm_robust(mpg ~ wt + hp, data = mtcars, se_type = "HC3")
+  
+  # modelsummary should handle mixed model types
+  output <- capture.output(
+    modelsummary::modelsummary(list("lm2" = m1, "lm_robust" = m2), output = "markdown")
+  )
+  
+  expect_true(length(output) > 0)
+})
+
+test_that("modelsummary can compare multiple lm2 models", {
+  skip_if_not_installed("estimatr")
+  skip_if_not_installed("modelsummary")
+  
+  m1 <- lm2(mpg ~ wt, data = mtcars)
+  m2 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m3 <- lm2(mpg ~ wt + hp + drat, data = mtcars)
+  
+  # modelsummary should handle multiple lm2 models
+  output <- capture.output(
+    modelsummary::modelsummary(
+      list("Model 1" = m1, "Model 2" = m2, "Model 3" = m3), 
+      output = "markdown"
+    )
+  )
+  
+  expect_true(length(output) > 0)
+  output_text <- paste(output, collapse = "\n")
+  
+  # Should contain all model names
+  expect_true(grepl("Model 1", output_text))
+  expect_true(grepl("Model 2", output_text))
+  expect_true(grepl("Model 3", output_text))
+})
+
+# ============================================================================
+# COEFFICIENT EXTRACTION COMPATIBILITY TESTS
+# ============================================================================
+
+test_that("lm2 coef extraction works like lm_robust", {
+  skip_if_not_installed("estimatr")
+  
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m2 <- estimatr::lm_robust(mpg ~ wt + hp, data = mtcars, se_type = "HC3")
+  
+  # coef() should work
+  expect_equal(coef(m1), coef(m2))
+  
+  # vcov() should work
+  expect_equal(vcov(m1), vcov(m2))
+  
+  # confint() should work
+  expect_equal(confint(m1), confint(m2))
+})

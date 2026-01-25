@@ -4,10 +4,10 @@
 \alias{resize_images}
 \title{Resize Images}
 \usage{
-resize_images(folder, width)
+resize_images(path, width)
 }
 \arguments{
-\item{folder}{Character string. Path to a folder containing image files, or path to a single image file.}
+\item{path}{Character string. Path to a folder containing image files, or path to a single image file.}
 
 \item{width}{Numeric vector. Target width(s) in pixels for the output PNG files.
 Can be a single value (recycled for all files) or a vector matching the number

@@ -44,16 +44,16 @@ that is self-explanatory, and generate publication-ready results in 1 line of co
 \itemize{
   \item \code{\link{format_pvalue}}: Format p-values for display
   \item \code{\link{message2}}: Print colored messages to console
+  \item \code{\link{resize_images}}: Resize images (SVG, PDF, EPS, JPG, PNG, etc.) to PNG with specified width
 }
 }
 
-\section{Data Management}{
+\section{Miscellaneous}{
 
 \itemize{
   \item \code{\link{list2}}: Like list(), but unnamed objects are automatically named
   \item \code{\link{convert_to_sql}}: Convert CSV files to SQL INSERT statements
   \item \code{\link{clear}}: Clear environment, console, and all graphics devices
-  \item \code{\link{resize_images}}: Resize images (SVG, PDF, EPS, JPG, PNG, etc.) to PNG with specified width
 }
 }
 

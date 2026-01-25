@@ -303,7 +303,7 @@ message2("This is a cyan message", col = "cyan")
 ```
 </details>
 
-### 🗂️ Data Management
+### 🗂️ Miscellaneous
 
 <details>
 <summary><code>list2()</code>: Create lists with objects without having to name them</summary>

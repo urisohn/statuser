@@ -2,26 +2,19 @@
 % Please edit documentation in R/list2.R
 \name{list2}
 \alias{list2}
-\title{Improves list() by allowing not naming (some) objects.}
+\title{Enhanced alternative to list()}
 \usage{
 list2(...)
 }
-\arguments{
-\item{...}{Objects to include in the list. Can be named or unnamed.}
-}
-\value{
-A list where unnamed objects are automatically named with their existing name.
-}
 \description{
-Improves list() by allowing not naming (some) objects.
+List with objects that are automatically named.
 }
 \details{
-This function is based on a solution on Stack Overflow:
-\url{https://stackoverflow.com/questions/16951080/can-lists-be-created-that-name-themselves-based-on-input-object-names}
+list2(x , y)      is equivalent to list(x = x , y = y)
 
-If objects are passed with explicit names (e.g., \code{list2(a = x, b = y)}),
-those names are used. If objects are passed without names, the function
-attempts to use the variable names of the objects themselves.
+list2(x , y2 = y) is equivalent to list(x = x , y2 = y)
+
+Based on: \url{https://stackoverflow.com/questions/16951080/can-lists-be-created-that-name-themselves-based-on-input-object-names}
 }
 \examples{
 x <- 1:5
