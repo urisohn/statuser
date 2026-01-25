@@ -37,7 +37,7 @@
         - effect.size is the standardized coefficient: beta = b * sd(x) / sd(y)
         - missing: number of observations excluded due to missing values
         - red.flag: !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%
-          (set notes=FALSE to prevent printing these notes)
+          (set notes==FALSE to prevent printing these notes)
 
 # lm2 print output with interaction is stable
 

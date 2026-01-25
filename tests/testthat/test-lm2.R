@@ -136,6 +136,54 @@ test_that("lm2 predict matches lm_robust predict without clustering", {
   expect_equal(mean(yh1$se.fit == yh2$se.fit), 1)
 })
 
+test_that("lm2 predict without newdata matches lm predict", {
+  skip_if_not_installed("estimatr")
+  
+  # Fit with lm2 and lm
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m2 <- lm(mpg ~ wt + hp, data = mtcars)
+  
+  # Get predictions without newdata
+  yh1 <- predict(m1)
+  yh2 <- predict(m2)
+  
+  # Fitted values should be identical
+  expect_equal(unname(yh1), unname(yh2), tolerance = 1e-10)
+})
+
+test_that("lm2 predict without newdata matches lm_robust predict with newdata", {
+  skip_if_not_installed("estimatr")
+  
+  # Fit with lm2 and lm_robust
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m2 <- estimatr::lm_robust(mpg ~ wt + hp, data = mtcars, se_type = "HC3")
+  
+  # lm2 without newdata vs lm_robust with newdata
+  yh1 <- predict(m1)
+  yh2 <- predict(m2, newdata = mtcars)
+  
+  # Fitted values should be identical
+  expect_equal(unname(yh1), unname(yh2), tolerance = 1e-10)
+})
+
+test_that("lm2 predict with se.fit=TRUE works without newdata", {
+  skip_if_not_installed("estimatr")
+  
+  # Fit with lm2 and lm_robust
+  m1 <- lm2(mpg ~ wt + hp, data = mtcars)
+  m2 <- estimatr::lm_robust(mpg ~ wt + hp, data = mtcars, se_type = "HC3")
+  
+  # lm2 without newdata but with se.fit=TRUE
+  yh1 <- predict(m1, se.fit = TRUE)
+  yh2 <- predict(m2, newdata = mtcars, se.fit = TRUE)
+  
+  # Fitted values should be identical
+  expect_equal(unname(yh1$fit), unname(yh2$fit), tolerance = 1e-10)
+  
+  # Standard errors should be identical
+  expect_equal(unname(yh1$se.fit), unname(yh2$se.fit), tolerance = 1e-10)
+})
+
 test_that("lm2 is compatible with marginaleffects", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("marginaleffects")

@@ -21,11 +21,11 @@
        Group 1 Group 2   1-2  ci   ci.L   ci.H       t   df p.value N1 N2
          50.18   54.74 -4.56 95% -5.212 -3.908 -14.108 43.7  <.0001 25 25
       
-      APA Style:
-      t(43.7) = -14.11, p < .0001
-      
       Group 1: Control
       Group 2: Treatment
+      
+      APA Style:
+      t(43.7) = -14.11, p < .0001
 
 # t.test2 print output for paired test is stable
 
@@ -80,9 +80,9 @@
        Group 1 Group 2    1-2  ci    ci.L  ci.H      t df p.value N1 N2
         72.295   76.92 -4.625 95% -12.412 3.162 -1.203 37   .2365 20 20
       
-      APA Style:
-      t(37.0) = -1.20, p = .2365
-      
       Group 1: Control Group B
       Group 2: Experimental Group A
+      
+      APA Style:
+      t(37.0) = -1.20, p = .2365
 

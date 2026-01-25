@@ -607,7 +607,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
     } else {
       cat("  - red.flag: !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
     }
-    cat("    (set notes=FALSE to prevent printing these notes)\n")
+    cat("    (set notes==FALSE to prevent printing these notes)\n")
   }
   
   invisible(x)
@@ -629,14 +629,22 @@ summary.lm2 <- function(object, ...) {
 #' Predict method for lm2 objects
 #'
 #' @param object An object of class \code{lm2}
+#' @param newdata An optional data frame in which to look for variables with 
+#'   which to predict. If omitted, the original model data is used.
 #' @param ... Additional arguments passed to \code{\link[estimatr]{predict.lm_robust}},
-#'   including \code{newdata}, \code{se.fit}, and \code{interval}.
+#'   including \code{se.fit} and \code{interval}.
 #'
-#' @return A vector of predicted values (or a data frame if \code{se.fit = TRUE} or 
-#'   \code{interval} is specified)
+#' @return A vector of predicted values (or a list with \code{fit} and \code{se.fit} 
+#'   if \code{se.fit = TRUE}, or a matrix with \code{fit}, \code{lwr}, \code{upr} 
+#'   if \code{interval} is specified)
 #' @export
-predict.lm2 <- function(object, ...) {
-  # The lm2 object inherits from lm_robust, so we can use NextMethod()
-  # to call predict.lm_robust
-  NextMethod("predict")
+predict.lm2 <- function(object, newdata, ...) {
+  # If newdata is not provided, use the original model data
+  if (missing(newdata)) {
+    # Get the original data from the model frame
+    newdata <- model.frame(object)
+  }
+  # Remove lm2 class temporarily and call predict on the lm_robust object
+  class(object) <- setdiff(class(object), "lm2")
+  predict(object, newdata = newdata, ...)
 }
