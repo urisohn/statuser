@@ -210,8 +210,8 @@ print.table2 <- function(x, ...) {
         "p = NA"
       }
       
-      # Create APA formatted string: χ²(df) = value, p = value
-      apa_string <- paste0("χ²(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
+      # Create APA formatted string: chi-squared(df) = value, p = value
+      apa_string <- paste0("\u03c7\u00b2(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
       
       # Print left-aligned APA formatting
       cat(paste0("\n", apa_string, "\n"))
@@ -384,9 +384,9 @@ print.table2 <- function(x, ...) {
       "p = NA"
     }
     
-    # Create APA formatted string: χ²(df) = value, p = value
+    # Create APA formatted string: chi-squared(df) = value, p = value
     # Use Unicode chi-square symbol
-    apa_string <- paste0("χ²(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
+    apa_string <- paste0("\u03c7\u00b2(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
     
     # Print left-aligned APA formatting
     cat(paste0(apa_string, "\n"))

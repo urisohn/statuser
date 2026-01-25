@@ -51,11 +51,11 @@
 #'
 #' @details
 #' The test beings fitting a GAM model, predicting y with a smooth of x, and optionally with covariates. 
-#' It identifyies the interior most extreme value of fitted y, and adjusts from the matching x-value 
+#' It identifies the interior most extreme value of fitted y, and adjusts from the matching x-value 
 #' to set the breakpoint relying on the Robin Hood procedure introduced also by Simonsohn (2018).
 #' It then estimates the (once) interrupted regression using that breakpoint,
 #' and reports the slope and significance of the average slopes at either side of it. A U-shape 
-#' is significant if thhe slopes are of opposite sign and are both individually significant.
+#' is significant if the slopes are of opposite sign and are both individually significant.
 #' 
 
 #'

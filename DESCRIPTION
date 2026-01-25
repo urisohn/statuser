@@ -5,7 +5,7 @@ Version: 0.1.5
 Author: Uri Simonsohn [aut, cre]
 Maintainer: Uri Simonsohn <urisohn@gmail.com>
 Description: Enhanced versions of basic R functions like table2(), t.test2(), and lm2(), 
-    produce output designed to be understanded by, and more useful to stats users.
+    produce output designed to be understood by, and more useful to, stats users.
     Default options are informed by best practices (e.g., lm2() uses robust standard errors & 
     flags possible regression problems). Functions like plot_cdf(), plot_density(), and plot_freq() 
     generate in 1 line of code publication-ready descriptive figures most 
@@ -21,7 +21,6 @@ Imports:
     rsvg,
     magick,
     labelled,
-    rlang,
     sandwich,
     lmtest,
     utils

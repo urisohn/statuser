@@ -6,6 +6,10 @@
 \usage{
 list2(...)
 }
+\arguments{
+\item{...}{Objects to include in the list. Objects are automatically named 
+based on their variable names unless explicit names are provided.}
+}
 \description{
 List with objects that are automatically named.
 }

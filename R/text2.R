@@ -4,10 +4,11 @@
 #'
 #' @param x,y coordinates for text placement 
 #' @param labels text to display
-#' @param bg background color
 #' @param align alignment in relation to x coordinate ('left','center','right')
+#' @param bg background color
+#' @param cex character expansion factor
 #' @param pad left/right padding in percentage (e.g., .03)
-#' @param pad_v top/bottom padding in percenrage (e.g., .025)
+#' @param pad_v top/bottom padding in percentage (e.g., .25)
 #' @param ... Additional arguments passed to \code{\link[graphics]{text}}.
 #'
 #' @examples
@@ -43,7 +44,7 @@
 #' 
 #' # Both padding increased
 #' text2(5, 2, "Extra padding", pad = 0.15, pad_v = 0.6, bg = "pink")
-#' @usage text2(x,y,labels="text to show on figure",bg='papayawhip',align='left',...)
+#' @usage NULL
 #' @export
 text2 <- function(x, y, labels, align="center", bg="papayawhip", cex=1, pad=0.03, pad_v=0.25,  ...) {
 

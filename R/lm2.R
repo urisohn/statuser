@@ -582,8 +582,8 @@ print.lm2 <- function(x, notes = NULL, ...) {
   if (!df_varies) {
     cat("df =", round(tbl$df[1], 0), " | ")
   }
-  cat("R² =", format(round(x$r.squared, 3), nsmall = 3), " | ")
-  cat("Adj. R² =", format(round(x$adj.r.squared, 3), nsmall = 3), " | ")
+  cat("R\u00b2 =", format(round(x$r.squared, 3), nsmall = 3), " | ")
+  cat("Adj. R\u00b2 =", format(round(x$adj.r.squared, 3), nsmall = 3), " | ")
   if (has_clusters) {
     cat("SE type: CR2 (cluster)\n")
   } else {

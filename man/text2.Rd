@@ -3,9 +3,6 @@
 \name{text2}
 \alias{text2}
 \title{Enhanced alternative to text()}
-\usage{
-text2(x,y,labels="text to show on figure",bg='papayawhip',align='left',...)
-}
 \arguments{
 \item{x, y}{coordinates for text placement}
 
@@ -15,9 +12,11 @@ text2(x,y,labels="text to show on figure",bg='papayawhip',align='left',...)
 
 \item{bg}{background color}
 
+\item{cex}{character expansion factor}
+
 \item{pad}{left/right padding in percentage (e.g., .03)}
 
-\item{pad_v}{top/bottom padding in percenrage (e.g., .025)}
+\item{pad_v}{top/bottom padding in percentage (e.g., .25)}
 
 \item{...}{Additional arguments passed to \code{\link[graphics]{text}}.}
 }

@@ -3,8 +3,8 @@
 \name{t.test2}
 \alias{t.test2}
 \title{Enhanced alternative to t.test()}
-\usage{
-Identical to t.test()
+\arguments{
+\item{...}{Arguments passed to \code{\link[stats]{t.test}}}
 }
 \description{
 The basic t-test function in R, \code{\link[stats]{t.test}}, does not report 

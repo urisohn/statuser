@@ -27,10 +27,10 @@ A list (object of class "table2") with the following components:
   }
 }
 \description{
-The function \code{\link[stats]{table()}} does not show variable 
+The function \code{\link[base]{table}} does not show variable 
  names when tabulating from a dataframe, requires running another
- function, \code{\link[stats]{prop.table()}},  to tabulate proportions 
- and yet another function,\code{\link[stats]{chisq.test()}} to test difference of 
+ function, \code{\link[base]{prop.table}},  to tabulate proportions 
+ and yet another function, \code{\link[stats]{chisq.test}} to test difference of 
  proportions.  \code{table2} does what those three functions do, producing easier to 
  read output, and always shows variable names.
 }

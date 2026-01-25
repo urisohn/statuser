@@ -7,8 +7,11 @@
 #'  paragraph of text. \code{t.test2} improves on all those counts, and 
 #'  in addition, it reports the number of observations per group and if any observations 
 #'  are missing it issues a warning. It returns a dataframe instead of a list.
-#'  
-#' @usage Identical to t.test()
+#'
+#' @param ... Arguments passed to \code{\link[stats]{t.test}}
+#'
+#' @importFrom stats cor
+#' @usage NULL
 #'
 #' @examples
 #' # Two-sample t-test

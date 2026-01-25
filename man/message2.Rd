@@ -7,6 +7,8 @@
 message2(..., col = "cyan", font = 1, stop = FALSE)
 }
 \arguments{
+\item{...}{Message content to be printed. Multiple arguments are pasted together.}
+
 \item{col}{text color. Default is "cyan".}
 
 \item{font}{Integer. 1 for plain text (default), 2 for bold text.}

@@ -2,6 +2,7 @@
 #' 
 #' Add options to set color and to end execution of code (to be used as error message)
 #'
+#' @param ... Message content to be printed. Multiple arguments are pasted together.
 #' @param col text color. Default is "cyan". 
 #' @param font Integer. 1 for plain text (default), 2 for bold text.
 #' @param stop Logical. If TRUE, stops execution (like \code{stop()}) but without printing "Error:".

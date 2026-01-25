@@ -8,7 +8,8 @@
 #' 
 #' Based on: \url{https://stackoverflow.com/questions/16951080/can-lists-be-created-that-name-themselves-based-on-input-object-names}
 #'
-
+#' @param ... Objects to include in the list. Objects are automatically named 
+#'   based on their variable names unless explicit names are provided.
 #'
 #' @examples
 #' x <- 1:5
