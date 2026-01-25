@@ -14,56 +14,10 @@
 #' @param show.quantiles Logical. If TRUE (default), shows horizontal lines and results
 #'   at 25th, 50th, and 75th percentiles when there are exactly 2 groups. If FALSE,
 #'   quantile lines and results are not displayed.
-#' @param ... Additional arguments passed to plotting functions. Can be scalars
+#' @param ... Additional arguments passed to plotting functions. Can be single values
 #'   (applied to all groups) or vectors (applied element-wise to each group).
 #'   Common parameters include \code{col}, \code{lwd}, \code{lty}, \code{pch},
 #'   \code{type}, etc.
-#'
-#' @return Invisibly returns a list containing:
-#' \itemize{
-#'   \item \code{ecdfs}: A list of ECDF functions, one for each group
-#'   \item \code{ks_test}: (when 2 groups) The Kolmogorov-Smirnov test result
-#'   \item \code{quantile_regression_25}: (when 2 groups and quantreg available) Quantile regression model for tau = 0.25
-#'   \item \code{quantile_regression_50}: (when 2 groups and quantreg available) Quantile regression model for tau = 0.50
-#'   \item \code{quantile_regression_75}: (when 2 groups and quantreg available) Quantile regression model for tau = 0.75
-#'   \item \code{warnings}: (when warnings occur) A list of captured warnings, including:
-#'     \itemize{
-#'       \item \code{ks_ties}: Warning about ties in KS test (if present)
-#'       \item \code{quantile_regression_*_nonunique}: Warnings about non-uniqueness in quantile regression (if present)
-#'     }
-#' }
-#'
-#' @details
-#' This function:
-#' \itemize{
-#'   \item If a grouping variable is provided: splits the response variable by unique values of the grouping variable, computes an ECDF for each group, and plots all ECDFs on the same graph
-#'   \item If no grouping variable is provided: computes a single ECDF for all data and plots it
-#'   \item Handles plotting parameters: scalars apply to all groups, vectors
-#'     apply element-wise to groups (in order of unique grouping variable values)
-#' }
-#'
-#' The ECDFs are plotted as step functions with vertical lines. Parameters like
-#' \code{col}, \code{lwd}, \code{lty}, and \code{pch} can be specified as:
-#' \itemize{
-#'   \item A single value: applied to all groups
-#'   \item A vector: applied to groups in order of unique \code{group} values
-#' }
-#'
-#' Default colors are automatically assigned based on the number of groups:
-#' \itemize{
-#'   \item 2 groups: red4, dodgerblue
-#'   \item 3 groups: red4, dodgerblue, green4
-#'   \item 4 groups: orange1, orange3, red2, red4
-#'   \item 5+ groups: extends with additional colors
-#' }
-#'
-#' When there are exactly 2 groups, the function automatically performs:
-#' \itemize{
-#'   \item Kolmogorov-Smirnov test for distribution equality
-#'   \item Quantile regression tests at 25th, 50th, and 75th percentiles (requires \code{quantreg} package)
-#'   \item Displays test results in the bottom right corner
-#'   \item Adds vertical dashed lines at the 25th, 50th, and 75th percentiles
-#' }
 #'
 #' @examples
 #' # Basic usage with single variable (no grouping)
