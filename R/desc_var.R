@@ -1,6 +1,5 @@
 #' Describe a variable, optionally by groups
 #'
-#' Computes mean, SD, number of missing observations, mode, 2nd mode, max, min
 #' Returns a dataframe with one row per group
 #'
 #' @param y A numeric vector of values, a column name (character string or unquoted) if \code{data} is provided,
@@ -13,30 +12,21 @@
 #' @return A data frame with one row per group (or one row if no group is specified) containing:
 #'   \itemize{
 #'     \item \code{group}: Group identifier
-#'     \item \code{n}: Number of observations
 #'     \item \code{mean}: Mean
 #'     \item \code{sd}: Standard deviation
 #'     \item \code{se}: Standard error
 #'     \item \code{median}: Median
-#'     \item \code{missing}: Number of observations with missing (NA) values
-#'     \item \code{unique}: Number of unique values
+#'     \item \code{min}: Minimum
+#'     \item \code{max}: Maximum
 #'     \item \code{mode}: Most frequent value
 #'     \item \code{freq_mode}: Frequency of mode
 #'     \item \code{mode2}: 2nd most frequent value
 #'     \item \code{freq_mode2}: Frequency of 2nd mode
-#'     \item \code{min}: Minimum
-#'     \item \code{max}: Maximum
+#'     \item \code{n.total}: Number of observations
+#'     \item \code{n.missing}: Number of observations with missing (NA) values
+#'     \item \code{n.unique}: Number of unique values
 #'   }
 #'
-#' @details
-#' This function computes descriptive statistics similar to \code{psych::describeBy()}, but:
-#' \itemize{
-#'   \item Returns a single dataframe with one row per group (instead of a list)
-#'   \item Excludes kurtosis, skewness, and range
-#'   \item Includes count of missing (NA) observations
-#'   \item Includes mode statistics (most frequent value and 2nd most frequent value with their frequencies)
-#'   \item Adds descriptive labels to all columns using the \code{labelled} package
-#' }
 #'
 #' @examples
 #' # With grouping
@@ -175,49 +165,30 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     }
     
   } else {
-    # Not a formula: use rlang to capture expressions
-    y_quo <- rlang::enquo(y)
+    # Not a formula: use match.call() and deparse(substitute()) like other functions
     group_was_provided <- !missing(group)
-    group_quo <- if (group_was_provided) rlang::enquo(group) else NULL
     
-    # Get variable names for error messages
-    # Check if quosure expression is a symbol (unquoted variable) or already evaluated
-    y_expr <- rlang::quo_get_expr(y_quo)
-    if (rlang::is_symbol(y_expr)) {
-      # Extract name directly from symbol without evaluating
-      y_name <- as.character(y_expr)
+    # Get variable names from the call (before any evaluation)
+    y_expr <- call_match$y
+    y_name_raw <- if (!is.null(y_expr)) deparse(y_expr) else "y"
+    # Clean variable name: remove df$ prefix if present
+    y_name <- if (grepl("\\$", y_name_raw)) {
+      strsplit(y_name_raw, "\\$")[[1]][length(strsplit(y_name_raw, "\\$")[[1]])]
     } else {
-      # Expression is already evaluated (e.g., numeric vector passed directly)
-      # Try to get name from call, or use default
-      y_name <- tryCatch({
-        if ("y" %in% names(call_match)) {
-          deparse(call_match$y)
-        } else {
-          "y"
-        }
-      }, error = function(e) {
-        "y"
-      })
+      y_name_raw
     }
     
-    group_name <- if (group_was_provided) {
-      group_expr <- rlang::quo_get_expr(group_quo)
-      if (rlang::is_symbol(group_expr)) {
-        # Extract name directly from symbol without evaluating
-        as.character(group_expr)
+    group_name <- NULL
+    group_name_raw <- NULL
+    if (group_was_provided) {
+      group_expr <- call_match$group
+      group_name_raw <- if (!is.null(group_expr)) deparse(group_expr) else "group"
+      # Clean variable name: remove df$ prefix if present
+      group_name <- if (grepl("\\$", group_name_raw)) {
+        strsplit(group_name_raw, "\\$")[[1]][length(strsplit(group_name_raw, "\\$")[[1]])]
       } else {
-        tryCatch({
-          if ("group" %in% names(call_match)) {
-            deparse(call_match$group)
-          } else {
-            "group"
-          }
-        }, error = function(e) {
-          "group"
-        })
+        group_name_raw
       }
-    } else {
-      NULL
     }
     
     # Validate data frame if provided
@@ -226,85 +197,51 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     }
     
     # Extract y variable
-    y <- tryCatch({
-      if (!is.null(data)) {
-        # If data is provided and expression is a symbol, get it directly from data
-        if (rlang::is_symbol(y_expr)) {
-          # Use the already-extracted y_name, or try to get it from the call
-          col_name <- if (!is.null(y_name) && y_name != "") {
-            y_name
-          } else {
-            # Fallback: try to get name from call
-            if ("y" %in% names(call_match)) {
-              deparse(call_match$y)
-            } else {
-              stop("Could not determine column name")
-            }
-          }
-          
-          if (col_name %in% names(data)) {
-            data[[col_name]]
-          } else {
-            # Column not found in data, try eval_tidy as fallback
-            # But first, modify quosure environment to prioritize data
-            rlang::eval_tidy(y_quo, data = data)
-          }
+    if (!is.null(data)) {
+      # Data provided: extract from data frame
+      if (!y_name %in% names(data)) {
+        message2(format_msg(sprintf("'%s' not found in data", y_name)), col = 'red', stop = TRUE)
+      }
+      y <- data[[y_name]]
+    } else {
+      # No data: evaluate from calling environment
+      y_exists <- exists(y_name, envir = calling_env, inherits = TRUE)
+      if (!y_exists) {
+        # y might already be a vector passed directly, check if it's numeric
+        if (is.numeric(y) && is.vector(y)) {
+          # y is already evaluated, use it as-is
         } else {
-          # Expression is not a symbol (already evaluated), use eval_tidy
-          rlang::eval_tidy(y_quo, data = data)
+          message2(format_msg(sprintf("'%s' not found", y_name)), col = 'red', stop = TRUE)
         }
       } else {
-        rlang::eval_tidy(y_quo)
+        y <- get(y_name, envir = calling_env)
       }
-    }, error = function(e) {
-      if (!is.null(data)) {
-        message2(format_msg(sprintf("Column '%s' not found in data: %s", y_name, e$message)), col = 'red', stop = TRUE)
-      } else {
-        message2(format_msg(sprintf("Could not evaluate 'y': %s", e$message)), col = 'red', stop = TRUE)
-      }
-    })
+    }
     
     y_len <- length(y)
     
     # Extract group variable if provided
     if (group_was_provided) {
-      group_expr_for_eval <- rlang::quo_get_expr(group_quo)
-      group <- tryCatch({
-        if (!is.null(data)) {
-          # If data is provided and expression is a symbol, get it directly from data
-          if (rlang::is_symbol(group_expr_for_eval)) {
-            # Use the already-extracted group_name, or try to get it from the call
-            col_name <- if (!is.null(group_name) && group_name != "") {
-              group_name
-            } else {
-              # Fallback: try to get name from call
-              if ("group" %in% names(call_match)) {
-                deparse(call_match$group)
-              } else {
-                stop("Could not determine column name")
-              }
-            }
-            
-            if (col_name %in% names(data)) {
-              data[[col_name]]
-            } else {
-              # Column not found in data, try eval_tidy as fallback
-              rlang::eval_tidy(group_quo, data = data)
-            }
+      if (!is.null(data)) {
+        # Data provided: extract from data frame
+        if (!group_name %in% names(data)) {
+          message2(format_msg(sprintf("'%s' not found in data", group_name)), col = 'red', stop = TRUE)
+        }
+        group <- data[[group_name]]
+      } else {
+        # No data: evaluate from calling environment
+        group_exists <- exists(group_name, envir = calling_env, inherits = TRUE)
+        if (!group_exists) {
+          # group might already be a vector passed directly
+          if (is.vector(group)) {
+            # group is already evaluated, use it as-is
           } else {
-            # Expression is not a symbol (already evaluated), use eval_tidy
-            rlang::eval_tidy(group_quo, data = data)
+            message2(format_msg(sprintf("'%s' not found", group_name)), col = 'red', stop = TRUE)
           }
         } else {
-          rlang::eval_tidy(group_quo)
+          group <- get(group_name, envir = calling_env)
         }
-      }, error = function(e) {
-        if (!is.null(data)) {
-          message2(format_msg(sprintf("Column '%s' not found in data: %s", group_name, e$message)), col = 'red', stop = TRUE)
-        } else {
-          message2(format_msg(sprintf("Could not evaluate 'group': %s", e$message)), col = 'red', stop = TRUE)
-        }
-      })
+      }
       
       # Validate length
       if (!is.null(group)) {
@@ -429,31 +366,25 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     # No grouping: compute for full dataset
     stats <- compute_stats(y)
     
-    # Build base data frame
+    # Build base data frame (counts at end: n, n.missing, n.unique)
     result_df <- data.frame(
       group = "All",
-      n = stats$n,
       mean = stats$mean,
       sd = stats$sd,
       se = stats$se,
       median = stats$median,
-      missing = stats$missing,
-      unique = stats$unique,
       min = stats$min,
       max = stats$max,
+      mode = stats$mode,
+      freq_mode = stats$freq_mode,
+      mode2 = stats$mode2,
+      freq_mode2 = stats$freq_mode2,
+      n.total = stats$n,
+      n.missing = stats$missing,
+      n.unique = stats$unique,
       stringsAsFactors = FALSE
     )
     
-    # Add mode columns (always include them, even if NA)
-    result_df$mode <- stats$mode
-    result_df$freq_mode <- stats$freq_mode
-    result_df$mode2 <- stats$mode2
-    result_df$freq_mode2 <- stats$freq_mode2
-    
-    # Show message if mode is not available
-    if (is.na(stats$mode)) {
-      message2(format_msg("mode not reported because all values are unique"))
-    }
   } else {
     # Grouping: compute for each group
     result_list <- list()
@@ -490,26 +421,24 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
         y_group <- y[mask]
         stats <- compute_stats(y_group)
         
-        # Build data frame with grouping variables as separate columns
+        # Build data frame with grouping variables as separate columns (counts at end)
         result_row <- data.frame(
           combo,
-          n = stats$n,
           mean = stats$mean,
           sd = stats$sd,
           se = stats$se,
           median = stats$median,
-          missing = stats$missing,
-          unique = stats$unique,
           min = stats$min,
           max = stats$max,
+          mode = stats$mode,
+          freq_mode = stats$freq_mode,
+          mode2 = stats$mode2,
+          freq_mode2 = stats$freq_mode2,
+          n.total = stats$n,
+          n.missing = stats$missing,
+          n.unique = stats$unique,
           stringsAsFactors = FALSE
         )
-        
-        # Add mode columns (always include them, even if NA)
-        result_row$mode <- stats$mode
-        result_row$freq_mode <- stats$freq_mode
-        result_row$mode2 <- stats$mode2
-        result_row$freq_mode2 <- stats$freq_mode2
         
         result_list[[length(result_list) + 1]] <- result_row
       }
@@ -522,25 +451,24 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
         y_group <- y[group == g]
         stats <- compute_stats(y_group)
         
+        # Build data frame (counts at end: n, n.missing, n.unique)
         result_row <- data.frame(
           group = as.character(g),
-          n = stats$n,
           mean = stats$mean,
           sd = stats$sd,
           se = stats$se,
           median = stats$median,
-          missing = stats$missing,
-          unique = stats$unique,
           min = stats$min,
           max = stats$max,
+          mode = stats$mode,
+          freq_mode = stats$freq_mode,
+          mode2 = stats$mode2,
+          freq_mode2 = stats$freq_mode2,
+          n.total = stats$n,
+          n.missing = stats$missing,
+          n.unique = stats$unique,
           stringsAsFactors = FALSE
         )
-        
-        # Add mode columns (always include them, even if NA)
-        result_row$mode <- stats$mode
-        result_row$freq_mode <- stats$freq_mode
-        result_row$mode2 <- stats$mode2
-        result_row$freq_mode2 <- stats$freq_mode2
         
         result_list[[length(result_list) + 1]] <- result_row
       }
@@ -549,8 +477,8 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
     result_df <- do.call(rbind, result_list)
     
     # Check if any group has 0 observations
-    if (any(result_df$n == 0)) {
-      zero_groups <- sum(result_df$n == 0)
+    if (any(result_df$n.total == 0)) {
+      zero_groups <- sum(result_df$n.total == 0)
       if (zero_groups == 1) {
         message2(format_msg("1 group has 0 observations"))
       } else {
@@ -568,33 +496,37 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
         result_df <- result_df[order(result_df$group), , drop = FALSE]
       }
       
-    # Show message if no group has mode stats (all mode values are NA)
-      if ("mode" %in% names(result_df) && all(is.na(result_df$mode))) {
-        message2(format_msg("mode not reported because all values are unique"))
-      }
   }
   
   # 5. Round numeric columns to specified decimal places
     numeric_cols <- c("mean", "sd", "se", "median", "mode", "mode2", "min", "max")
     numeric_cols <- numeric_cols[numeric_cols %in% names(result_df)]
     result_df[numeric_cols] <- lapply(result_df[numeric_cols], round, digits = decimals)
+  
+  # 5b. Replace NA mode values with "-" and flag if all modes are NA
+    all_modes_na <- all(is.na(result_df$mode))
+    # Convert mode columns to character and replace NA with "-"
+    result_df$mode <- ifelse(is.na(result_df$mode), "-", as.character(result_df$mode))
+    result_df$freq_mode <- ifelse(is.na(result_df$freq_mode), "-", as.character(result_df$freq_mode))
+    result_df$mode2 <- ifelse(is.na(result_df$mode2), "-", as.character(result_df$mode2))
+    result_df$freq_mode2 <- ifelse(is.na(result_df$freq_mode2), "-", as.character(result_df$freq_mode2))
     
   # 6. Add descriptive labels to columns using labelled package
     label_list <- list(
       group = "Group identifier",
-      n = "Number of observations",
       mean = "Mean",
       sd = "Standard deviation",
       se = "Standard error",
       median = "Median (50th percentile)",
-      missing = "Number of observations with missing values (NA)",
-      unique = "Number of unique values",
+      min = "Minimum value",
+      max = "Maximum value",
       mode = "Most frequent value",
       freq_mode = "Frequency of mode",
       mode2 = "2nd most frequent value",
       freq_mode2 = "Frequency of 2nd mode",
-      min = "Minimum value",
-      max = "Maximum value"
+      n.total = "Number of observations",
+      n.missing = "Number of observations with missing values (NA)",
+      n.unique = "Number of unique values"
     )
   
   # Add labels for individual grouping variable columns if they exist
@@ -611,7 +543,33 @@ desc_var <- function(y, group = NULL, data = NULL, decimals = 3) {
   
   rownames(result_df) <- NULL
   
-  # 7. Return result dataframe
+  # 7. Add class and attributes for print method, then return
+  attr(result_df, "all_modes_na") <- all_modes_na
+  attr(result_df, "y_name") <- y_name
+  class(result_df) <- c("desc_var", class(result_df))
   return(result_df)
+}
+
+#' Print method for desc_var objects
+#'
+#' @param x An object of class \code{desc_var}
+#' @param ... Additional arguments passed to print.data.frame
+#'
+#' @return Invisibly returns the original object
+#' @export
+print.desc_var <- function(x, ...) {
+  # Remove the desc_var class temporarily to use default data.frame printing
+  class(x) <- class(x)[class(x) != "desc_var"]
+  
+  print(x, ...)
+  
+  # Print note if all modes were NA
+  if (isTRUE(attr(x, "all_modes_na"))) {
+    y_name <- attr(x, "y_name")
+    if (is.null(y_name) || y_name == "") y_name <- "y"
+    cat(sprintf("\nNote: mode not reported because all values of %s are unique\n", y_name))
+  }
+  
+  invisible(x)
 }
 

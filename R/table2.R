@@ -6,12 +6,8 @@
 #'  and yet another function,\code{\link[stats]{chisq.test()}} to test difference of 
 #'  proportions.  \code{table2} does what those three functions do, producing easier to 
 #'  read output, and always shows variable names. 
-#' 
- #' @usage Same basic set of arguments as \code{\link[stats]{table}}, plus the 
- #' enhanced arguments shown below 
-
-#' @param prop If specified, reports (in addition table with frequencies), 
-#' a table with proportions:
+#' @param ... same arguments as \code{\link[base]{table}}, plus the arguments shown below
+#' @param prop report a table with:
 #'   \itemize{
 #'     \item \code{prop="all"}: Proportions for full table (each cell / total)
 #'     \item \code{prop="row"}: Proportions by row  ('rows' also accepted)
@@ -20,6 +16,7 @@
 #' @param digits Number of decimal values to show for proportions 
 #' @param chi Logical. If \code{TRUE}, performs a chi-square test on frequency table,
 #' reports results in APA format
+#' 
 #'
 #' @return A list (object of class "table2") with the following components:
 #'   \itemize{
@@ -54,6 +51,7 @@
 #' # Table with chi-square test
 #' table2(df$group, df$status, chi = TRUE,prop='all')
 #'
+#' @usage NULL
 #' @export
 table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN), 
                   useNA = c("no", "ifany", "always"), 

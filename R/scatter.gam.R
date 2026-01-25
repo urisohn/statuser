@@ -1,16 +1,12 @@
 #' Scatter Plot with GAM Smooth Line
 #'
-#' Creates a scatter plot with a GAM (Generalized Additive Model) smooth line,
-#' with options to display data points and three-way spline summary points.
-#' Supports both \code{scatter.gam(x, y)} and formula syntax \code{scatter.gam(y ~ x)}.
+#' Creates a scatter plot with a GAM (Generalized Additive Model) smooth line.
+#' Supports both \code{scatter.gam(x, y)} and \code{scatter.gam(y ~ x)}.
 #'
 #' @param x A numeric vector of x values, or a formula of the form \code{y ~ x}.
 #' @param y A numeric vector of y values. Not used if \code{x} is a formula.
-#' @param data.dots Logical. If TRUE, displays the original data points on the
-#'   plot. Default is FALSE.
-#' @param three.dots Logical. If TRUE, displays three summary points where x is
-#'   divided into tertiles (three equal-range bins), and each point shows the
-#'   mean x and mean y within that bin. Default is FALSE.
+#' @param data.dots Logical. If TRUE, displays data on scatterplot
+#' @param three.dots Logical. If TRUE, divides x into tertiles and puts markers on the average  x & y for each
 #' @param data An optional data frame containing the variables \code{x} and \code{y}.
 #' @param k Optional integer specifying the basis dimension for the smooth term
 #'   in the GAM model (passed to \code{s(x, k=k)}). If NULL (default), uses the
@@ -69,6 +65,8 @@
 #'
 #' # Control smoothness of the GAM line by specifying the basis dimension
 #' scatter.gam(x, y, k = 10)
+#'
+#' @seealso \code{\link[stats]{scatter.smooth}} for a simpler loess-based scatter plot smoother.
 #'
 #' @importFrom mgcv gam
 #' @export
@@ -363,7 +361,7 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
   
   # Add three-way spline points if requested
   if (three.dots == TRUE) {
-    points(x3_means, y3_means, pch = 16)
+    points(x3_means, y3_means, pch = 16, cex = 1.3)
   }
   
   # Draw smooth line on top of data points

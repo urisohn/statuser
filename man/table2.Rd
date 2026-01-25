@@ -3,18 +3,15 @@
 \name{table2}
 \alias{table2}
 \title{Enhanced alternative to table()}
-\usage{
-Same basic set of arguments as \code{\link[stats]{table}}, plus the 
-enhanced arguments shown below
-}
 \arguments{
-\item{prop}{If specified, reports (in addition table with frequencies), 
-a table with proportions:
-  \itemize{
-    \item \code{prop="all"}: Proportions for full table (each cell / total)
-    \item \code{prop="row"}: Proportions by row  ('rows' also accepted)
-    \item \code{prop="col"}: Proportions by columns ('cols', 'column', 'columns' also accepted)
-  }}
+\item{...}{same arguments as \code{\link[base]{table}}, plus the arguments shown below}
+
+\item{prop}{report a table with:
+\itemize{
+  \item \code{prop="all"}: Proportions for full table (each cell / total)
+  \item \code{prop="row"}: Proportions by row  ('rows' also accepted)
+  \item \code{prop="col"}: Proportions by columns ('cols', 'column', 'columns' also accepted)
+}}
 
 \item{digits}{Number of decimal values to show for proportions}
 

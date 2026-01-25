@@ -21,34 +21,23 @@ Ignored if \code{y} is a formula.}
 A data frame with one row per group (or one row if no group is specified) containing:
   \itemize{
     \item \code{group}: Group identifier
-    \item \code{n}: Number of observations
     \item \code{mean}: Mean
     \item \code{sd}: Standard deviation
     \item \code{se}: Standard error
     \item \code{median}: Median
-    \item \code{missing}: Number of observations with missing (NA) values
-    \item \code{unique}: Number of unique values
+    \item \code{min}: Minimum
+    \item \code{max}: Maximum
     \item \code{mode}: Most frequent value
     \item \code{freq_mode}: Frequency of mode
     \item \code{mode2}: 2nd most frequent value
     \item \code{freq_mode2}: Frequency of 2nd mode
-    \item \code{min}: Minimum
-    \item \code{max}: Maximum
+    \item \code{n.total}: Number of observations
+    \item \code{n.missing}: Number of observations with missing (NA) values
+    \item \code{n.unique}: Number of unique values
   }
 }
 \description{
-Computes mean, SD, number of missing observations, mode, 2nd mode, max, min
 Returns a dataframe with one row per group
-}
-\details{
-This function computes descriptive statistics similar to \code{psych::describeBy()}, but:
-\itemize{
-  \item Returns a single dataframe with one row per group (instead of a list)
-  \item Excludes kurtosis, skewness, and range
-  \item Includes count of missing (NA) observations
-  \item Includes mode statistics (most frequent value and 2nd most frequent value with their frequencies)
-  \item Adds descriptive labels to all columns using the \code{labelled} package
-}
 }
 \examples{
 # With grouping

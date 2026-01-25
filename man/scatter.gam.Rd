@@ -23,12 +23,9 @@ scatter.gam(
 
 \item{y}{A numeric vector of y values. Not used if \code{x} is a formula.}
 
-\item{data.dots}{Logical. If TRUE, displays the original data points on the
-plot. Default is FALSE.}
+\item{data.dots}{Logical. If TRUE, displays data on scatterplot}
 
-\item{three.dots}{Logical. If TRUE, displays three summary points where x is
-divided into tertiles (three equal-range bins), and each point shows the
-mean x and mean y within that bin. Default is FALSE.}
+\item{three.dots}{Logical. If TRUE, divides x into tertiles and puts markers on the average  x & y for each}
 
 \item{data}{An optional data frame containing the variables \code{x} and \code{y}.}
 
@@ -66,9 +63,8 @@ Common plot arguments include:
 Invisibly returns the fitted GAM model object.
 }
 \description{
-Creates a scatter plot with a GAM (Generalized Additive Model) smooth line,
-with options to display data points and three-way spline summary points.
-Supports both \code{scatter.gam(x, y)} and formula syntax \code{scatter.gam(y ~ x)}.
+Creates a scatter plot with a GAM (Generalized Additive Model) smooth line.
+Supports both \code{scatter.gam(x, y)} and \code{scatter.gam(y ~ x)}.
 }
 \details{
 This function fits a GAM model with a smooth term for x and plots the fitted
@@ -101,4 +97,7 @@ scatter.gam(x, y, data.dots = TRUE, col = "red", lwd = 2, main = "GAM Fit")
 # Control smoothness of the GAM line by specifying the basis dimension
 scatter.gam(x, y, k = 10)
 
+}
+\seealso{
+\code{\link[stats]{scatter.smooth}} for a simpler loess-based scatter plot smoother.
 }

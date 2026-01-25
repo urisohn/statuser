@@ -1,4 +1,4 @@
-#' Enhanced Linear Regression (lm)
+#' Enhanced alternative to lm()
 #'
 #' Runs a linear regression with better defaults (robust SE), and richer & better 
 #' formatted output than \code{lm}. For robust and clustered errors it relies on \code{\link[estimatr]{lm_robust}}. 
@@ -6,26 +6,11 @@
 #' variable, an effect size column (standardized regression coefficient), and a red.flag column per variable 
 #' flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors;
 #' \code{lm_robust} relies on HC2 (and Stata's 'reg y x, robust' on HC1), which can have
-#' inflated false-positive rates in smaller samples (Long & Ervin, 2000).
-#'
-#' When \code{clusters} is specified, the output includes three SE columns: \code{SE.cluster} (CR2),
-#' \code{SE.robust} (HC3), and \code{SE.classical}. The red flag diagnostics compare HC3 to classical SE,
-#' not the clustered SE, because clustered SEs are expected to be larger when there is within-cluster
-#' correlation (which is not a problem). Comparing HC3 to classical SE isolates heteroskedasticity
-#' and outlier issues from the expected clustering effect.
-#' 
-#' @param formula An object of class \code{\link{formula}}: a symbolic description
-#'   of the model to be fitted.
-#' @param data An optional data frame, list or environment containing the variables 
-#'   in the model. If not found in \code{data}, the variables are taken from the 
-#'   environment from which \code{lm2} is called.
+#' inflated false-positive rates in smaller samples (Long & Ervin, 2000). 
+#' @param ... same arguments as \code{\link[base]{lm}}, plus the arguments below
 #' @param se_type The type of standard error to use. Default is \code{"HC3"}.
 #'   Without clusters: \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
 #'   When \code{clusters} is specified, \code{se_type} is automatically set to \code{"CR2"}.
-#' @param output Character string specifying output format. \code{"statuser"} (default)
-#'   returns an enhanced table with standardized coefficients and both robust and
-#'   classical standard errors. \code{"estimatr"} returns the standard
-#'   \code{lm_robust} output.
 #' @param notes Logical. If TRUE (default), print explanatory notes below the table
 #'   when the result is printed.
 #' @param clusters An optional variable indicating clusters for cluster-robust standard 
@@ -37,36 +22,22 @@
 #'   Passed to \code{\link[estimatr]{lm_robust}}.
 #' @param ... Additional arguments passed to \code{\link[estimatr]{lm_robust}}.
 #'
-#' @return When \code{output = "estimatr"}, returns an object of class \code{lm_robust}.
-#'   When \code{output = "statuser"}, returns an object that inherits from \code{lm_robust}
-#'   (for compatibility with packages like \code{marginaleffects}) with class \code{c("lm2", "lm_robust", ...)}
-#'   and additional attributes for enhanced display:
-#'   \itemize{
-#'     \item \code{statuser_table}: A data frame with columns for display (estimate, SE.robust, 
-#'       SE.classical, SE.cluster if clustered, t, df, p.value, B, term)
-#'     \item \code{classical_fit}: The classical OLS fit for comparison
-#'     \item \code{na_counts}: Number of NA values per variable
-#'     \item \code{n_missing}: Total observations excluded due to missing values
-#'     \item \code{notes}: Whether to print notes
-#'     \item \code{has_clusters}: Whether clustered SE was used
-#'   }
-#'   The print method displays an enhanced table with standardized coefficients (effect sizes),
-#'   both robust and classical standard errors, and diagnostic red flags.
-#'
 #' @details
 #' Robust standard errors and clustered standard errors are computed using 
-#' \code{\link[estimatr]{lm_robust}}; see the documentation of that function for details.
+#' \code{\link[estimatr]{lm_robust}}; see the documentation of that function for details (using by default CR2 errors)
+#' The output shows both standard errors and when clustering errors it reports all three.
+#' The red.flag column is based on the difference between robust and classical standard errors.
 #'
 #' The \code{red.flag} column provides diagnostic warnings:
 #' \itemize{
 #'   \item \code{!}, \code{!!}, \code{!!!}: Robust and classical standard errors differ by 
 #'     more than 25\%, 50\%, or 100\%, respectively. Large differences may suggest model 
 #'     misspecification or outliers (but they may also be benign). When encountering a red flag,
-#'     authors should plot the distributions to look for outliers or skewed data, and use scatter.gam()
+#'     authors should plot the distributions to look for outliers or skewed data, and use \code{\link{scatter.gam}}
 #'     to look for possible nonlinearities in the relevant variables.
 #'     King & Roberts (2015) propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
 #'     \code{statuser} does not follow either recommendation. The former seems too liberal, the 
-#'     latter too time consuming to include in every regression.
+#'     latter too time consuming to include in every regression, plus the focus here is on individual variables rather than joint tests.
 #'   \item \code{X} and \code{X*}: For interaction terms, the component variables are correlated with 
 #'     |r| > 0.3 (\code{X}) or p < .05 (\code{X*}); this can produce spurious interactions. Authors are advised
 #'     to not rely on the linear model and instead use GAM (Simonsohn, 2024).
@@ -135,9 +106,9 @@
 #' plot_freq(x2)
 #'
 #' @seealso \code{\link[estimatr]{lm_robust}}, \code{\link{scatter.gam}}
-#'
+#' @usage NULL
 #' @export lm2
-lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", notes = TRUE, 
+lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE, 
                 clusters = NULL, fixed_effects = NULL, ...) {
   
   # Capture the call
@@ -147,9 +118,6 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   if (!requireNamespace("estimatr", quietly = TRUE)) {
     stop("Package 'estimatr' is required for lm2(). Please install it with: install.packages('estimatr')")
   }
-  
-  # Validate output argument
-  output <- match.arg(output, choices = c("statuser", "estimatr"))
   
   # Check if clusters are specified (either as argument or in ...)
   has_clusters <- !is.null(clusters) || "clusters" %in% names(list(...))
@@ -176,12 +144,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", output = "statuser", note
   # Run lm_robust with specified se_type
   robust_fit <- do.call(estimatr::lm_robust, lm_robust_args)
   
-  # If user wants estimatr output, return it directly
-  if (output == "estimatr") {
-    return(robust_fit)
-  }
-  
-  # For statuser output, build enhanced object that inherits from lm_robust
+  # Build enhanced object that inherits from lm_robust
   # This allows packages like marginaleffects to work with it seamlessly
   
   # Extract components from lm_robust object

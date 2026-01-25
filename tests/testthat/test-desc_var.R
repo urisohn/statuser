@@ -22,6 +22,20 @@ test_that("desc_var handles data frame input", {
   expect_equal(as.character(result$group), c("A", "B"))
 })
 
+test_that("desc_var works when column names match parameter names (y, group)", {
+  # This test catches a bug where using column names that match function 
+
+  # parameter names (y, group) caused incorrect variable extraction
+  df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+  
+  # Should not error with "All variables must have the same length"
+  result <- desc_var(y, group, data = df)
+  
+  expect_equal(nrow(result), 2)
+  expect_equal(as.character(result$group), c("A", "B"))
+  expect_equal(sum(as.numeric(result$n.total)), 100)
+})
+
 test_that("desc_var handles no grouping", {
   y <- rnorm(100)
   
@@ -158,7 +172,7 @@ test_that("desc_var handles single observation per group", {
   result <- desc_var(y ~ group, data = df)
   
   expect_equal(nrow(result), 3)
-  expect_true(all(result$n == 1))
+  expect_true(all(result$n.total == 1))
   # SD should be NA for single observations
   expect_true(all(is.na(result$sd)))
 })
@@ -186,7 +200,7 @@ test_that("desc_var handles single group", {
   
   expect_equal(nrow(result), 1)
   expect_equal(as.character(result$group), "All")
-  expect_equal(as.numeric(result$n), 50)
+  expect_equal(as.numeric(result$n.total), 50)
 })
 
 test_that("desc_var correctly computes all statistics", {
@@ -196,7 +210,7 @@ test_that("desc_var correctly computes all statistics", {
   result <- desc_var(y)
   
   # Use as.numeric() to strip labelled attributes
-  expect_equal(as.numeric(result$n), 10)
+  expect_equal(as.numeric(result$n.total), 10)
   expect_equal(as.numeric(result$mean), 5.5, tolerance = 1e-2)  # Allow for rounding
   expect_equal(as.numeric(result$median), 5.5, tolerance = 1e-2)
   expect_equal(as.numeric(result$min), 1, tolerance = 1e-2)
