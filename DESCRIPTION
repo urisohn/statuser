@@ -1,17 +1,19 @@
 Package: statuser
 Type: Package
-Title: Stats Functions for Stats Users, Not Statisticians
-Version: 0.1.6
-Author: Uri Simonsohn [aut, cre]
-Maintainer: Uri Simonsohn <urisohn@gmail.com>
-Description: Enhanced versions of basic R functions like table2(), t.test2(), and lm2(), 
-    produce output designed to be understood by, and more useful to, stats users.
-    Default options are informed by best practices (e.g., lm2() uses robust standard errors & 
-    flags possible regression problems). Functions like plot_cdf(), plot_density(), and plot_freq() 
-    generate in 1 line of code publication-ready descriptive figures most 
-    empirical papers should include. Syntax of existing functions is 
-    augmented, so if lm(...) works so does lm2(...), but with better defaults, 
-    richer and better formatted output, and extra options.
+Title: Statistical Tools Purposefully Designed for End Users
+Version: 0.1.7
+Authors@R: person(given = "Uri",
+                  family = "Simonsohn",
+                  role = c("aut", "cre"),
+                  email = "urisohn@gmail.com")
+Description: The statistical tools in this package do one of four things:
+    1) Enhance basic statistical functions with more 
+    flexible inputs, smarter defaults, and richer, clearer, and ready-to-use 
+    output (e.g., t.test2())
+    2) Produce publication-ready commonly needed figures with one line of code (e.g., plot_cdf())
+    3) Implement novel analytical tools developed by the authors (e.g., twolines())
+    4) Deliver niche functions of high value to the authors that are not easily
+    available elsewhere (e.g., clear(), convert_to_sql(), resize_images()).
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 7.3.3
