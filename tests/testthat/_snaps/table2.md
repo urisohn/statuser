@@ -63,7 +63,7 @@
              Male     26   18
       
       Chi-squared test, null: independence
-      χ²(1) = 0.28, p = .5986
+      χ²(1) = 0.53, p = .4661
 
 # table2 print output for three-way table is stable
 

@@ -324,8 +324,27 @@ validate_table2 <- function(..., data = NULL, func_name = "table2", data_name = 
   if (length(dots) > 1) {
     lengths <- sapply(dots, length)
     if (length(unique(lengths)) > 1) {
-      length_str <- paste(sprintf("%d", lengths), collapse = ", ")
-      stop(sprintf("%s(): All variables must have the same length. Lengths: %s", func_name, length_str), call. = FALSE)
+      # Extract variable names from expressions for better error message
+      var_names <- sapply(dot_expressions, function(expr) {
+        # Check if it's a symbol (variable name)
+        if (is.symbol(expr) || is.name(expr)) {
+          return(as.character(expr))
+        }
+        # Check if it's a dataframe column reference: df$var
+        if (is.call(expr) && length(expr) >= 3) {
+          op <- expr[[1]]
+          if (identical(op, quote(`$`)) || identical(op, as.name("$"))) {
+            return(as.character(expr[[3]]))
+          }
+        }
+        # Fallback to deparsed expression
+        return(deparse(expr))
+      })
+      
+      # Build informative message showing each variable and its length
+      var_info <- paste(sprintf("  %s (n=%d)", var_names, lengths), collapse = "\n")
+      msg <- paste0(func_name, "(): All variables must have the same length, but these variables have different lengths:\n", var_info)
+      message2(msg, col = "red", stop = TRUE)
     }
   }
   

@@ -16,8 +16,8 @@
 #' @param digits Number of decimal values to show for proportions 
 #' @param chi Logical. If \code{TRUE}, performs a chi-square test on frequency table,
 #' reports results in APA format
-#' @param correct Logical. If \code{TRUE} (default), applies Yates' continuity correction 
-#' for 2x2 tables in the chi-square test. Set to \code{FALSE} to disable the correction.
+#' @param correct Logical. If \code{TRUE}, applies Yates' continuity correction 
+#' for 2x2 tables in the chi-square test. Default is \code{FALSE} (no correction).
 #' 
 #'
 #' @return A list (object of class "table2") with the following components:
@@ -58,7 +58,7 @@
 table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN), 
                   useNA = c("no", "ifany", "always"), 
                   dnn = NULL, deparse.level = 1, prop = NULL, digits = 3, 
-                  chi = FALSE, correct = TRUE) {
+                  chi = FALSE, correct = FALSE) {
   
   # FUNCTION OUTLINE:
   # 1. Validate and process useNA and exclude arguments
@@ -290,6 +290,9 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       names(dimnames(orig_freq)) <- c(var1_name_1d, "")
     }
     
+    # Track if original was 1D (converted to 2D for formatting)
+    was_1d <- (n_dims_orig == 1)
+    
     # Get variable names from dimnames for cat messages
     var1_name <- if (length(dim(result)) == 2 && !is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
       names(orig_dimn)[1]
@@ -312,7 +315,8 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       prop_type <- "overall proportions"
       
       # Add row and column with marginal proportions, 100% only in bottom right
-      if (length(dim(result)) == 2) {
+      # Skip margins for 1D tables (they would just duplicate the single column)
+      if (length(dim(result)) == 2 && !was_1d) {
         n_rows <- nrow(result)
         n_cols <- ncol(result)
         dimn <- dimnames(result)
@@ -355,7 +359,8 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       prop_type <- "row proportions"
       
       # TASK 8: Add column with 1.0 for each row
-      if (length(dim(result)) == 2) {
+      # Skip for 1D tables (would just duplicate the single column)
+      if (length(dim(result)) == 2 && !was_1d) {
         n_rows <- nrow(result)
         dimn <- dimnames(result)
         # Preserve names of dimnames
