@@ -145,7 +145,11 @@ print.table2 <- function(x, ...) {
   # Handle 3D tables
   if (n_dims == 3) {
     if (is.null(dim_names) || length(dim_names) != 3) {
-      return(NextMethod())
+      # Use base print instead of NextMethod() to avoid issues with recursive calls
+      x_for_print <- x
+      class(x_for_print) <- setdiff(class(x_for_print), "table2")
+      print(x_for_print)
+      return(invisible(x))
     }
     
     third_var_name <- dim_names[3]
@@ -187,13 +191,18 @@ print.table2 <- function(x, ...) {
   
   # Handle 1D tables
   if (n_dims == 1) {
-    # For 1D tables, use default print but then add chi-square test if available
-    # Check if we have chi_test attribute
+    # For 1D tables, print using base table print method
+    # We can't use NextMethod() here because it fails when called recursively
+    # with the table2 class added. Instead, temporarily remove the table2 class.
+    x_for_print <- x
+    class(x_for_print) <- setdiff(class(x_for_print), "table2")
+    cat("\n")
+    print(x_for_print)
+    
+    # Check if we have chi_test attribute and print if available
     chi_test <- attr(x, "chi_test")
     if (!is.null(chi_test) && !is.null(chi_test$statistic) && !is.null(chi_test$p.value)) {
-      # Print the table using default method
-      NextMethod()
-      # Then print chi-square test with label (left-aligned)
+      # Print chi-square test with label (left-aligned)
       cat("\nChi-squared test, null: equality of proportions\n")
       chi_stat <- as.numeric(chi_test$statistic)
       chi_df <- as.numeric(chi_test$parameter)
@@ -214,10 +223,7 @@ print.table2 <- function(x, ...) {
       apa_string <- paste0("\u03c7\u00b2(", chi_df_formatted, ") = ", chi_stat_formatted, ", ", chi_p_formatted)
       
       # Print left-aligned APA formatting
-      cat(paste0("\n", apa_string, "\n"))
-    } else {
-      # No chi-square test, just use default print
-      NextMethod()
+      cat(paste0(apa_string, "\n"))
     }
     return(invisible(x))
   }
@@ -226,14 +232,21 @@ print.table2 <- function(x, ...) {
   # If we don't have dimension names and it's not a proportion table and not a frequency table, fall back to default print
   # But if it's a frequency table (marked with is_frequency), we want to use our custom formatting
   if ((is.null(dim_names) || length(dim_names) != 2) && !is_proportion && !is_frequency) {
-    return(NextMethod())
+    # Use base print instead of NextMethod() to avoid issues with recursive calls
+    x_for_print <- x
+    class(x_for_print) <- setdiff(class(x_for_print), "table2")
+    print(x_for_print)
+    return(invisible(x))
   }
   
   # For proportion tables or frequency tables without dimension names, use default print but with custom formatting
   if (is.null(dim_names) || length(dim_names) != 2) {
-    # Still use NextMethod but the formatting should be handled by the proportion logic
+    # Still use base print but the formatting should be handled by the proportion logic
     # Actually, we need dimension names to format properly, so fall back
-    return(NextMethod())
+    x_for_print <- x
+    class(x_for_print) <- setdiff(class(x_for_print), "table2")
+    print(x_for_print)
+    return(invisible(x))
   }
   
   row_var_name <- dim_names[1]

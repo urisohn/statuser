@@ -170,6 +170,23 @@ test_that("table2 handles single vector", {
   expect_equal(sum(result$freq), length(x))
 })
 
+test_that("table2 single vector prints without error", {
+  # Regression test: table2() with one variable used to produce
+
+  # "Error in NextMethod() : generic function not specified"
+  x <- c("A", "A", "B", "B", "A")
+  
+  result <- table2(x)
+  
+  # Printing should not error
+  expect_no_error(print(result))
+  
+  # Capture output and verify it contains expected values
+  output <- capture.output(print(result))
+  expect_true(any(grepl("A", output)))
+  expect_true(any(grepl("B", output)))
+})
+
 test_that("table2 prop='ALL' Total row sums to 1.0", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
