@@ -263,35 +263,40 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
     # Save original frequency table before any modifications (for all prop types)
     orig_freq <- result
     
-    # Handle 1D tables: convert to 2D format for consistent formatting
-    if (n_dims_orig == 1) {
-      # Extract variable name
-      var1_name_1d <- if (!is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
+    # Track if original was 1D
+    was_1d <- (n_dims_orig == 1)
+    
+    # Handle 1D tables: keep as 1D, just calculate proportions
+    if (was_1d) {
+      # For 1D tables, calculate proportions and return early
+      total_sum <- sum(result, na.rm = TRUE)
+      prop_result <- result / total_sum
+      prop_result <- round(prop_result, digits = digits)
+      
+      # Keep the same dimnames as the frequency table
+      dimnames(prop_result) <- dimnames(result)
+      class(prop_result) <- "table"
+      
+      # Store proportion table
+      prop_out <- prop_result
+      
+      # Build output list
+      output <- list2(freq = freq, prop = prop_out, chisq = chisq)
+      
+      # Store proportion metadata
+      attr(output, "prop_type") <- prop
+      var1_name <- if (!is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && 
+                       !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
         names(orig_dimn)[1]
       } else {
         ""
       }
+      attr(output, "var1_name") <- var1_name
+      attr(output, "var2_name") <- ""
       
-      # Convert 1D table to 2D: variable as rows, single column
-      result_1d <- result
-      result <- matrix(result_1d, ncol = 1)
-      # Use the variable name as the column label, or "Frequency" if no name
-      col_label <- if (nchar(var1_name_1d) > 0) var1_name_1d else "Frequency"
-      dimnames(result) <- list(orig_dimn[[1]], col_label)
-      names(dimnames(result)) <- c(var1_name_1d, "")
-      
-      # Update orig_dimn to reflect 2D structure
-      orig_dimn <- dimnames(result)
-      
-      # Also convert orig_freq to 2D format for consistency
-      orig_freq_1d <- orig_freq
-      orig_freq <- matrix(orig_freq_1d, ncol = 1)
-      dimnames(orig_freq) <- list(orig_dimn[[1]], col_label)
-      names(dimnames(orig_freq)) <- c(var1_name_1d, "")
+      class(output) <- c("table2", class(output))
+      return(output)
     }
-    
-    # Track if original was 1D (converted to 2D for formatting)
-    was_1d <- (n_dims_orig == 1)
     
     # Get variable names from dimnames for cat messages
     var1_name <- if (length(dim(result)) == 2 && !is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
