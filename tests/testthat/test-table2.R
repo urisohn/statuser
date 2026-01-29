@@ -542,3 +542,84 @@ test_that("table2 chi=TRUE matches chisq.test() for 2x2 table", {
   # p-value should match
   expect_equal(result$chisq$p.value, base_chisq$p.value, tolerance = 1e-10)
 })
+
+test_that("table2 correct=FALSE disables Yates continuity correction", {
+  set.seed(556)
+  x <- sample(c("A", "B"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
+  
+  # With correction (default)
+  result_corrected <- table2(x, y, chi = TRUE)
+  base_corrected <- chisq.test(table(x, y), correct = TRUE)
+  
+  # Without correction
+  result_uncorrected <- table2(x, y, chi = TRUE, correct = FALSE)
+  base_uncorrected <- chisq.test(table(x, y), correct = FALSE)
+  
+  # Corrected results should match
+
+  expect_equal(
+    as.numeric(result_corrected$chisq$statistic),
+    as.numeric(base_corrected$statistic),
+    tolerance = 1e-10
+  )
+  
+  # Uncorrected results should match
+  expect_equal(
+    as.numeric(result_uncorrected$chisq$statistic),
+    as.numeric(base_uncorrected$statistic),
+    tolerance = 1e-10
+  )
+  
+  # Corrected and uncorrected should differ for 2x2 tables
+  expect_false(
+    isTRUE(all.equal(
+      as.numeric(result_corrected$chisq$statistic),
+      as.numeric(result_uncorrected$chisq$statistic)
+    ))
+  )
+})
+
+test_that("table2 chi-square matches prop.test for 2x2 tables", {
+  set.seed(557)
+  x <- sample(c("A", "B"), 100, replace = TRUE)
+  y <- sample(c("X", "Y"), 100, replace = TRUE)
+  
+  base_table <- table(x, y)
+  
+  # With Yates correction (default)
+  result_corrected <- table2(x, y, chi = TRUE, correct = TRUE)
+  prop_corrected <- prop.test(base_table, correct = TRUE)
+  
+  # Chi-square statistic should match prop.test
+  expect_equal(
+    as.numeric(result_corrected$chisq$statistic),
+    as.numeric(prop_corrected$statistic),
+    tolerance = 1e-10
+  )
+  
+  # p-value should match prop.test
+  expect_equal(
+    result_corrected$chisq$p.value,
+    prop_corrected$p.value,
+    tolerance = 1e-10
+  )
+  
+  # Without Yates correction
+  result_uncorrected <- table2(x, y, chi = TRUE, correct = FALSE)
+  prop_uncorrected <- prop.test(base_table, correct = FALSE)
+  
+  # Chi-square statistic should match prop.test
+  expect_equal(
+    as.numeric(result_uncorrected$chisq$statistic),
+    as.numeric(prop_uncorrected$statistic),
+    tolerance = 1e-10
+  )
+  
+  # p-value should match prop.test
+  expect_equal(
+    result_uncorrected$chisq$p.value,
+    prop_uncorrected$p.value,
+    tolerance = 1e-10
+  )
+})

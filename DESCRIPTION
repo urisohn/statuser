@@ -1,7 +1,7 @@
 Package: statuser
 Type: Package
 Title: Statistical Tools Purposefully Designed for End Users
-Version: 0.1.7
+Version: 0.1.7.9001
 Authors@R: person(given = "Uri",
                   family = "Simonsohn",
                   role = c("aut", "cre"),

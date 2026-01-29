@@ -16,6 +16,8 @@
 #' @param digits Number of decimal values to show for proportions 
 #' @param chi Logical. If \code{TRUE}, performs a chi-square test on frequency table,
 #' reports results in APA format
+#' @param correct Logical. If \code{TRUE} (default), applies Yates' continuity correction 
+#' for 2x2 tables in the chi-square test. Set to \code{FALSE} to disable the correction.
 #' 
 #'
 #' @return A list (object of class "table2") with the following components:
@@ -55,7 +57,8 @@
 #' @export
 table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN), 
                   useNA = c("no", "ifany", "always"), 
-                  dnn = NULL, deparse.level = 1, prop = NULL, digits = 3, chi = FALSE) {
+                  dnn = NULL, deparse.level = 1, prop = NULL, digits = 3, 
+                  chi = FALSE, correct = TRUE) {
   
   # FUNCTION OUTLINE:
   # 1. Validate and process useNA and exclude arguments
@@ -201,7 +204,7 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       chi_warning <- NULL
       chi_test <- tryCatch({
         withCallingHandlers(
-          stats::chisq.test(result),
+          stats::chisq.test(result, correct = correct),
           warning = function(w) {
             if (grepl("Chi-squared approximation may be incorrect", w$message)) {
               chi_warning <<- TRUE
