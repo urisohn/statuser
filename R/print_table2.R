@@ -29,6 +29,9 @@ print.table2 <- function(x, ...) {
       # Get prop_type from list attributes
       prop_type_list <- attr(x, "prop_type")
       
+      # Pass prop_type to the proportion table for adding totals
+      attr(prop_to_print, "prop_type") <- prop_type_list
+      
       # Build proportion header based on prop type
       cat("\n2. ")
       if (!is.null(prop_type_list) && prop_type_list == 0) {
@@ -166,6 +169,48 @@ print.table2 <- function(x, ...) {
       # Remove the third dimension to make it a 2D table
       dim(slice) <- dim(slice)[1:2]
       dimnames(slice) <- dimn[1:2]
+      
+      # For proportion tables, add Total row/column based on prop_type
+      if (is_proportion && !is.null(prop_type)) {
+        slice_dimn <- dimnames(slice)
+        dimn_names <- names(slice_dimn)
+        
+        if (prop_type == 0) {
+          # Overall proportions: add both Total row and Total column
+          n_rows <- nrow(slice)
+          n_cols <- ncol(slice)
+          
+          # Add Total row
+          col_totals <- colSums(slice, na.rm = TRUE)
+          slice <- rbind(slice, col_totals)
+          slice_dimn[[1]] <- c(slice_dimn[[1]], "Total")
+          
+          # Add Total column
+          row_totals <- rowSums(slice, na.rm = TRUE)
+          slice <- cbind(slice, row_totals)
+          slice_dimn[[2]] <- c(slice_dimn[[2]], "Total")
+          
+          names(slice_dimn) <- dimn_names
+          dimnames(slice) <- slice_dimn
+        } else if (prop_type == 1) {
+          # Row proportions: add Total column with 1.0 for each row
+          n_rows <- nrow(slice)
+          summary_col <- matrix(round(1.0, proportion_digits), nrow = n_rows, ncol = 1)
+          slice <- cbind(slice, summary_col)
+          slice_dimn[[2]] <- c(slice_dimn[[2]], "Total")
+          names(slice_dimn) <- dimn_names
+          dimnames(slice) <- slice_dimn
+        } else if (prop_type == 2) {
+          # Column proportions: add Total row with 1.0 for each column
+          n_cols <- ncol(slice)
+          summary_row <- matrix(round(1.0, proportion_digits), nrow = 1, ncol = n_cols)
+          slice <- rbind(slice, summary_row)
+          slice_dimn[[1]] <- c(slice_dimn[[1]], "Total")
+          names(slice_dimn) <- dimn_names
+          dimnames(slice) <- slice_dimn
+        }
+      }
+      
       class(slice) <- c("table2", class(slice))
       # Copy attributes
       if (is_proportion) {
@@ -200,8 +245,11 @@ print.table2 <- function(x, ...) {
     print(x_for_print)
     
     # Check if we have chi_test attribute and print if available
+    # BUT skip if this is being called from the list format handler (is_frequency or is_proportion set)
+    # because the list handler prints chi-square at the end
     chi_test <- attr(x, "chi_test")
-    if (!is.null(chi_test) && !is.null(chi_test$statistic) && !is.null(chi_test$p.value)) {
+    if (!is.null(chi_test) && !is.null(chi_test$statistic) && !is.null(chi_test$p.value) &&
+        !is_frequency && !is_proportion) {
       # Print chi-square test with label (left-aligned)
       cat("\nChi-squared test, null: equality of proportions\n")
       chi_stat <- as.numeric(chi_test$statistic)

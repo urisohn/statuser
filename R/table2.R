@@ -298,7 +298,70 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       return(output)
     }
     
-    # Get variable names from dimnames for cat messages
+    # Handle 3D tables: calculate proportions within each slice
+    if (n_dims_orig == 3) {
+      # For 3D tables, calculate proportions within each 2D slice
+      prop_result <- result
+      n_slices <- dim(result)[3]
+      
+      for (k in seq_len(n_slices)) {
+        slice <- result[, , k]
+        
+        if (prop == 0) {
+          # Overall proportions within slice
+          slice_sum <- sum(slice, na.rm = TRUE)
+          if (slice_sum > 0) {
+            prop_result[, , k] <- slice / slice_sum
+          }
+        } else if (prop == 1) {
+          # Row proportions within slice
+          row_sums <- rowSums(slice, na.rm = TRUE)
+          row_sums[row_sums == 0] <- 1
+          prop_result[, , k] <- slice / row_sums
+        } else if (prop == 2) {
+          # Column proportions within slice
+          col_sums <- colSums(slice, na.rm = TRUE)
+          col_sums[col_sums == 0] <- 1
+          prop_result[, , k] <- sweep(slice, 2, col_sums, "/")
+        }
+      }
+      
+      prop_result <- round(prop_result, digits = digits)
+      
+      # Keep the same dimnames as the frequency table
+      dimnames(prop_result) <- dimnames(result)
+      class(prop_result) <- "table"
+      
+      # Store proportion table
+      prop_out <- prop_result
+      
+      # Get variable names
+      var1_name <- if (!is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && 
+                       !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
+        names(orig_dimn)[1]
+      } else {
+        ""
+      }
+      var2_name <- if (!is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 2 && 
+                       !is.na(names(orig_dimn)[2]) && nchar(names(orig_dimn)[2]) > 0) {
+        names(orig_dimn)[2]
+      } else {
+        ""
+      }
+      
+      # Build output list
+      output <- list2(freq = freq, prop = prop_out, chisq = chisq)
+      
+      # Store proportion metadata
+      attr(output, "prop_type") <- prop
+      attr(output, "var1_name") <- var1_name
+      attr(output, "var2_name") <- var2_name
+      
+      class(output) <- c("table2", class(output))
+      return(output)
+    }
+    
+    # Get variable names from dimnames for cat messages (for 2D tables)
     var1_name <- if (length(dim(result)) == 2 && !is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
       names(orig_dimn)[1]
     } else {

@@ -172,7 +172,6 @@ test_that("table2 handles single vector", {
 
 test_that("table2 single vector prints without error", {
   # Regression test: table2() with one variable used to produce
-
   # "Error in NextMethod() : generic function not specified"
   x <- c("A", "A", "B", "B", "A")
   
@@ -185,6 +184,24 @@ test_that("table2 single vector prints without error", {
   output <- capture.output(print(result))
   expect_true(any(grepl("A", output)))
   expect_true(any(grepl("B", output)))
+})
+
+test_that("table2 single vector with prop and chi prints chi-square only once", {
+  # Regression test: chi-square was being printed twice for 1D tables with prop
+  x <- c("A", "A", "A", "B", "B")
+  
+  result <- table2(x, prop = "all", chi = TRUE)
+  
+  # Capture output
+  output <- capture.output(print(result))
+  
+  # Count occurrences of chi-square header
+  chi_count <- sum(grepl("Chi-squared test", output))
+  expect_equal(chi_count, 1, info = "Chi-square test should only be printed once")
+  
+  # Verify chi-square result is present
+  expect_true(any(grepl("\u03c7\u00b2", output)) || any(grepl("χ²", output)), 
+              info = "Chi-square statistic should be in output")
 })
 
 test_that("table2 prop='ALL' Total row sums to 1.0", {
