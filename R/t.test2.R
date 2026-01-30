@@ -10,6 +10,26 @@
 #'
 #' @param ... Arguments passed to \code{\link[stats]{t.test}}
 #'
+#' @return A data frame with class \code{c("t.test2", "data.frame")} containing 
+#'   a single row with the following columns:
+#'   \describe{
+#'     \item{mean columns}{One or two columns containing group means, named after 
+#'       the input variables (e.g., \code{men}, \code{women}) or \code{Group 1}, 
+#'       \code{Group 2} for long names.}
+#'     \item{diff column}{For two-sample tests, the difference between means 
+#'       (e.g., \code{men-women}).}
+#'     \item{ci}{The confidence level as a string (e.g., "95 percent").}
+#'     \item{ci.L, ci.H}{Lower and upper bounds of the confidence interval.}
+#'     \item{t}{The t-statistic.}
+#'     \item{df}{Degrees of freedom.}
+#'     \item{p.value}{The p-value.}
+#'     \item{N columns}{Sample sizes, named \code{N(group1)}, \code{N(group2)} or 
+#'       \code{N1}, \code{N2}. For paired tests, a single \code{N} column.}
+#'     \item{correlation}{For paired tests only, the correlation between pairs.}
+#'   }
+#'   Attributes store additional information including missing value counts and 
+#'   test type (one-sample, two-sample, paired, Welch vs. Student).
+#'
 #' @importFrom stats cor
 #' @usage NULL
 #'

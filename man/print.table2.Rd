@@ -11,6 +11,12 @@
 
 \item{...}{Additional arguments passed to print}
 }
+\value{
+Invisibly returns the input object \code{x}. Called for its side effect 
+  of printing a formatted cross-tabulation table to the console. The output 
+  includes frequencies, optional relative frequencies (row, column, or overall 
+  proportions), and chi-squared test results when applicable.
+}
 \description{
 Print method for table2 output with centered column variable name
 }

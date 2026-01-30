@@ -15,6 +15,11 @@ message2(..., col = "cyan", font = 1, stop = FALSE)
 
 \item{stop}{Logical. If TRUE, stops execution (like \code{stop()}) but without printing "Error:".}
 }
+\value{
+No return value, called for side effects. Prints a colored message 
+  to the console. If \code{stop = TRUE}, execution is halted after printing 
+  the message.
+}
 \description{
 Add options to set color and to end execution of code (to be used as error message)
 }

@@ -18,8 +18,8 @@
 \item{chi}{Logical. If \code{TRUE}, performs a chi-square test on frequency table,
 reports results in APA format}
 
-\item{correct}{Logical. If \code{TRUE} (default), applies Yates' continuity correction 
-for 2x2 tables in the chi-square test. Set to \code{FALSE} to disable the correction.}
+\item{correct}{Logical. If \code{TRUE}, applies Yates' continuity correction 
+for 2x2 tables in the chi-square test. Default is \code{FALSE} (no correction).}
 }
 \value{
 A list (object of class "table2") with the following components:

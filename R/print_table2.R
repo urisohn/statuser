@@ -3,6 +3,11 @@
 #' @param x An object of class \code{table2}
 #' @param ... Additional arguments passed to print
 #'
+#' @return Invisibly returns the input object \code{x}. Called for its side effect 
+#'   of printing a formatted cross-tabulation table to the console. The output 
+#'   includes frequencies, optional relative frequencies (row, column, or overall 
+#'   proportions), and chi-squared test results when applicable.
+#'
 #' @export
 print.table2 <- function(x, ...) {
   # Check if x is the new list format (has freq, prop, chisq elements)

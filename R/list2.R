@@ -11,6 +11,10 @@
 #' @param ... Objects to include in the list. Objects are automatically named 
 #'   based on their variable names unless explicit names are provided.
 #'
+#' @return A named list. Each element is named after the variable passed to 
+#'   the function (or the explicit name if provided). The structure is identical 
+#'   to a standard R list created with \code{\link[base]{list}}.
+#'
 #' @examples
 #' x <- 1:5
 #' y <- letters[1:3]

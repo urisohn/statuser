@@ -4,7 +4,11 @@
 \alias{clear}
 \title{Clear All: Environment, Console, and Graphics}
 \usage{
-clear()
+clear(envir = parent.frame())
+}
+\arguments{
+\item{envir}{The environment to clear. Defaults to the calling environment 
+(typically the global environment when called interactively).}
 }
 \value{
 Invisibly returns NULL. Prints a colored confirmation message.
@@ -15,13 +19,13 @@ Clear All: Environment, Console, and Graphics
 \details{
 This function performs three cleanup operations:
 \itemize{
-  \item \strong{Environment}: Removes all objects from the global environment
+  \item \strong{Environment}: Removes all objects from the specified environment
   \item \strong{Console}: Clears the console screen (only in interactive sessions)
   \item \strong{Graphics}: Closes all open graphics devices (except the null device)
 }
 
-\strong{Warning}: This function deletes all objects in your
-global environment. Save anything that you wish to keep before running.
+\strong{Warning}: This function deletes all objects in the specified
+environment. Save anything that you wish to keep before running.
 }
 \examples{
 \dontrun{

@@ -1,17 +1,20 @@
 #' Clear All: Environment, Console, and Graphics
 #'
+#' @param envir The environment to clear. Defaults to the calling environment 
+#'   (typically the global environment when called interactively).
+#'
 #' @return Invisibly returns NULL. Prints a colored confirmation message.
 #'
 #' @details
 #' This function performs three cleanup operations:
 #' \itemize{
-#'   \item \strong{Environment}: Removes all objects from the global environment
+#'   \item \strong{Environment}: Removes all objects from the specified environment
 #'   \item \strong{Console}: Clears the console screen (only in interactive sessions)
 #'   \item \strong{Graphics}: Closes all open graphics devices (except the null device)
 #' }
 #'
-#' \strong{Warning}: This function deletes all objects in your
-#' global environment. Save anything that you wish to keep before running.
+#' \strong{Warning}: This function deletes all objects in the specified
+#' environment. Save anything that you wish to keep before running.
 #'
 #' @examples
 #' \dontrun{
@@ -25,9 +28,9 @@
 #' }
 #'
 #' @export
-clear <- function() {
+clear <- function(envir = parent.frame()) {
   # Clear environment
-  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
+  rm(list = ls(envir = envir), envir = envir)
   
   # Clear console (only in interactive sessions)
   if (interactive()) {

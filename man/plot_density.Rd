@@ -15,6 +15,17 @@ plot_density(formula, data = NULL, show_means = TRUE, ...)
 
 \item{...}{Additional arguments passed to plotting functions.}
 }
+\value{
+Invisibly returns a list with the following element:
+  \describe{
+    \item{densities}{A named list of density objects (class \code{"density"}), 
+      one for each group. Each density object contains \code{x} (evaluation points), 
+      \code{y} (density estimates), \code{bw} (bandwidth), and other components 
+      as returned by \code{\link[stats]{density}}. If no grouping variable is 
+      provided, the list contains a single element named \code{"all"}.}
+  }
+  The function is primarily called for its side effect of creating a plot.
+}
 \description{
 Plots the distribution of a variable by group, simply: \code{plot_density(y ~ x)}
 }

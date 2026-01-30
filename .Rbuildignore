@@ -6,4 +6,4 @@
 ^assets/
 ^TEST_SUMMARY\.md$
 ^CRAN_FIXES\.md$
-
+^cran-comments\.md$

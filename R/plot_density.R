@@ -42,6 +42,16 @@
 #' plot_density(value ~ group, data = df)
 #' plot_density(value ~ group, data = df, col = c("red", "blue"))
 #'
+#' @return Invisibly returns a list with the following element:
+#'   \describe{
+#'     \item{densities}{A named list of density objects (class \code{"density"}), 
+#'       one for each group. Each density object contains \code{x} (evaluation points), 
+#'       \code{y} (density estimates), \code{bw} (bandwidth), and other components 
+#'       as returned by \code{\link[stats]{density}}. If no grouping variable is 
+#'       provided, the list contains a single element named \code{"all"}.}
+#'   }
+#'   The function is primarily called for its side effect of creating a plot.
+#'
 #' @export
 plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
   #OUTLINE

@@ -22,6 +22,24 @@ Passed to \code{\link[estimatr]{lm_robust}}.}
 
 \item{...}{Additional arguments passed to \code{\link[estimatr]{lm_robust}}.}
 }
+\value{
+An object of class \code{c("lm2", "lm_robust", "lm")}. This inherits 
+  from \code{\link[estimatr]{lm_robust}} and can be used with packages like 
+  \code{marginaleffects}. The object contains all components of an \code{lm_robust} 
+  object plus additional attributes:
+  \describe{
+    \item{statuser_table}{A data frame with columns: \code{term}, \code{estimate}, 
+      \code{SE.robust}, \code{SE.classical}, \code{t}, \code{df}, \code{p.value}, 
+      \code{B} (standardized coefficient), and optionally \code{SE.cluster} when 
+      clustered standard errors are used.}
+    \item{classical_fit}{The underlying \code{lm} object with classical standard errors.}
+    \item{na_counts}{Integer vector of missing value counts per variable.}
+    \item{n_missing}{Total number of observations excluded due to missing values.}
+    \item{has_clusters}{Logical indicating whether clustered standard errors were used.}
+  }
+  When printed, displays a formatted regression table with robust and classical 
+  standard errors, effect sizes, and diagnostic red flags.
+}
 \description{
 Runs a linear regression with better defaults (robust SE), and richer & better 
 formatted output than \code{lm}. For robust and clustered errors it relies on \code{\link[estimatr]{lm_robust}}. 

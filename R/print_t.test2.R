@@ -3,6 +3,11 @@
 #' @param x An object of class \code{t.test2}
 #' @param ... Additional arguments passed to print
 #'
+#' @return Invisibly returns the input object \code{x}. Called for its side effect 
+#'   of printing a formatted t-test summary to the console, including means, 
+#'   confidence intervals, test statistics, p-values, sample sizes, and 
+#'   APA-formatted results.
+#'
 #' @export
 print.t.test2 <- function(x, ...) {
   # Ensure x is a data frame

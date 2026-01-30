@@ -22,6 +22,10 @@
 #' cat('this will not')
 #' }
 #'
+#' @return No return value, called for side effects. Prints a colored message 
+#'   to the console. If \code{stop = TRUE}, execution is halted after printing 
+#'   the message.
+#'
 #' @importFrom grDevices col2rgb
 #' @export
 message2 <- function(..., col = "cyan", font = 1, stop = FALSE) {

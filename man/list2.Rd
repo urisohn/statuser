@@ -10,6 +10,11 @@ list2(...)
 \item{...}{Objects to include in the list. Objects are automatically named 
 based on their variable names unless explicit names are provided.}
 }
+\value{
+A named list. Each element is named after the variable passed to 
+  the function (or the explicit name if provided). The structure is identical 
+  to a standard R list created with \code{\link[base]{list}}.
+}
 \description{
 List with objects that are automatically named.
 }

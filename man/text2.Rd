@@ -20,6 +20,10 @@
 
 \item{...}{Additional arguments passed to \code{\link[graphics]{text}}.}
 }
+\value{
+No return value, called for side effects. Adds text with an optional 
+  background rectangle to an existing plot.
+}
 \description{
 Adds to text() optional background color and verbal alignment (align='center')
 }

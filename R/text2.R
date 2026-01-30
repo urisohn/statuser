@@ -11,6 +11,9 @@
 #' @param pad_v top/bottom padding in percentage (e.g., .25)
 #' @param ... Additional arguments passed to \code{\link[graphics]{text}}.
 #'
+#' @return No return value, called for side effects. Adds text with an optional 
+#'   background rectangle to an existing plot.
+#'
 #' @examples
 #' # Create a simple plot
 #' plot(1:10, 1:10, type = "n", main = "text2() - Alignment & Color")
