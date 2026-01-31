@@ -70,40 +70,42 @@ simple_data$y2 <- 1 + 0.5 * simple_data$x + 0.3 * simple_data$z + rnorm(n, sd = 
 # SECTION 3: INTERACTIONS
 # ============================================================================
 
-interact_data <- data.frame(
-  x1 = rnorm(n),
-  x2 = rnorm(n)
-)
-interact_data$y <- 1 + 
-  0.5 * interact_data$x1 + 
-  0.3 * interact_data$x2 + 
-  0.4 * interact_data$x1 * interact_data$x2 +
-  rnorm(n, sd = 1)
-interact_data$x2_corr <- interact_data$x1 + rnorm(n, sd = 0.5)  # r ~ 0.9
-interact_data$y_corr <- 1 + 
-  0.5 * interact_data$x1 + 
-  0.3 * interact_data$x2_corr + 
-  0.4 * interact_data$x1 * interact_data$x2_corr +
-  rnorm(n, sd = 1)
-interact_data$group <- factor(sample(c("Control", "Treatment"), n, replace = TRUE))
-interact_data$y_nf <- 2 + 
-  0.5 * interact_data$x1 +
-  ifelse(interact_data$group == "Treatment", 1, 0) +
-  ifelse(interact_data$group == "Treatment", 0.8, 0) * interact_data$x1 +
-  rnorm(n, sd = 1)
-interact_data$group2 <- factor(sample(c("Young", "Old"), n, replace = TRUE))
-interact_data$y_ff <- 3 +
-  ifelse(interact_data$group == "Treatment", 1, 0) +
-  ifelse(interact_data$group2 == "Old", 0.5, 0) +
-  ifelse(interact_data$group == "Treatment" & interact_data$group2 == "Old", 2, 0) +
-  rnorm(n, sd = 1)
-interact_data$y_3way <- 1 +
-  0.3 * interact_data$x1 +
-  ifelse(interact_data$group == "Treatment", 0.5, 0) +
-  ifelse(interact_data$group2 == "Old", 0.4, 0) +
-  0.2 * interact_data$x1 * ifelse(interact_data$group == "Treatment", 1, 0) * 
-    ifelse(interact_data$group2 == "Old", 1, 0) +
-  rnorm(n, sd = 1)
+  
+  #Data
+      interact_data <- data.frame(
+        x1 = rnorm(n),
+        x2 = rnorm(n)
+      )
+      interact_data$y <- 1 + 
+        0.5 * interact_data$x1 + 
+        0.3 * interact_data$x2 + 
+        0.4 * interact_data$x1 * interact_data$x2 +
+        rnorm(n, sd = 1)
+      interact_data$x2_corr <- interact_data$x1 + rnorm(n, sd = 0.5)  # r ~ 0.9
+      interact_data$y_corr <- 1 + 
+        0.5 * interact_data$x1 + 
+        0.3 * interact_data$x2_corr + 
+        0.4 * interact_data$x1 * interact_data$x2_corr +
+        rnorm(n, sd = 1)
+      interact_data$group <- factor(sample(c("Control", "Treatment"), n, replace = TRUE))
+      interact_data$y_nf <- 2 + 
+        0.5 * interact_data$x1 +
+        ifelse(interact_data$group == "Treatment", 1, 0) +
+        ifelse(interact_data$group == "Treatment", 0.8, 0) * interact_data$x1 +
+        rnorm(n, sd = 1)
+      interact_data$group2 <- factor(sample(c("Young", "Old"), n, replace = TRUE))
+      interact_data$y_ff <- 3 +
+        ifelse(interact_data$group == "Treatment", 1, 0) +
+        ifelse(interact_data$group2 == "Old", 0.5, 0) +
+        ifelse(interact_data$group == "Treatment" & interact_data$group2 == "Old", 2, 0) +
+        rnorm(n, sd = 1)
+      interact_data$y_3way <- 1 +
+        0.3 * interact_data$x1 +
+        ifelse(interact_data$group == "Treatment", 0.5, 0) +
+        ifelse(interact_data$group2 == "Old", 0.4, 0) +
+        0.2 * interact_data$x1 * ifelse(interact_data$group == "Treatment", 1, 0) * 
+          ifelse(interact_data$group2 == "Old", 1, 0) +
+        rnorm(n, sd = 1)
 
 # 3.1 - Numeric * Numeric interaction (uncorrelated)
   lm2(y ~ x1 * x2, data = interact_data)

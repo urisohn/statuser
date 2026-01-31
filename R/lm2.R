@@ -260,9 +260,39 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
       # Get the coefficient
       b <- estimates[i]
       
-      # Try to get the SD of this predictor
-      # Handle factor variables and interactions
-      if (term %in% names(model_data)) {
+      # Check if this is an interaction term (contains ":")
+      if (grepl(":", term)) {
+        # Interaction term: compute b * sd(x1) * sd(x2) * ... / sd(y)
+        components <- strsplit(term, ":")[[1]]
+        sd_product <- 1
+        all_numeric <- TRUE
+        
+        for (comp in components) {
+          if (comp %in% names(model_data)) {
+            x_comp <- model_data[[comp]]
+            if (is.numeric(x_comp)) {
+              sd_product <- sd_product * stats::sd(x_comp, na.rm = TRUE)
+            } else {
+              # Factor component - can't compute SD
+              all_numeric <- FALSE
+              break
+            }
+          } else {
+            # Component not found (likely a factor level like "groupB")
+            all_numeric <- FALSE
+            break
+          }
+        }
+        
+        if (all_numeric) {
+          standardized_coefs[i] <- b * sd_product / sd_y
+        } else {
+          standardized_coefs[i] <- NA_real_
+        }
+        na_counts[i] <- NA_integer_  # NA count not meaningful for interactions
+        
+      } else if (term %in% names(model_data)) {
+        # Simple term: compute b * sd(x) / sd(y)
         x <- model_data[[term]]
         if (is.numeric(x)) {
           sd_x <- stats::sd(x, na.rm = TRUE)
@@ -277,8 +307,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
           na_counts[i] <- NA_integer_
         }
       } else {
-        # For factor levels, interactions, etc., set to NA
-        # (standardized coefficients are typically not meaningful for these)
+        # For factor levels, etc., set to NA
         standardized_coefs[i] <- NA_real_
         na_counts[i] <- NA_integer_
       }
@@ -811,6 +840,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
       cat("  - t.value & p.value are based on robust SE (HC3)\n")
     }
     cat("  - effect.size is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
+    cat("    for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)\n")
     cat("  - missing: number of observations excluded due to missing values\n")
     if (has_interactions) {
       cat("  - red.flag:\n")
