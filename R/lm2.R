@@ -387,6 +387,163 @@ print.lm2 <- function(x, notes = NULL, ...) {
   # Get NA counts from attribute before modifying display_df
   na_counts <- attr(x, "na_counts")
   
+  # -------------------------------------------------------------------------
+  # Helper: Parse factor terms and identify baseline levels
+  # Returns a list with:
+  #   - formatted_terms: vector of formatted term names (e.g., "group (B)")
+  #   - baseline_info: list of baseline rows to insert
+  #   - is_factor_level: logical vector indicating which terms are factor levels
+  # -------------------------------------------------------------------------
+  parse_factor_terms <- function(tbl, xlevels) {
+    n_terms <- nrow(tbl)
+    formatted_terms <- tbl$term
+    is_factor_level <- logical(n_terms)
+    baseline_info <- list()  # Will store info about baseline rows to add
+    
+    if (is.null(xlevels) || length(xlevels) == 0) {
+      return(list(
+        formatted_terms = formatted_terms,
+        baseline_info = baseline_info,
+        is_factor_level = is_factor_level
+      ))
+    }
+    
+    # Helper: Replace factor level in a term component
+    # e.g., "group2B" with var_name="group2", lev="B" -> "group2 (B)"
+    replace_factor_level <- function(component, var_name, lev) {
+      expected <- paste0(var_name, lev)
+      if (component == expected) {
+        return(paste0(var_name, " (", lev, ")"))
+      }
+      return(NULL)
+    }
+    
+    # Helper: Check if term is an ordered factor polynomial contrast
+    # e.g., "group3_ord.L" -> "group3_ord (linear)"
+    # Returns NULL if not a match, or the formatted name if it is
+    check_ordered_contrast <- function(term, var_name) {
+      # Ordered factors use .L, .Q, .C, .^4, .^5, etc. for polynomial contrasts
+      contrast_map <- c(
+        ".L" = "linear",
+        ".Q" = "quadratic", 
+        ".C" = "cubic"
+      )
+      
+      for (suffix in names(contrast_map)) {
+        expected <- paste0(var_name, suffix)
+        if (term == expected) {
+          return(paste0(var_name, " (", contrast_map[suffix], ")"))
+        }
+      }
+      
+      # Check for higher order polynomials: .^4, .^5, etc.
+      pattern <- paste0("^", gsub("([.|()\\^{}+*?$\\[\\]\\\\])", "\\\\\\1", var_name), "\\.\\^(\\d+)$")
+      if (grepl(pattern, term)) {
+        degree <- sub(pattern, "\\1", term)
+        return(paste0(var_name, " (^", degree, ")"))
+      }
+      
+      return(NULL)
+    }
+    
+    # Track which factors we've seen (to add baseline only once)
+    factors_seen <- character(0)
+    
+    for (i in seq_len(n_terms)) {
+      term <- tbl$term[i]
+      
+      # Skip intercept
+      if (term == "(Intercept)") next
+      
+      # Check if this is an interaction term
+      if (grepl(":", term)) {
+        # Split into components and try to format each
+        components <- strsplit(term, ":")[[1]]
+        new_components <- components
+        
+        for (ci in seq_along(components)) {
+          comp <- components[ci]
+          # Try to match against factor levels
+          for (var_name in names(xlevels)) {
+            levels_vec <- xlevels[[var_name]]
+            for (lev in levels_vec[-1]) {  # Skip baseline level (won't appear in interactions)
+              replacement <- replace_factor_level(comp, var_name, lev)
+              if (!is.null(replacement)) {
+                new_components[ci] <- replacement
+                break
+              }
+            }
+            # Also check for ordered factor contrasts in interactions
+            ordered_replacement <- check_ordered_contrast(comp, var_name)
+            if (!is.null(ordered_replacement)) {
+              new_components[ci] <- ordered_replacement
+            }
+          }
+        }
+        formatted_terms[i] <- paste(new_components, collapse = ":")
+      } else {
+        # Non-interaction term: check each factor variable
+        matched <- FALSE
+        for (var_name in names(xlevels)) {
+          levels_vec <- xlevels[[var_name]]
+          
+          # First check for ordered factor polynomial contrasts (e.g., varname.L, varname.Q)
+          ordered_replacement <- check_ordered_contrast(term, var_name)
+          if (!is.null(ordered_replacement)) {
+            is_factor_level[i] <- TRUE
+            formatted_terms[i] <- ordered_replacement
+            matched <- TRUE
+            # Note: ordered factors don't have a baseline level to show
+            break
+          }
+          
+          # Check if this term matches varname + level (treatment contrasts)
+          for (lev in levels_vec) {
+            expected_name <- paste0(var_name, lev)
+            if (term == expected_name) {
+              # This is a factor level term
+              is_factor_level[i] <- TRUE
+              formatted_terms[i] <- paste0(var_name, " (", lev, ")")
+              
+              # If this is the first time we see this factor, record the baseline
+              if (!(var_name %in% factors_seen)) {
+                factors_seen <- c(factors_seen, var_name)
+                baseline_level <- levels_vec[1]  # First level is baseline
+                baseline_info[[length(baseline_info) + 1]] <- list(
+                  var_name = var_name,
+                  baseline_level = baseline_level,
+                  insert_before = i  # Insert baseline row before this row
+                )
+              }
+              matched <- TRUE
+              break
+            }
+          }
+          if (matched) break
+        }
+      }
+    }
+    
+    return(list(
+      formatted_terms = formatted_terms,
+      baseline_info = baseline_info,
+      is_factor_level = is_factor_level
+    ))
+  }
+  
+  # Get factor levels from the model
+  xlevels <- x$xlevels
+  if (is.null(xlevels)) {
+    # Fallback to classical fit
+    classical_fit <- attr(x, "classical_fit")
+    if (!is.null(classical_fit)) {
+      xlevels <- classical_fit$xlevels
+    }
+  }
+  
+  # Parse factor terms
+  factor_info <- parse_factor_terms(tbl, xlevels)
+  
   # Get model data for correlation checks (x itself is now the lm_robust object)
   model_data <- x$model
   if (is.null(model_data)) {
@@ -508,8 +665,13 @@ print.lm2 <- function(x, notes = NULL, ...) {
   df_vals <- tbl$df
   df_varies <- length(unique(round(df_vals, 2))) > 1
   
-  # Format term names: lowercase, with 2 trailing spaces
-  term_names_formatted <- paste0(tolower(gsub("^\\(Intercept\\)$", "intercept", tbl$term)), "  ")
+  # Format term names: use parsed factor terms (e.g., "group (B)"), with 2 trailing spaces
+  # Only lowercase "(Intercept)" -> "intercept", preserve original case for all other terms
+  term_names_formatted <- sapply(seq_along(factor_info$formatted_terms), function(i) {
+    term <- factor_info$formatted_terms[i]
+    term <- gsub("^\\(Intercept\\)$", "intercept", term)
+    paste0(term, "  ")
+  })
   
   if (has_clusters) {
     # With clusters: SE.cluster, SE.robust (HC3), SE.classical
@@ -580,6 +742,39 @@ print.lm2 <- function(x, notes = NULL, ...) {
   
   # Add red flag column at the end (use "--" when no flag)
   display_df$red.flag <- pad(ifelse(se_flag == "", "--", se_flag), 4)
+  
+  # Insert baseline rows for factor variables (in reverse order to maintain correct positions)
+  if (length(factor_info$baseline_info) > 0) {
+    # Process in reverse order so row indices remain valid
+    for (j in rev(seq_along(factor_info$baseline_info))) {
+      bl <- factor_info$baseline_info[[j]]
+      baseline_term <- paste0(bl$var_name, " (", bl$baseline_level, ")  ")
+      
+      # Create a baseline row with "[omitted]" placeholder
+      baseline_row <- display_df[1, , drop = FALSE]  # Copy structure
+      baseline_row$term <- baseline_term
+      # Set all numeric columns to "[omitted]" indicator
+      for (col in names(baseline_row)) {
+        if (col == "term") next
+        baseline_row[[col]] <- ""
+      }
+      baseline_row$estimate <- "[omitted]"
+      
+      # Insert before the first level of this factor
+      insert_pos <- bl$insert_before
+      if (insert_pos == 1) {
+        display_df <- rbind(baseline_row, display_df)
+      } else if (insert_pos > nrow(display_df)) {
+        display_df <- rbind(display_df, baseline_row)
+      } else {
+        display_df <- rbind(
+          display_df[1:(insert_pos - 1), , drop = FALSE],
+          baseline_row,
+          display_df[insert_pos:nrow(display_df), , drop = FALSE]
+        )
+      }
+    }
+  }
   
   # Use term values as row names, then remove the term column
   rownames(display_df) <- display_df$term

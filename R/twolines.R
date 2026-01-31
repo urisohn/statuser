@@ -623,6 +623,8 @@ reg2 <- function(f, xc, graph = 1, family = "gaussian", data = NULL) {
       xr <- x1 - x0
       
       # Plot
+      old_par <- par(no.readonly = TRUE)
+      on.exit(par(old_par), add = TRUE)
       par(mar = c(5.4, 4.1, .5, 2.1))
       plot(xu[xu < xc], yobs[xu < xc], cex = .75, col = col.l1, pch = pch.dot, las = 1,
            ylim = c(y0, y1),

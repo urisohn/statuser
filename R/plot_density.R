@@ -343,6 +343,7 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
     #16. Set up plot
       # Ensure adequate top margin for main title and (n=...) text (like plot_freq)
       old_mar <- par("mar")
+      on.exit(par(mar = old_mar), add = TRUE)
       if (!"mar" %in% names(plot_params)) {
         # Increase top margin if it's too small (less than 5 lines to accommodate title and N)
         if (old_mar[3] < 5) {
@@ -356,11 +357,6 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
       # Add (n=...) below main title (like plot_cdf notation)
       tot <- length(y)
       mtext(paste0("(n=", tot, ")"), side = 3, line = 0.75, font = 3, cex = 0.9)
-      
-      # Restore original margins if we changed them
-      if (!"mar" %in% names(plot_params) && old_mar[3] < 5) {
-        par(mar = old_mar)
-      }
       
       # Draw custom y-axis with formatted labels (skip leading zeros)
       if (!user_provided_yaxt) {

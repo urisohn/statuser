@@ -296,25 +296,21 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
       }
     
     # Ensure adequate top margin for main title and legend
-    old_mar <- par("mar")
-    old_mgp <- par("mgp")
+    old_par <- par(no.readonly = TRUE)
+    on.exit(par(old_par), add = TRUE)
     if (!"mar" %in% names(dots)) {
       # Increase top margin if it's too small (less than 3 lines to accommodate title and legend)
       # Add 1 line to the left margin
-      new_mar <- c(old_mar[1], old_mar[2] + 1, old_mar[3], old_mar[4])
+      new_mar <- c(old_par$mar[1], old_par$mar[2] + 1, old_par$mar[3], old_par$mar[4])
       if (new_mar[3] < 3) {
         new_mar[3] <- 3
       }
       par(mar = new_mar)
-      # Restore original margins on exit
-      on.exit(par(mar = old_mar), add = TRUE)
     }
     # Move ylab 0.75 lines to the left
     if (!"mgp" %in% names(dots)) {
-      new_mgp <- c(old_mgp[1], old_mgp[2] - 0.75, old_mgp[3])
+      new_mgp <- c(old_par$mgp[1], old_par$mgp[2] - 0.75, old_par$mgp[3])
       par(mgp = new_mgp)
-      # Restore original mgp on exit
-      on.exit(par(mgp = old_mgp), add = TRUE)
     }
     
     # Remove vectorized parameters and data from dots for plot()

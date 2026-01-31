@@ -263,12 +263,12 @@ plot_gam <- function(model, predictor, quantile.others = 50,
     }
   }
   
+  # Save current par settings and restore on exit
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par), add = TRUE)
+  
   # Set up layout for two panels if distribution plotting is requested
   if (plot_distribution) {
-    # Save current par settings
-    old_par <- par(no.readonly = TRUE)
-    on.exit(par(old_par), add = TRUE)
-    
     # Set up two panels: top for GAM plot (75%), bottom for distribution (25%)
     # Use layout to control spacing (no gap between panels)
     layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(0.75, 0.25))
@@ -278,9 +278,8 @@ plot_gam <- function(model, predictor, quantile.others = 50,
     par(mar = c(0, 4.1, 5.1, 2.1))  # Top plot: no bottom margin, extra top margin for title
   } else {
     # When no bottom plot, ensure we have enough top margin for title and subtitle
-    if (par("mar")[3] < 5) {
-      current_mar <- par("mar")
-      par(mar = c(current_mar[1], current_mar[2], 5.1, current_mar[4]))
+    if (old_par$mar[3] < 5) {
+      par(mar = c(old_par$mar[1], old_par$mar[2], 5.1, old_par$mar[4]))
     }
   }
   

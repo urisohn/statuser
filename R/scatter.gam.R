@@ -260,12 +260,12 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
     }
   }
   
+  # Save current par settings and restore on exit
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par), add = TRUE)
+  
   # Set up layout for two panels if distribution plotting is requested
   if (plot_distribution) {
-    # Save current par settings
-    old_par <- par(no.readonly = TRUE)
-    on.exit(par(old_par), add = TRUE)
-    
     # Set up two panels: top for scatter plot, bottom for distribution
     # Use layout to control spacing (no gap between panels)
     layout(matrix(c(1, 2), nrow = 2, ncol = 1), heights = c(2, 1))
@@ -277,8 +277,7 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
     par(mar = c(0, 5.1, 3, 4.1))  # Top plot: no bottom margin, 3 lines top margin, aligned margins
   } else {
     # Set top margin to 3 lines when not plotting distribution
-    current_mar <- par("mar")
-    par(mar = c(current_mar[1], current_mar[2], 3, current_mar[4]))
+    par(mar = c(old_par$mar[1], old_par$mar[2], 3, old_par$mar[4]))
   }
   
   # Set default labels if not provided

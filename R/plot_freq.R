@@ -269,6 +269,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       
       # Ensure adequate top margin for main title and (N=...) text
       old_mar <- par("mar")
+      on.exit(par(mar = old_mar), add = TRUE)
       if (!"mar" %in% names(dots)) {
         # Increase top margin if it's too small (less than 5 lines to accommodate title and N)
         if (old_mar[3] < 5) {
@@ -284,11 +285,6 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       # Main title is typically at line 3, so position (N=...) at line 0.75 (between positions used for grouped and non-grouped plots)
       tot <- length(x)
       mtext(paste0("(N=", tot, ")"), side = 3, line = 0.75, font = 3, cex = 0.9)
-      
-      # Restore original margins if we changed them
-      if (!"mar" %in% names(dots) && old_mar[3] < 5) {
-        par(mar = old_mar)
-      }
       
       # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
@@ -520,6 +516,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     
       # Ensure adequate top margin for main title and (N=...) text
       old_mar <- par("mar")
+      on.exit(par(mar = old_mar), add = TRUE)
       if (!"mar" %in% names(dots)) {
         # Increase top margin if it's too small (less than 5 lines to accommodate title and N)
         if (old_mar[3] < 5) {
@@ -536,11 +533,6 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     # Main title is typically at line 3, so position (N=...) at line 0.75 (between positions used for grouped and non-grouped plots)
         tot <- total  # Use the original total (before percentage conversion)
         mtext(paste0("(N=", tot, ")"), side = 3, line = 0.75, font = 3, cex = 0.9)
-      
-      # Restore original margins if we changed them
-      if (!"mar" %in% names(dots) && old_mar[3] < 5) {
-        par(mar = old_mar)
-      }
         
     # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
