@@ -243,11 +243,25 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   n_used <- robust_fit$nobs
   n_missing <- n_original - n_used
   
-  # Calculate standardized coefficients and NA counts
+  # Calculate standardized coefficients, means/percentages, and NA counts
   standardized_coefs <- numeric(length(term_names))
+  mean_or_pct <- numeric(length(term_names))
   na_counts <- integer(length(term_names))
   names(standardized_coefs) <- term_names
+  names(mean_or_pct) <- term_names
   names(na_counts) <- term_names
+  
+  # Get model matrix for dummy variable percentages
+  # Try from classical_fit first, then robust_fit
+  model_matrix <- tryCatch(
+    stats::model.matrix(classical_fit),
+    error = function(e) {
+      tryCatch(
+        stats::model.matrix(robust_fit),
+        error = function(e2) NULL
+      )
+    }
+  )
   
   # Get original data to count NAs (before model.frame removes them)
   # We need to look at the raw data columns
@@ -255,6 +269,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     term <- term_names[i]
     if (term == "(Intercept)") {
       standardized_coefs[i] <- NA_real_
+      mean_or_pct[i] <- NA_real_
       na_counts[i] <- NA_integer_  # NA count not meaningful for intercept
     } else {
       # Get the coefficient
@@ -289,16 +304,19 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
         } else {
           standardized_coefs[i] <- NA_real_
         }
+        mean_or_pct[i] <- NA_real_  # Mean/pct not meaningful for interactions
         na_counts[i] <- NA_integer_  # NA count not meaningful for interactions
         
       } else if (term %in% names(model_data)) {
-        # Simple term: compute b * sd(x) / sd(y)
+        # Simple term in model data: compute b * sd(x) / sd(y)
         x <- model_data[[term]]
         if (is.numeric(x)) {
           sd_x <- stats::sd(x, na.rm = TRUE)
           standardized_coefs[i] <- b * (sd_x / sd_y)
+          mean_or_pct[i] <- mean(x, na.rm = TRUE)
         } else {
           standardized_coefs[i] <- NA_real_
+          mean_or_pct[i] <- NA_real_
         }
         # Count NAs in original data column
         if (term %in% names(data)) {
@@ -307,9 +325,37 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
           na_counts[i] <- NA_integer_
         }
       } else {
-        # For factor levels, etc., set to NA
-        standardized_coefs[i] <- NA_real_
-        na_counts[i] <- NA_integer_
+        # For factor levels (e.g., "groupB"), get standardized coef and % from model matrix
+        # Try to get percentage from model matrix (dummy variable)
+        if (!is.null(model_matrix) && term %in% colnames(model_matrix)) {
+          dummy_col <- model_matrix[, term]
+          # Calculate standardized coefficient: b * sd(dummy) / sd(y)
+          sd_dummy <- stats::sd(dummy_col, na.rm = TRUE)
+          standardized_coefs[i] <- b * sd_dummy / sd_y
+          # Calculate percentage of 1s (multiply by 100 for display as %)
+          mean_or_pct[i] <- mean(dummy_col, na.rm = TRUE) * 100
+          
+          # Count NAs in the original factor variable
+          # Find the factor variable name by checking which data column this term came from
+          found_na_count <- FALSE
+          for (var_name in names(data)) {
+            if (is.factor(data[[var_name]]) || is.character(data[[var_name]])) {
+              # Check if this term starts with the variable name
+              if (startsWith(term, var_name)) {
+                na_counts[i] <- sum(is.na(data[[var_name]]))
+                found_na_count <- TRUE
+                break
+              }
+            }
+          }
+          if (!found_na_count) {
+            na_counts[i] <- 0L
+          }
+        } else {
+          standardized_coefs[i] <- NA_real_
+          mean_or_pct[i] <- NA_real_
+          na_counts[i] <- NA_integer_
+        }
       }
     }
   }
@@ -324,6 +370,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     df = df_values,
     p.value = p_values,
     B = standardized_coefs,
+    mean_or_pct = mean_or_pct,
     row.names = NULL,
     stringsAsFactors = FALSE
   )
@@ -654,10 +701,30 @@ print.lm2 <- function(x, notes = NULL, ...) {
     se_flag[i] <- paste(flags, collapse = " ")
   }
   
-  # Format B column, using "--" for intercept instead of NA
+  # Format B column, using "  --" for intercept or NA (with extra padding for alignment)
   B_formatted <- sapply(seq_along(tbl$B), function(i) {
+    if (tbl$term[i] == "(Intercept)") return("  --")
+    val <- smart_round(tbl$B[i])
+    if (val == "--") return("  --")
+    val
+  })
+  
+  # Format mean column: mean for numeric vars, % for factor levels, "--" for intercept/interactions
+  mean_formatted <- sapply(seq_along(tbl$mean_or_pct), function(i) {
     if (tbl$term[i] == "(Intercept)") return("--")
-    smart_round(tbl$B[i])
+    if (is.na(tbl$mean_or_pct[i])) return("--")
+    val <- tbl$mean_or_pct[i]
+    # Check if this is a factor level (will have % value typically between 0-100)
+    # We stored percentages (0-100) for factor levels, means for numeric
+    # Factor levels are identified by not being in model_data names
+    term <- tbl$term[i]
+    if (!(term %in% names(model_data)) && !grepl(":", term)) {
+      # This is a factor level - show as percentage with % sign
+      paste0(format(round(val, 1), nsmall = 1), "%")
+    } else {
+      # Numeric variable - show mean
+      smart_round(val)
+    }
   })
   
   # Format missing column, using "--" for intercept instead of NA
@@ -715,7 +782,8 @@ print.lm2 <- function(x, notes = NULL, ...) {
         t.value = right_align(t_vals, 1),
         df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        effect.size = pad(B_formatted, 1),
+        std.estimate = pad(B_formatted, 2),
+        `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
       )
@@ -728,7 +796,8 @@ print.lm2 <- function(x, notes = NULL, ...) {
         SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        effect.size = pad(B_formatted, 1),
+        std.estimate = pad(B_formatted, 2),
+        `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
       )
@@ -745,7 +814,8 @@ print.lm2 <- function(x, notes = NULL, ...) {
         t.value = right_align(t_vals, 1),
         df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        effect.size = pad(B_formatted, 1),
+        std.estimate = pad(B_formatted, 2),
+        `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
       )
@@ -757,7 +827,8 @@ print.lm2 <- function(x, notes = NULL, ...) {
         SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        effect.size = pad(B_formatted, 1),
+        std.estimate = pad(B_formatted, 2),
+        `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
       )
@@ -788,6 +859,32 @@ print.lm2 <- function(x, notes = NULL, ...) {
         baseline_row[[col]] <- ""
       }
       baseline_row$estimate <- "[baseline]"
+      
+      # Calculate percentage for the baseline level
+      if (bl$var_name %in% names(model_data)) {
+        factor_col <- model_data[[bl$var_name]]
+        baseline_pct <- mean(factor_col == bl$baseline_level, na.rm = TRUE) * 100
+        baseline_pct_str <- paste0(format(round(baseline_pct, 1), nsmall = 1), "%")
+        # Match the width of existing mean column values for alignment
+        # right_align adds 1 trailing space, so we need width-1 for the content, then add trailing space
+        existing_width <- max(nchar(display_df$`  mean`))
+        baseline_row$`  mean` <- paste0(format(baseline_pct_str, width = existing_width - 1, justify = "right"), " ")
+      }
+      
+      # Count missing observations for this factor variable
+      # Get the NA count from an existing level of this factor in tbl
+      baseline_na_count <- 0L
+      for (k in seq_len(nrow(tbl))) {
+        # Look for a term that starts with this factor's variable name
+        if (startsWith(tbl$term[k], bl$var_name)) {
+          # Get the na_count for this term from the na_counts attribute
+          if (!is.null(na_counts) && !is.na(na_counts[k])) {
+            baseline_na_count <- na_counts[k]
+            break
+          }
+        }
+      }
+      baseline_row$missing <- paste0("  ", baseline_na_count)
       
       # Insert before the first level of this factor
       insert_pos <- bl$insert_before
@@ -825,7 +922,6 @@ print.lm2 <- function(x, notes = NULL, ...) {
     cat("df =", round(tbl$df[1], 0), " | ")
   }
   cat("R\u00b2 =", format(round(x$r.squared, 3), nsmall = 3), " | ")
-  cat("Adj. R\u00b2 =", format(round(x$adj.r.squared, 3), nsmall = 3), " | ")
   if (has_clusters) {
     cat("SE type: CR2 (cluster)\n")
   } else {
@@ -839,8 +935,12 @@ print.lm2 <- function(x, notes = NULL, ...) {
     } else {
       cat("  - t.value & p.value are based on robust SE (HC3)\n")
     }
-    cat("  - effect.size is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
-    cat("    for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)\n")
+    if (has_interactions) {
+      cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
+      cat("    for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)\n")
+    } else {
+      cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
+    }
     cat("  - missing: number of observations excluded due to missing values\n")
     if (has_interactions) {
       cat("  - red.flag:\n")

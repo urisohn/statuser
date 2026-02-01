@@ -403,7 +403,7 @@ test_that("print.lm2 shows notes by default", {
   output_text <- paste(output, collapse = "\n")
   
   expect_true(grepl("Notes:", output_text))
-  expect_true(grepl("effect.size", output_text))
+  expect_true(grepl("std.estimate", output_text))
   expect_true(grepl("red.flag", output_text))
 })
 
