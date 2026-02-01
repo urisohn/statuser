@@ -744,12 +744,14 @@ print.lm2 <- function(x, notes = NULL, ...) {
             cor_val <- cor_test$estimate  # Keep sign for display
             cor_p <- cor_test$p.value
             
-            # Format correlation: 2 decimals, ** for p<.01, * for p<.05
+            # Format correlation: 2 decimals, † for p<.1, * for p<.05, ** for p<.01
             cor_formatted <- format(round(cor_val, 2), nsmall = 2)
             if (!is.na(cor_p) && cor_p < 0.01) {
               cor_formatted <- paste0(cor_formatted, "**")
             } else if (!is.na(cor_p) && cor_p < 0.05) {
               cor_formatted <- paste0(cor_formatted, "*")
+            } else if (!is.na(cor_p) && cor_p < 0.1) {
+              cor_formatted <- paste0(cor_formatted, "\u2020")  # † character
             }
             cor_rxz[i] <- cor_formatted
             
@@ -819,7 +821,22 @@ print.lm2 <- function(x, notes = NULL, ...) {
   if (is.null(has_clusters)) has_clusters <- FALSE
   
   # Format columns
-  estimate_vals <- sapply(tbl$estimate, smart_round)
+  # Add significance stars to estimates: † p<.1, * p<.05, ** p<.01
+  # Pad stars to consistent width (2 chars) for alignment
+  estimate_vals <- sapply(seq_along(tbl$estimate), function(i) {
+    est <- smart_round(tbl$estimate[i])
+    p <- tbl$p.value[i]
+    if (is.na(p)) return(paste0(est, "  "))
+    if (p < 0.01) {
+      paste0(est, "**")
+    } else if (p < 0.05) {
+      paste0(est, "* ")
+    } else if (p < 0.1) {
+      paste0(est, "\u2020 ")  # † character + space
+    } else {
+      paste0(est, "  ")
+    }
+  })
   t_vals <- sapply(tbl$t, smart_round)
   
   # Check if df varies across coefficients
@@ -999,21 +1016,17 @@ print.lm2 <- function(x, notes = NULL, ...) {
   }
   if (notes) {
     cat("\nNotes:\n")
+    cat("  - \u2020 p<.1, * p<.05, ** p<.01\n")
     if (has_clusters) {
       cat("  - t.value & p.value are based on clustered SE (CR2)\n")
       cat("  - SE.robust (HC3) used only to contrast with SE.classical to flag observations\n")
     } else {
       cat("  - t.value & p.value are based on robust SE (HC3)\n")
     }
-    if (has_interactions) {
-      cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
-      cat("                            for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)\n")
-    } else {
-      cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
-    }
+    cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
     cat("  - missing: number of observations excluded due to missing values\n")
     if (has_interactions) {
-      cat("  - r(x,z): correlation between interacted variables (* p<.05, ** p<.01)\n")
+      cat("  - r(x,z): correlation between interacted variables\n")
     }
     # Build red.flag note based on which flags are present
     if (has_se_flags || has_cor_flags) {
