@@ -332,8 +332,18 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
           # Calculate standardized coefficient: b * sd(dummy) / sd(y)
           sd_dummy <- stats::sd(dummy_col, na.rm = TRUE)
           standardized_coefs[i] <- b * sd_dummy / sd_y
-          # Calculate percentage of 1s (multiply by 100 for display as %)
-          mean_or_pct[i] <- mean(dummy_col, na.rm = TRUE) * 100
+          
+          # Check if this is an ordered factor polynomial contrast (.L, .Q, .C, .^n)
+          # These have non-0/1 values so percentage doesn't make sense
+          is_polynomial_contrast <- grepl("\\.(L|Q|C|\\^[0-9]+)$", term)
+          
+          if (is_polynomial_contrast) {
+            # Polynomial contrasts: mean/pct not meaningful
+            mean_or_pct[i] <- NA_real_
+          } else {
+            # Treatment contrasts (dummy 0/1): calculate percentage of 1s
+            mean_or_pct[i] <- mean(dummy_col, na.rm = TRUE) * 100
+          }
           
           # Count NAs in the original factor variable
           # Find the factor variable name by checking which data column this term came from
@@ -453,10 +463,10 @@ print.lm2 <- function(x, notes = NULL, ...) {
   format_p <- function(p) {
     if (is.na(p)) return(NA_character_)
     if (p < 0.0001) return("<.0001")
-    # Round to 4 decimals, remove leading zero
+    # Round to 4 decimals, remove leading zero, add space to align with "<.0001"
     p_rounded <- round(p, 4)
     p_str <- format(p_rounded, nsmall = 4, scientific = FALSE)
-    p_str <- sub("^0\\.", ".", p_str)
+    p_str <- sub("^0\\.", " .", p_str)  # Replace leading 0 with space for alignment
     p_str
   }
   
@@ -782,7 +792,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
         t.value = right_align(t_vals, 1),
         df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        std.estimate = pad(B_formatted, 2),
+        std.estimate = pad(right_align(B_formatted, 0), 3),
         `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
@@ -796,7 +806,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
         SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        std.estimate = pad(B_formatted, 2),
+        std.estimate = pad(right_align(B_formatted, 0), 3),
         `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
@@ -814,7 +824,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
         t.value = right_align(t_vals, 1),
         df = pad(sapply(df_vals, function(d) format(round(d, 1), nsmall = 1)), 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        std.estimate = pad(B_formatted, 2),
+        std.estimate = pad(right_align(B_formatted, 0), 3),
         `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
@@ -827,7 +837,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
         SE.classical = pad(sapply(tbl$SE.classical, smart_round), 3),
         t.value = right_align(t_vals, 1),
         p.value = pad(sapply(tbl$p.value, format_p), 1),
-        std.estimate = pad(B_formatted, 2),
+        std.estimate = pad(right_align(B_formatted, 0), 3),
         `  mean` = right_align(mean_formatted, 1),
         stringsAsFactors = FALSE,
         check.names = FALSE
