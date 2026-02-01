@@ -35,7 +35,7 @@
       Notes:
         - t.value & p.value are based on robust SE (HC3)
         - effect.size is the standardized coefficient: beta = b * sd(x) / sd(y)
-           for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)
+          for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)
         - missing: number of observations excluded due to missing values
         - red.flag: !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%
           (set notes==FALSE to prevent printing these notes)

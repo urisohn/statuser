@@ -779,15 +779,15 @@ print.lm2 <- function(x, notes = NULL, ...) {
       bl <- factor_info$baseline_info[[j]]
       baseline_term <- paste0(bl$var_name, " (", bl$baseline_level, ")  ")
       
-      # Create a baseline row with "[omitted]" placeholder
+      # Create a baseline row with "[baseline]" placeholder
       baseline_row <- display_df[1, , drop = FALSE]  # Copy structure
       baseline_row$term <- baseline_term
-      # Set all numeric columns to "[omitted]" indicator
+      # Set all numeric columns to "[baseline]" indicator
       for (col in names(baseline_row)) {
         if (col == "term") next
         baseline_row[[col]] <- ""
       }
-      baseline_row$estimate <- "[omitted]"
+      baseline_row$estimate <- "[baseline]"
       
       # Insert before the first level of this factor
       insert_pos <- bl$insert_before

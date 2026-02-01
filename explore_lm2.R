@@ -57,7 +57,7 @@ simple_data$y2 <- 1 + 0.5 * simple_data$x + 0.3 * simple_data$z + rnorm(n, sd = 
   factor_data$group3_ord <- ordered(factor_data$group3, levels = c("Low", "Med", "High"))
 
 # 2.1 - Two-level factor
-  lm2(y ~ x + group2, data = factor_data)
+  m1=lm2(y ~ x + group2, data = factor_data)
 
 # 2.2 - Three-level factor
   lm2(y2 ~ x + group3, data = factor_data)
