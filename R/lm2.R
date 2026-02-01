@@ -38,9 +38,9 @@
 #'     King & Roberts (2015) propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
 #'     \code{statuser} does not follow either recommendation. The former seems too liberal, the 
 #'     latter too time consuming to include in every regression, plus the focus here is on individual variables rather than joint tests.
-#'   \item \code{X} and \code{X*}: For interaction terms, the component variables are correlated with 
-#'     |r| > 0.3 (\code{X}) or p < .05 (\code{X*}); this can produce spurious interactions. Authors are advised
-#'     to not rely on the linear model and instead use GAM (Simonsohn, 2024).
+#'   \item \code{X}: For interaction terms, the component variables are correlated (|r| > 0.3 or p < .05),
+#'     which means the interaction term is likely to be biased. See Simonsohn (2024) "Interacting with curves"
+#'     \url{https://doi.org/10.1177/25152459231207795}.
 #' }
 #'
 #' @references
@@ -696,11 +696,8 @@ print.lm2 <- function(x, notes = NULL, ...) {
             cor_val <- abs(cor_test$estimate)
             cor_p <- cor_test$p.value
             
-            # X* if correlation is significant at p < .05
-            if (!is.na(cor_p) && cor_p < 0.05) {
-              flags <- c(flags, "X*")
-            } else if (!is.na(cor_val) && cor_val > 0.3) {
-              # X if correlation > .3 (but not significant)
+            # X if correlation r > .3 OR p < .05
+            if ((!is.na(cor_val) && cor_val > 0.3) || (!is.na(cor_p) && cor_p < 0.05)) {
               flags <- c(flags, "X")
             }
           }
@@ -955,12 +952,12 @@ print.lm2 <- function(x, notes = NULL, ...) {
     if (has_interactions) {
       cat("  - red.flag:\n")
       cat("     !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
-      cat("     X: terms in interaction are correlated r > .3 (see Simonsohn 2025)\n")
-      cat("     X*: terms in interaction are correlated p < .05 (see Simonsohn 2025)\n")
+      cat("     X: interacted variables are correlated, interaction term is likely to be biased\n")
+      cat("        See Simonsohn (2024) \"Interacting with curves\" https://doi.org/10.1177/25152459231207795\n")
     } else {
       cat("  - red.flag: !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
     }
-    cat("    (set notes==FALSE to prevent printing these notes)\n")
+    cat("  - To avoid these notes, lm2(..., notes=FALSE)\n")
   }
   
   invisible(x)
