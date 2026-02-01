@@ -319,7 +319,66 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
         } else {
           standardized_coefs[i] <- NA_real_
         }
-        mean_or_pct[i] <- NA_real_  # Mean/pct not meaningful for interactions
+        
+        # Compute mean for interactions: 
+        # For x*z where z is factor: mean of x for that factor level
+        # For x*z where both numeric: mean of x*z product
+        if (length(components) == 2) {
+          # Try to identify numeric vs factor components
+          comp1 <- components[1]
+          comp2 <- components[2]
+          
+          # Helper to get variable and check if it's a factor level
+          get_var_info <- function(comp_name) {
+            # Direct numeric variable
+            if (comp_name %in% names(model_data)) {
+              v <- model_data[[comp_name]]
+              if (is.numeric(v)) return(list(type = "numeric", var = v, filter = NULL))
+              if (is.factor(v)) return(list(type = "factor", var = v, filter = NULL))
+            }
+            # Factor level term (e.g., "groupTreatment")
+            for (var_name in names(model_data)) {
+              if (is.factor(model_data[[var_name]]) || is.character(model_data[[var_name]])) {
+                if (startsWith(comp_name, var_name)) {
+                  level_name <- substring(comp_name, nchar(var_name) + 1)
+                  factor_var <- model_data[[var_name]]
+                  if (level_name %in% levels(factor(factor_var))) {
+                    return(list(type = "factor_level", var = factor_var, filter = level_name))
+                  }
+                }
+              }
+            }
+            return(NULL)
+          }
+          
+          info1 <- get_var_info(comp1)
+          info2 <- get_var_info(comp2)
+          
+          if (!is.null(info1) && !is.null(info2)) {
+            # Case 1: numeric * factor_level -> mean of numeric where factor == level
+            if (info1$type == "numeric" && info2$type == "factor_level") {
+              filter_idx <- info2$var == info2$filter
+              mean_or_pct[i] <- mean(info1$var[filter_idx], na.rm = TRUE)
+            } else if (info1$type == "factor_level" && info2$type == "numeric") {
+              filter_idx <- info1$var == info1$filter
+              mean_or_pct[i] <- mean(info2$var[filter_idx], na.rm = TRUE)
+            # Case 2: numeric * numeric -> mean of product
+            } else if (info1$type == "numeric" && info2$type == "numeric") {
+              mean_or_pct[i] <- mean(info1$var * info2$var, na.rm = TRUE)
+            # Case 3: factor_level * factor_level -> percentage where both conditions met
+            } else if (info1$type == "factor_level" && info2$type == "factor_level") {
+              filter_idx <- (info1$var == info1$filter) & (info2$var == info2$filter)
+              mean_or_pct[i] <- mean(filter_idx, na.rm = TRUE) * 100
+            } else {
+              mean_or_pct[i] <- NA_real_
+            }
+          } else {
+            mean_or_pct[i] <- NA_real_
+          }
+        } else {
+          # 3+ way interactions: skip for now
+          mean_or_pct[i] <- NA_real_
+        }
         na_counts[i] <- NA_integer_  # NA count not meaningful for interactions
         
       } else if (term %in% names(model_data)) {
@@ -776,17 +835,36 @@ print.lm2 <- function(x, notes = NULL, ...) {
     val
   })
   
-  # Format mean column: mean for numeric vars, % for factor levels, "--" for intercept/interactions
+  # Format mean column: mean for numeric vars, % for factor levels
+  # For interactions: mean of x for factor level, mean of x*z for numeric*numeric, % for factor*factor
   mean_formatted <- sapply(seq_along(tbl$mean_or_pct), function(i) {
     if (tbl$term[i] == "(Intercept)") return("--")
     if (is.na(tbl$mean_or_pct[i])) return("--")
     val <- tbl$mean_or_pct[i]
-    # Check if this is a factor level (will have % value typically between 0-100)
-    # We stored percentages (0-100) for factor levels, means for numeric
-    # Factor levels are identified by not being in model_data names
     term <- tbl$term[i]
-    if (!(term %in% names(model_data)) && !grepl(":", term)) {
-      # This is a factor level - show as percentage with % sign
+    
+    # Check if this is a factor*factor interaction (show as %)
+    # We stored percentages (0-100) for these
+    if (grepl(":", term)) {
+      # Interaction term - check if it's factor*factor by looking at value range
+      # Factor*factor interactions have percentage values (0-100)
+      # We need to check components to determine
+      components <- strsplit(term, ":")[[1]]
+      is_factor_factor <- TRUE
+      for (comp in components) {
+        # If component is in model_data and is numeric, it's not factor*factor
+        if (comp %in% names(model_data) && is.numeric(model_data[[comp]])) {
+          is_factor_factor <- FALSE
+          break
+        }
+      }
+      if (is_factor_factor) {
+        paste0(format(round(val, 1), nsmall = 1), "%")
+      } else {
+        smart_round(val)
+      }
+    } else if (!(term %in% names(model_data))) {
+      # This is a factor level (main effect) - show as percentage with % sign
       paste0(format(round(val, 1), nsmall = 1), "%")
     } else {
       # Numeric variable - show mean
@@ -1024,6 +1102,11 @@ print.lm2 <- function(x, notes = NULL, ...) {
       cat("  - t.value & p.value are based on robust SE (HC3)\n")
     }
     cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
+    if (has_interactions) {
+      cat("  - mean: for main effects mean of x; for x*z interaction where z is factor, mean of x when z==1\n")
+    } else {
+      cat("  - mean: for numeric variables, mean of x; for factors, % of observations\n")
+    }
     cat("  - missing: number of observations excluded due to missing values\n")
     if (has_interactions) {
       cat("  - r(x,z): correlation between interacted variables\n")

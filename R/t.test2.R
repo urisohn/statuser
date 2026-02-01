@@ -164,30 +164,50 @@ t.test2 <- function(...) {
       y_var_name <- extract_var_name(formula[[2]])
       group_var_name <- extract_var_name(formula[[3]])
       
+      # Check if the formula uses $ notation (e.g., df$minutes.watched ~ df$cond)
+      y_expr_str <- deparse(formula[[2]], width.cutoff = 500)
+      group_expr_str <- deparse(formula[[3]], width.cutoff = 500)
+      y_uses_dollar <- grepl("\\$", y_expr_str)
+      group_uses_dollar <- grepl("\\$", group_expr_str)
+      
       # Extract y and group variables
       # Match t.test() behavior: check environment first, then data frame
       # This is important because t.test() uses environment variables if they exist,
       # even when data= is specified
-      y_from_env <- exists(y_var_name, envir = calling_env, inherits = TRUE)
-      y_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && y_var_name %in% names(data_arg)
       
-      if (y_from_env) {
-        y_var <- eval(as.name(y_var_name), envir = calling_env)
-      } else if (y_from_data) {
-        y_var <- data_arg[[y_var_name]]
+      # For $ notation, evaluate the full expression directly
+      if (y_uses_dollar) {
+        y_var <- eval(formula[[2]], envir = calling_env)
+        y_from_env <- TRUE
+        y_from_data <- FALSE
       } else {
-        y_var <- eval(as.name(y_var_name), envir = calling_env)  # Will throw error if not found
+        y_from_env <- exists(y_var_name, envir = calling_env, inherits = TRUE)
+        y_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && y_var_name %in% names(data_arg)
+        
+        if (y_from_env) {
+          y_var <- eval(as.name(y_var_name), envir = calling_env)
+        } else if (y_from_data) {
+          y_var <- data_arg[[y_var_name]]
+        } else {
+          y_var <- eval(as.name(y_var_name), envir = calling_env)  # Will throw error if not found
+        }
       }
       
-      group_from_env <- exists(group_var_name, envir = calling_env, inherits = TRUE)
-      group_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && group_var_name %in% names(data_arg)
-      
-      if (group_from_env) {
-        group_var <- eval(as.name(group_var_name), envir = calling_env)
-      } else if (group_from_data) {
-        group_var <- data_arg[[group_var_name]]
+      if (group_uses_dollar) {
+        group_var <- eval(formula[[3]], envir = calling_env)
+        group_from_env <- TRUE
+        group_from_data <- FALSE
       } else {
-        group_var <- eval(as.name(group_var_name), envir = calling_env)  # Will throw error if not found
+        group_from_env <- exists(group_var_name, envir = calling_env, inherits = TRUE)
+        group_from_data <- !is.null(data_arg) && is.data.frame(data_arg) && group_var_name %in% names(data_arg)
+        
+        if (group_from_env) {
+          group_var <- eval(as.name(group_var_name), envir = calling_env)
+        } else if (group_from_data) {
+          group_var <- data_arg[[group_var_name]]
+        } else {
+          group_var <- eval(as.name(group_var_name), envir = calling_env)  # Will throw error if not found
+        }
       }
       
       # Check if data= is specified but variables were read from environment instead
