@@ -641,12 +641,16 @@ print.lm2 <- function(x, notes = NULL, ...) {
   }
   
   # Calculate SE flag: ! if robust and classical differ by >25%, !! if >50%, !!! if >100%
-  # Also check for interaction term correlations (X, X*)
+  # Also check for interaction term correlations and store r(x,z) values
   se_flag <- character(nrow(tbl))
+  cor_rxz <- character(nrow(tbl))  # Store formatted correlation for r(x,z) column
   has_interactions <- FALSE
+  has_se_flags <- FALSE      # Track if any SE-related flags (!, !!, !!!)
+  has_cor_flags <- FALSE     # Track if any correlation-related flags (X)
   
   for (i in seq_len(nrow(tbl))) {
     flags <- character(0)
+    cor_rxz[i] <- "--"  # Default for non-interaction terms
     
     # Check SE difference
     se_classical <- tbl$SE.classical[i]
@@ -655,10 +659,13 @@ print.lm2 <- function(x, notes = NULL, ...) {
       ratio_diff <- abs(se_classical - se_robust) / se_classical
       if (ratio_diff > 1) {
         flags <- c(flags, "!!!")
+        has_se_flags <- TRUE
       } else if (ratio_diff > 0.5) {
         flags <- c(flags, "!!")
+        has_se_flags <- TRUE
       } else if (ratio_diff > 0.25) {
         flags <- c(flags, "!")
+        has_se_flags <- TRUE
       }
     }
     
@@ -669,21 +676,47 @@ print.lm2 <- function(x, notes = NULL, ...) {
       # Extract the component variable names
       components <- strsplit(term, ":")[[1]]
       
-      # Check correlation between components if we have 2 numeric variables
+      # Check correlation between components if we have 2 components
       if (length(components) == 2 && !is.null(model_data)) {
         var1_name <- components[1]
         var2_name <- components[2]
         
-        # Try to get the variables from model data or original data
-        var1 <- NULL
-        var2 <- NULL
+        # Helper function to get numeric variable for correlation
+        # Handles both direct numeric variables and factor level terms
+        get_numeric_var <- function(comp_name, model_data, model_matrix) {
+          # First check if it's directly in model_data as numeric
+          if (comp_name %in% names(model_data)) {
+            v <- model_data[[comp_name]]
+            if (is.numeric(v)) return(v)
+            # If it's a factor with 2 levels, convert to 0/1
+            if (is.factor(v) && length(levels(v)) == 2) {
+              return(as.numeric(v) - 1)
+            }
+          }
+          # Check if it's a factor level term (e.g., "groupTreatment")
+          # Try to find the original factor variable
+          for (var_name in names(model_data)) {
+            if (is.factor(model_data[[var_name]]) || is.character(model_data[[var_name]])) {
+              if (startsWith(comp_name, var_name)) {
+                # Extract the level name
+                level_name <- substring(comp_name, nchar(var_name) + 1)
+                factor_var <- model_data[[var_name]]
+                if (level_name %in% levels(factor(factor_var))) {
+                  # Convert to 0/1 for this specific level
+                  return(as.numeric(factor_var == level_name))
+                }
+              }
+            }
+          }
+          # Try model matrix as fallback
+          if (!is.null(model_matrix) && comp_name %in% colnames(model_matrix)) {
+            return(model_matrix[, comp_name])
+          }
+          return(NULL)
+        }
         
-        if (var1_name %in% names(model_data)) {
-          var1 <- model_data[[var1_name]]
-        }
-        if (var2_name %in% names(model_data)) {
-          var2 <- model_data[[var2_name]]
-        }
+        var1 <- get_numeric_var(var1_name, model_data, model_matrix)
+        var2 <- get_numeric_var(var2_name, model_data, model_matrix)
         
         # Calculate correlation if both are numeric
         if (!is.null(var1) && !is.null(var2) && is.numeric(var1) && is.numeric(var2)) {
@@ -693,12 +726,22 @@ print.lm2 <- function(x, notes = NULL, ...) {
           )
           
           if (!is.null(cor_test)) {
-            cor_val <- abs(cor_test$estimate)
+            cor_val <- cor_test$estimate  # Keep sign for display
             cor_p <- cor_test$p.value
             
-            # X if correlation r > .3 OR p < .05
-            if ((!is.na(cor_val) && cor_val > 0.3) || (!is.na(cor_p) && cor_p < 0.05)) {
+            # Format correlation: 2 decimals, ** for p<.01, * for p<.05
+            cor_formatted <- format(round(cor_val, 2), nsmall = 2)
+            if (!is.na(cor_p) && cor_p < 0.01) {
+              cor_formatted <- paste0(cor_formatted, "**")
+            } else if (!is.na(cor_p) && cor_p < 0.05) {
+              cor_formatted <- paste0(cor_formatted, "*")
+            }
+            cor_rxz[i] <- cor_formatted
+            
+            # X if correlation |r| > .3 OR p < .05
+            if ((!is.na(cor_val) && abs(cor_val) > 0.3) || (!is.na(cor_p) && cor_p < 0.05)) {
               flags <- c(flags, "X")
+              has_cor_flags <- TRUE
             }
           }
         }
@@ -712,7 +755,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
   B_formatted <- sapply(seq_along(tbl$B), function(i) {
     if (tbl$term[i] == "(Intercept)") return("  --")
     val <- smart_round(tbl$B[i])
-    if (val == "--") return("  --")
+    if (is.na(val)) return("  --")
     val
   })
   
@@ -847,6 +890,11 @@ print.lm2 <- function(x, notes = NULL, ...) {
     display_df$missing <- pad(missing_formatted, 2)
   }
   
+  # Add r(x,z) column for interaction correlations (only if there are interactions)
+  if (has_interactions) {
+    display_df$`r(x,z)` <- pad(right_align(cor_rxz, 0), 2)
+  }
+  
   # Add red flag column at the end (use "--" when no flag)
   display_df$red.flag <- pad(ifelse(se_flag == "", "--", se_flag), 4)
   
@@ -944,18 +992,28 @@ print.lm2 <- function(x, notes = NULL, ...) {
     }
     if (has_interactions) {
       cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
-      cat("    for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)\n")
+      cat("                            for x*z interactions: beta = b * sd(x) * sd(z) / sd(y)\n")
     } else {
       cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
     }
     cat("  - missing: number of observations excluded due to missing values\n")
     if (has_interactions) {
+      cat("  - r(x,z): correlation between interacted variables (* p<.05, ** p<.01)\n")
+    }
+    # Build red.flag note based on which flags are present
+    if (has_se_flags || has_cor_flags) {
       cat("  - red.flag:\n")
-      cat("     !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
-      cat("     X: interacted variables are correlated, interaction term is likely to be biased\n")
-      cat("        See Simonsohn (2024) \"Interacting with curves\" https://doi.org/10.1177/25152459231207795\n")
+      # SE flags explanation (only if present)
+      if (has_se_flags) {
+        cat("     !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
+      }
+      # Correlation flags explanation (only if present)
+      if (has_cor_flags) {
+        cat("     X: interacted variables are correlated, interaction term is likely to be biased\n")
+        cat("        See Simonsohn (2024) \"Interacting with curves\" https://doi.org/10.1177/25152459231207795\n")
+      }
     } else {
-      cat("  - red.flag: !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
+      cat("  - red.flag: none\n")
     }
     cat("  - To avoid these notes, lm2(..., notes=FALSE)\n")
   }
