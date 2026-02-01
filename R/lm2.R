@@ -171,8 +171,23 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     stop("Package 'estimatr' is required for lm2(). Please install it with: install.packages('estimatr')")
   }
   
-  # Check if clusters are specified (either as argument or in ...)
-  has_clusters <- !is.null(clusters) || "clusters" %in% names(list(...))
+  # Capture clusters expression for non-standard evaluation
+  clusters_expr <- substitute(clusters)
+  has_clusters <- !missing(clusters) && !is.null(clusters_expr) && !identical(clusters_expr, quote(NULL))
+  
+  # Evaluate clusters in data context if provided
+  clusters_vec <- NULL
+  if (has_clusters && !is.null(data)) {
+    clusters_vec <- tryCatch(
+      eval(clusters_expr, envir = data, enclos = parent.frame()),
+      error = function(e) {
+        # Try evaluating in parent frame if not in data
+        eval(clusters_expr, envir = parent.frame(2))
+      }
+    )
+  } else if (has_clusters) {
+    clusters_vec <- eval(clusters_expr, envir = parent.frame())
+  }
   
   # Validate inputs and construct data frame if needed
   validated <- validate_lm2(
@@ -180,7 +195,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     data = data,
     se_type = se_type,
     se_type_missing = missing(se_type),
-    dots = list(..., clusters = clusters),
+    dots = list(..., clusters = clusters_vec),
     calling_env = parent.frame()
   )
   
@@ -190,7 +205,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
 
   # Build arguments for lm_robust (only include non-NULL optional args)
   lm_robust_args <- list(formula = formula, data = data, se_type = se_type, ...)
-  if (!is.null(clusters)) lm_robust_args$clusters <- clusters
+  if (has_clusters) lm_robust_args$clusters <- clusters_vec
   if (!is.null(fixed_effects)) lm_robust_args$fixed_effects <- fixed_effects
   
   # Run lm_robust with specified se_type
@@ -1013,7 +1028,11 @@ print.lm2 <- function(x, notes = NULL, ...) {
         cat("        See Simonsohn (2024) \"Interacting with curves\" https://doi.org/10.1177/25152459231207795\n")
       }
     } else {
-      cat("  - red.flag: none\n")
+      if (has_interactions) {
+        cat("  - red.flag: none (robust and classical SE are similar and interacted terms are not correlated)\n")
+      } else {
+        cat("  - red.flag: none (robust and classical SE are similar)\n")
+      }
     }
     cat("  - To avoid these notes, lm2(..., notes=FALSE)\n")
   }

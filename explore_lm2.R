@@ -127,29 +127,31 @@ simple_data$y2 <- 1 + 0.5 * simple_data$x + 0.3 * simple_data$z + rnorm(n, sd = 
 # ============================================================================
 # SECTION 4: CLUSTERED DATA
 # ============================================================================
-
-n_clusters <- 30
-n_per_cluster <- 20
-n_total <- n_clusters * n_per_cluster
-
-cluster_data <- data.frame(
-  cluster_id = rep(1:n_clusters, each = n_per_cluster),
-  x = rnorm(n_total)
-)
-cluster_effects <- rnorm(n_clusters, sd = 2)
-cluster_data$cluster_effect <- cluster_effects[cluster_data$cluster_id]
-cluster_data$y <- 1 + 
-  0.5 * cluster_data$x + 
-  cluster_data$cluster_effect + 
-  rnorm(n_total, sd = 1)
-cluster_data$treatment <- factor(rep(c("Control", "Treatment"), length.out = n_total))
-cluster_data$y2 <- 1 + 
-  0.5 * cluster_data$x + 
-  ifelse(cluster_data$treatment == "Treatment", 1, 0) +
-  0.3 * cluster_data$x * ifelse(cluster_data$treatment == "Treatment", 1, 0) +
-  cluster_data$cluster_effect + 
-  rnorm(n_total, sd = 1)
-
+        
+  
+  #Data
+        n_clusters <- 30
+        n_per_cluster <- 20
+        n_total <- n_clusters * n_per_cluster
+        
+        cluster_data <- data.frame(
+          cluster_id = rep(1:n_clusters, each = n_per_cluster),
+          x = rnorm(n_total)
+        )
+        cluster_effects <- rnorm(n_clusters, sd = 2)
+        cluster_data$cluster_effect <- cluster_effects[cluster_data$cluster_id]
+        cluster_data$y <- 1 + 
+          0.5 * cluster_data$x + 
+          cluster_data$cluster_effect + 
+          rnorm(n_total, sd = 1)
+        cluster_data$treatment <- factor(rep(c("Control", "Treatment"), length.out = n_total))
+        cluster_data$y2 <- 1 + 
+          0.5 * cluster_data$x + 
+          ifelse(cluster_data$treatment == "Treatment", 1, 0) +
+          0.3 * cluster_data$x * ifelse(cluster_data$treatment == "Treatment", 1, 0) +
+          cluster_data$cluster_effect + 
+          rnorm(n_total, sd = 1)
+        
 # 4.1 - Ignoring clusters (incorrect)
   lm2(y ~ x, data = cluster_data)
 
