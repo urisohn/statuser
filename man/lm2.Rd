@@ -65,9 +65,9 @@ The \code{red.flag} column provides diagnostic warnings:
     King & Roberts (2015) propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
     \code{statuser} does not follow either recommendation. The former seems too liberal, the 
     latter too time consuming to include in every regression, plus the focus here is on individual variables rather than joint tests.
-  \item \code{X} and \code{X*}: For interaction terms, the component variables are correlated with 
-    |r| > 0.3 (\code{X}) or p < .05 (\code{X*}); this can produce spurious interactions. Authors are advised
-    to not rely on the linear model and instead use GAM (Simonsohn, 2024).
+  \item \code{X}: For interaction terms, the component variables are correlated (|r| > 0.3 or p < .05),
+    which means the interaction term is likely to be biased. See Simonsohn (2024) "Interacting with curves"
+    \url{https://doi.org/10.1177/25152459231207795}.
 }
 }
 \examples{
