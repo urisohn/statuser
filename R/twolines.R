@@ -60,7 +60,7 @@
 
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Simple example with simulated data
 #' set.seed(123)
 #' x <- rnorm(100)

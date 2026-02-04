@@ -1,6 +1,7 @@
 # Utility functions (not exported)
 
-
+# Package-level state (avoid global options)
+.statuser_state <- new.env(parent = emptyenv())
 #0 Set default values in a list
 set_default <- function(x, name, value) {
   if (!name %in% names(x)) x[[name]] <- value

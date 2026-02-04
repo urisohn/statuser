@@ -31,7 +31,7 @@
 #' formats are handled by \code{magick::image_read()}.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Resize a single image file
 #' resize_images("path/to/image.svg", width = 800)
 #'

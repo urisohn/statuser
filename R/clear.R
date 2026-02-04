@@ -1,7 +1,7 @@
 #' Clear All: Environment, Console, and Graphics
 #'
-#' @param envir The environment to clear. Defaults to the calling environment 
-#'   (typically the global environment when called interactively).
+#' @param envir The environment to clear. Defaults to the calling environment.
+#'   The global environment is not modified by this function.
 #'
 #' @return Invisibly returns NULL. Prints a colored confirmation message.
 #'
@@ -17,18 +17,21 @@
 #' environment. Save anything that you wish to keep before running.
 #'
 #' @examples
-#' \dontrun{
-#' # Create some objects
-#' x <- 1:10
-#' y <- rnorm(10)
-#' plot(x, y)
-#'
-#' # Clear everything
-#' clear()
+#' \donttest{
+#' # Clear a temporary environment (safe for examples)
+#' tmp_env <- new.env()
+#' tmp_env$x <- 1:10
+#' tmp_env$y <- rnorm(10)
+#' clear(tmp_env)
 #' }
 #'
 #' @export
 clear <- function(envir = parent.frame()) {
+  if (identical(envir, .GlobalEnv)) {
+    warning("clear() will not modify the global environment. Provide a different environment via `envir`.")
+    return(invisible(NULL))
+  }
+
   # Clear environment
   rm(list = ls(envir = envir), envir = envir)
   

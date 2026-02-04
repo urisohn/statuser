@@ -7,8 +7,8 @@
 clear(envir = parent.frame())
 }
 \arguments{
-\item{envir}{The environment to clear. Defaults to the calling environment 
-(typically the global environment when called interactively).}
+\item{envir}{The environment to clear. Defaults to the calling environment.
+The global environment is not modified by this function.}
 }
 \value{
 Invisibly returns NULL. Prints a colored confirmation message.
@@ -28,14 +28,12 @@ This function performs three cleanup operations:
 environment. Save anything that you wish to keep before running.
 }
 \examples{
-\dontrun{
-# Create some objects
-x <- 1:10
-y <- rnorm(10)
-plot(x, y)
-
-# Clear everything
-clear()
+\donttest{
+# Clear a temporary environment (safe for examples)
+tmp_env <- new.env()
+tmp_env$x <- 1:10
+tmp_env$y <- rnorm(10)
+clear(tmp_env)
 }
 
 }

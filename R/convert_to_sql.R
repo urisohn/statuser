@@ -36,24 +36,18 @@
 #' wrapped in single quotes.
 #' 
 #' @examples
-#' \dontrun{
 #' # Convert a CSV file to SQL (INSERT statements only)
-#' convert_to_sql("data.csv", "data.sql")
+#' tmp_csv <- tempfile(fileext = ".csv")
+#' tmp_sql <- tempfile(fileext = ".sql")
+#' write.csv(
+#'   data.frame(id = 1:2, value = c("a", "b"), date = c("2024-01-01", "2024-02-02")),
+#'   tmp_csv,
+#'   row.names = FALSE
+#' )
+#' convert_to_sql(tmp_csv, tmp_sql)
 #' 
 #' # Convert a CSV file to SQL with CREATE TABLE statement
-#' convert_to_sql("data.csv", "data.sql", create_table = TRUE)
-#' 
-#' # With create_table = TRUE, the output file will contain:
-#' # CREATE TABLE `data` (
-#' #   `column1` TEXT,
-#' #   `column2` REAL,
-#' #   `column3` DATE
-#' # );
-#' # 
-#' # INSERT INTO `data` VALUES ('value1', 123.45, '2024-01-01');
-#' # INSERT INTO `data` VALUES ('value2', 67.89, '2024-02-02');
-#' # ...
-#' }
+#' convert_to_sql(tmp_csv, tmp_sql, create_table = TRUE)
 #' 
 #' @export
 convert_to_sql <- function(input, output, create_table = FALSE) {

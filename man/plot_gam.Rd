@@ -56,7 +56,7 @@ Plots fitted GAM values for focal predictor,
 keeping any other predictors in the model at a specified quantile  (default: median)
 }
 \examples{
-\dontrun{
+\donttest{
 library(mgcv)
 # Fit a GAM model
 data(mtcars)

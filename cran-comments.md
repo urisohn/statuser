@@ -11,18 +11,20 @@
 
 ## Changes in this resubmission
 
-* Added \value tags to all exported function documentation.
+* Added or confirmed \value tags and return structure descriptions for exported functions.
+* Replaced \dontrun examples with \donttest or runnable examples where appropriate.
+* Avoided modifying the global environment in `clear()` and removed user option changes in `plot_cdf()`.
 
 ## Notes
 
-### Regarding `clear()` function
+The `clear()` function is a convenience for interactive use that performs three
+cleanup operations: (1) removes objects from a user-specified environment (using
+`parent.frame()` by default, but it will not modify `.GlobalEnv`), (2) clears the
+console, and (3) closes open graphics devices. This function is never called
+automatically by the package—users must explicitly invoke `clear()` to perform
+these actions. The example now operates on a temporary environment and is wrapped
+in `\donttest{}` to avoid side effects during R CMD check.
 
-The `clear()` function is a convenience for interactive use that performs three 
-cleanup operations: (1) removes objects from the calling environment (using 
-`parent.frame()`), (2) clears the console, and (3) closes open graphics devices. 
-This function is never called automatically by the package—users must explicitly 
-invoke `clear()` to perform these actions. The example is wrapped in `\dontrun{}` 
-to prevent any environment modification during R CMD check.
-
-The environment-clearing behavior is analogous to `base::rm()`, which also allows 
-users to remove objects from their environment.
+The `plot_cdf()` function previously used `options()` to record that a one-time
+message had been shown. This now uses an internal package state environment instead,
+so no user options are modified.

@@ -68,7 +68,7 @@ and reports the slope and significance of the average slopes at either side of i
 is significant if the slopes are of opposite sign and are both individually significant.
 }
 \examples{
-\dontrun{
+\donttest{
 # Simple example with simulated data
 set.seed(123)
 x <- rnorm(100)

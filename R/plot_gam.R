@@ -29,7 +29,7 @@
 #' }
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(mgcv)
 #' # Fit a GAM model
 #' data(mtcars)
