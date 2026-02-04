@@ -713,6 +713,19 @@ print.lm2 <- function(x, notes = NULL, ...) {
       error = function(e) NULL
     )
   }
+
+  # Build model matrix for factor level handling (if available)
+  model_matrix <- tryCatch(
+    stats::model.matrix(x),
+    error = function(e) {
+      classical_fit <- attr(x, "classical_fit")
+      if (!is.null(classical_fit)) {
+        tryCatch(stats::model.matrix(classical_fit), error = function(e2) NULL)
+      } else {
+        NULL
+      }
+    }
+  )
   
   # Calculate SE flag: ! if robust and classical differ by >25%, !! if >50%, !!! if >100%
   # Also check for interaction term correlations and store r(x,z) values

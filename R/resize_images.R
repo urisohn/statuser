@@ -32,14 +32,15 @@
 #'
 #' @examples
 #' \donttest{
-#' # Resize a single image file
-#' resize_images("path/to/image.svg", width = 800)
-#'
-#' # Resize all images in a folder to 800px width
-#' resize_images("path/to/images", width = 800)
-#'
-#' # Resize images to different widths
-#' resize_images("path/to/images", width = c(800, 1200, 600))
+#' # Create a temporary PNG file and resize it
+#' tmp_png <- tempfile(fileext = ".png")
+#' grDevices::png(tmp_png, width = 400, height = 300)
+#' old_par <- graphics::par(no.readonly = TRUE)
+#' graphics::par(mar = c(2, 2, 1, 1))
+#' graphics::plot(1:2, 1:2, type = "n")
+#' grDevices::dev.off()
+#' graphics::par(old_par)
+#' resize_images(tmp_png, width = 80)
 #' }
 #'
 #' @export

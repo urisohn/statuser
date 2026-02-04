@@ -28,3 +28,6 @@ in `\donttest{}` to avoid side effects during R CMD check.
 The `plot_cdf()` function previously used `options()` to record that a one-time
 message had been shown. This now uses an internal package state environment instead,
 so no user options are modified.
+
+Note: The remaining NOTE is "checking for future file timestamps ... unable to verify current time"
+on the local Windows build.
