@@ -245,7 +245,7 @@ test_that("lm2 shows severe red flag (!!!) for extreme heteroskedasticity", {
   )
 })
 
-test_that("lm2 shows X* flag for significantly correlated interaction terms", {
+test_that("lm2 shows X flag for significantly correlated interaction terms", {
   skip_if_not_installed("estimatr")
   
   # Create data with highly correlated predictors in an interaction
@@ -259,32 +259,43 @@ test_that("lm2 shows X* flag for significantly correlated interaction terms", {
   output <- capture.output(print(result))
   output_text <- paste(output, collapse = "\n")
   
-  # Should show X* flag for the interaction term
+  # Should show X flag in red.flag column for the interaction term
+  # (correlation significance stars now appear in r(x,z) column separately)
   expect_true(
-    grepl("X\\*", output_text),
-    info = "Expected X* flag for significantly correlated interaction terms"
+    grepl("\\bX\\b", output_text),
+    info = "Expected X flag for significantly correlated interaction terms"
+  )
+  
+  # Additionally check that significant correlation is shown in r(x,z) column
+  expect_true(
+    grepl("r\\(x,z\\)", output_text),
+    info = "Expected r(x,z) column for interaction models"
   )
 })
 
 test_that("lm2 shows X flag for moderately correlated interaction terms", {
   skip_if_not_installed("estimatr")
   
-  # Create data with moderately correlated predictors (|r| > 0.3 but p > .05 with small n)
+  # Create data with moderately correlated predictors (|r| > 0.3)
+  # Using larger sample size to ensure correlation is detectable
   set.seed(789)
-  n <- 20  # Small n so correlation may not be significant
+  n <- 100
   x1 <- rnorm(n)
-  x2 <- 0.35 * x1 + rnorm(n, sd = 0.9)  # Moderate correlation ~0.35
+  x2 <- 0.5 * x1 + rnorm(n, sd = 0.8)  # Moderate correlation ~0.5
   y <- x1 + x2 + x1 * x2 + rnorm(n)
   
   result <- lm2(y ~ x1 * x2)
   output <- capture.output(print(result))
-  output_text <- paste(output, collapse = "\n")
   
-  # Should show either X or X* flag (depending on exact p-value)
-  has_x_flag <- grepl("X", output_text, fixed = TRUE)
+  # Find the line with the interaction term's red.flag column
+  # The X flag appears when |r| > 0.3 or p < .05 for the correlation
+  interaction_line <- grep("x1:x2", output, value = TRUE)
+  
+  # Should show X flag in the red.flag column for the interaction
+  has_x_flag <- any(grepl("\\bX\\b", interaction_line))
   expect_true(
     has_x_flag,
-    info = "Expected X or X* flag for correlated interaction terms"
+    info = "Expected X flag for correlated interaction terms"
   )
 })
 

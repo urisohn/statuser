@@ -15,8 +15,8 @@
          packageStartupMessage ("Attached: 'statuser' (Version: ",utils::packageVersion('statuser'),  ")") 
           
       #While developing:
-        # packageStartupMessage ("#######################################################\n",
-         #                     "This Version 2026 02 02 - 07.55AM\n" )
+         packageStartupMessage ("#######################################################\n",
+                              "This Version 2026 02 04 - 05.05PM\n" )
 
 
   invisible()
