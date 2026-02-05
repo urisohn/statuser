@@ -260,6 +260,25 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   n_original <- nrow(data)
   n_used <- robust_fit$nobs
   n_missing <- n_original - n_used
+
+  # Fixed effects info (for printing)
+  fe_terms <- character(0)
+  fe_k <- integer(0)
+  fe_missing <- integer(0)
+  if (!is.null(fixed_effects)) {
+    fe_terms <- all.vars(fixed_effects)
+    fe_k <- sapply(fe_terms, function(term) {
+      if (!term %in% names(data)) return(NA_integer_)
+      v <- data[[term]]
+      length(unique(v[!is.na(v)]))
+    })
+    fe_missing <- sapply(fe_terms, function(term) {
+      if (!term %in% names(data)) return(NA_integer_)
+      sum(is.na(data[[term]]))
+    })
+    names(fe_k) <- fe_terms
+    names(fe_missing) <- fe_terms
+  }
   
   # Calculate standardized coefficients, means/percentages, and NA counts
   standardized_coefs <- numeric(length(term_names))
@@ -479,6 +498,9 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   attr(result, "n_missing") <- n_missing
   attr(result, "notes") <- notes
   attr(result, "has_clusters") <- has_clusters
+  attr(result, "fe_terms") <- fe_terms
+  attr(result, "fe_k") <- fe_k
+  attr(result, "fe_missing") <- fe_missing
   
   # Prepend "lm2" class so our print method is used, but keep lm_robust inheritance
   class(result) <- c("lm2", class(result))
@@ -1082,6 +1104,95 @@ print.lm2 <- function(x, notes = NULL, ...) {
       }
     }
   }
+
+  # Add fixed-effects rows (after coefficients) and adjust intercept label
+  fe_terms <- attr(x, "fe_terms")
+  fe_k <- attr(x, "fe_k")
+  fe_missing <- attr(x, "fe_missing")
+  has_fe <- !is.null(fe_terms) && length(fe_terms) > 0
+  if (has_fe) {
+    # Ensure intercept row is present when fixed effects are absorbed
+    intercept_idx <- which(trimws(display_df$term) == "intercept")
+    if (length(intercept_idx) == 0) {
+      intercept_row <- setNames(as.list(rep("", length(names(display_df)))), names(display_df))
+      intercept_row[["term"]] <- "intercept  "
+      intercept_row[["estimate"]] <- "[dropped]"
+      for (col in setdiff(names(display_df), c("term", "estimate"))) {
+        if (col == "missing") {
+          intercept_row[[col]] <- pad("--", 2)
+        } else if (col == "SE.classical") {
+          intercept_row[[col]] <- pad("--", 3)
+        } else if (col %in% c("SE.robust", "SE.cluster")) {
+          intercept_row[[col]] <- pad("--", 2)
+        } else if (col == "t.value") {
+          intercept_row[[col]] <- right_align("--", 1)
+        } else if (col == "df") {
+          intercept_row[[col]] <- pad("--", 1)
+        } else if (col == "p.value") {
+          intercept_row[[col]] <- pad("--", 1)
+        } else if (col == "std.estimate") {
+          intercept_row[[col]] <- pad(right_align("--", 0), 3)
+        } else if (col == "  mean") {
+          intercept_row[[col]] <- right_align("--", 1)
+        } else if (col == "r(x,z)") {
+          intercept_row[[col]] <- pad(right_align("--", 0), 2)
+        } else if (col == "red.flag") {
+          intercept_row[[col]] <- pad("--", 4)
+        } else {
+          intercept_row[[col]] <- "--"
+        }
+      }
+      display_df <- rbind(as.data.frame(intercept_row, stringsAsFactors = FALSE, check.names = FALSE), display_df)
+      intercept_idx <- 1
+    }
+    # Update intercept estimate to indicate absorption
+    if (length(intercept_idx) > 0) {
+      display_df$estimate[intercept_idx] <- "[dropped]"
+    }
+    
+    make_fe_row <- function(term, k, missing) {
+      row <- setNames(as.list(rep("", length(names(display_df)))), names(display_df))
+      row[["term"]] <- paste0(term, "  ")
+      estimate_val <- if (is.na(k)) "df=NA" else paste0("df=", k)
+      row[["estimate"]] <- right_align(estimate_val, 1)
+      
+      for (col in setdiff(names(display_df), c("term", "estimate"))) {
+        if (col == "missing") {
+          missing_val <- if (is.na(missing)) "--" else as.character(missing)
+          row[[col]] <- pad(missing_val, 2)
+        } else if (col == "SE.classical") {
+          row[[col]] <- pad("--", 3)
+        } else if (col %in% c("SE.robust", "SE.cluster")) {
+          row[[col]] <- pad("--", 2)
+        } else if (col == "t.value") {
+          row[[col]] <- right_align("--", 1)
+        } else if (col == "df") {
+          row[[col]] <- pad("--", 1)
+        } else if (col == "p.value") {
+          row[[col]] <- pad("--", 1)
+        } else if (col == "std.estimate") {
+          row[[col]] <- pad(right_align("--", 0), 3)
+        } else if (col == "  mean") {
+          row[[col]] <- right_align("--", 1)
+        } else if (col == "r(x,z)") {
+          row[[col]] <- pad(right_align("--", 0), 2)
+        } else if (col == "red.flag") {
+          row[[col]] <- pad("--", 4)
+        } else {
+          row[[col]] <- "--"
+        }
+      }
+      as.data.frame(row, stringsAsFactors = FALSE, check.names = FALSE)
+    }
+    
+    fe_rows <- lapply(fe_terms, function(term) {
+      k <- if (!is.null(fe_k) && term %in% names(fe_k)) fe_k[[term]] else NA_integer_
+      miss <- if (!is.null(fe_missing) && term %in% names(fe_missing)) fe_missing[[term]] else NA_integer_
+      make_fe_row(term, k, miss)
+    })
+    fe_df <- do.call(rbind, fe_rows)
+    display_df <- rbind(display_df, fe_df)
+  }
   
   # Use term values as row names, then remove the term column
   rownames(display_df) <- display_df$term
@@ -1154,6 +1265,14 @@ print.lm2 <- function(x, notes = NULL, ...) {
       } else {
         cat("  - red.flag: none (robust and classical SE are similar)\n")
       }
+    }
+    # Fixed effects note if absorbed (after red.flag)
+    fe_terms <- attr(x, "fe_terms")
+    if (!is.null(fe_terms) && length(fe_terms) > 0) {
+      fe_vars <- paste(fe_terms, collapse = ", ")
+      fe_note <- "- <vars> were entered as absorbed fixed effects; df is the number of unique values."
+      fe_note <- gsub("<vars>", fe_vars, fe_note, fixed = TRUE)
+      cat("  ", fe_note, "\n", sep = "")
     }
     cat("  - To avoid these notes, lm2(..., notes=FALSE)\n")
   }

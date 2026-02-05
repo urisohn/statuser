@@ -492,6 +492,28 @@ test_that("lm2 produces same coefficients as lm", {
   )
 })
 
+test_that("lm2 produces same estimates as lm_robust", {
+  skip_if_not_installed("estimatr")
+  
+  # Include fixed effects to match absorbed model behavior
+  set.seed(101)
+  n_groups <- 20
+  n_per_group <- 10
+  group <- factor(rep(1:n_groups, each = n_per_group))
+  x <- rnorm(n_groups * n_per_group)
+  y <- 1 + 0.7 * x + rnorm(n_groups)[group] + rnorm(n_groups * n_per_group)
+  fe_data <- data.frame(y = y, x = x, group = group)
+  
+  result_lm2 <- lm2(y ~ x, data = fe_data, fixed_effects = ~ group)
+  result_lr <- estimatr::lm_robust(y ~ x, data = fe_data, fixed_effects = ~ group, se_type = "HC3")
+  
+  expect_equal(
+    unname(coef(result_lm2)),
+    unname(coef(result_lr)),
+    tolerance = 1e-10
+  )
+})
+
 test_that("lm2 produces same R-squared as lm", {
   skip_if_not_installed("estimatr")
   
