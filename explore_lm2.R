@@ -21,12 +21,13 @@
 # SECTION 1: SIMPLE REGRESSIONS
 # ============================================================================
 
-simple_data <- data.frame(
-  x = rnorm(n),
-  z = rnorm(n)
-)
-simple_data$y <- 2 + 0.5 * simple_data$x + rnorm(n, sd = 1)
-simple_data$y2 <- 1 + 0.5 * simple_data$x + 0.3 * simple_data$z + rnorm(n, sd = 1)
+  #Gen data
+    simple_data <- data.frame(
+      x = rnorm(n),
+      z = rnorm(n)
+    )
+    simple_data$y <- 2 + 0.5 * simple_data$x + rnorm(n, sd = 1)
+    simple_data$y2 <- 1 + 0.5 * simple_data$x + 0.3 * simple_data$z + rnorm(n, sd = 1)
 
 # 1.1 - Simple regression (y ~ x)
   lm2(y ~ x, data = simple_data)

@@ -1107,12 +1107,21 @@ print.lm2 <- function(x, notes = NULL, ...) {
   }
   if (notes) {
     cat("\nNotes:\n")
-    cat("  - \u2020 p<.1, * p<.05, ** p<.01\n")
-    if (has_clusters) {
-      cat("  - t.value & p.value are based on clustered SE (CR2)\n")
-      cat("  - SE.robust (HC3) used only to contrast with SE.classical to flag observations\n")
+    show_dagger <- any(!is.na(tbl$p.value) & tbl$p.value >= 0.05 & tbl$p.value < 0.1)
+    show_star <- any(!is.na(tbl$p.value) & tbl$p.value >= 0.01 & tbl$p.value < 0.05)
+    show_double_star <- any(!is.na(tbl$p.value) & tbl$p.value < 0.01)
+    sig_parts <- character(0)
+    if (show_dagger) sig_parts <- c(sig_parts, "\u2020 p<.1")
+    if (show_star) sig_parts <- c(sig_parts, "* p<.05")
+    if (show_double_star) sig_parts <- c(sig_parts, "** p<.01")
+    sig_basis <- if (has_clusters) "SE.cluster" else "SE.robust"
+    if (length(sig_parts) > 0) {
+      cat("  - ", paste(sig_parts, collapse = ", "), " (based on ", sig_basis, ")\n", sep = "")
     } else {
-      cat("  - t.value & p.value are based on robust SE (HC3)\n")
+      cat("  - All estimates are p>.1 (based on ", sig_basis, ")\n", sep = "")
+    }
+    if (has_clusters) {
+      cat("  - SE.robust (HC3) used only to contrast with SE.classical to flag observations\n")
     }
     cat("  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)\n")
     if (has_interactions) {
