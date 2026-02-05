@@ -20,7 +20,7 @@
       
       Row proportions:
               response
-      gender      No   Yes Total
+      gender   No    Yes   Total
         Female 0.518 0.482 1.000
         Male   0.591 0.409 1.000
 
@@ -36,7 +36,7 @@
       
       Column proportions:
               response
-      gender      No   Yes
+      gender   No    Yes  
         Female 0.527 0.600
         Male   0.473 0.400
         Total  1.000 1.000

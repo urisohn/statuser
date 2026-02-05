@@ -72,12 +72,26 @@ validate_formula <- function(formula, data = NULL, func_name = "function", calli
       stop(sprintf("%s(): 'data' must be a data frame", func_name), call. = FALSE)
     }
     
+    # Get data name from the calling context if possible
+    parent_call <- sys.call(-1)
+    data_name <- if (!is.null(parent_call) && "data" %in% names(parent_call)) {
+      deparse(parent_call$data)
+    } else {
+      "data"
+    }
+    data_name <- gsub('^"|"$', '', data_name)
+    
     # Check which variables are missing from data
     missing_vars <- formula_vars[!formula_vars %in% names(data)]
     
     if (length(missing_vars) > 0) {
-      missing_list <- paste0("'", missing_vars, "'", collapse = ", ")
-      stop(sprintf("%s(): Variables not found in data: %s", func_name, missing_list), call. = FALSE)
+      # Match existing error format: Variable "x" not found in dataset "y"
+      if (length(missing_vars) == 1) {
+        stop(sprintf('%s(): Variable "%s" not found in dataset "%s"', func_name, missing_vars[1], data_name), call. = FALSE)
+      } else {
+        missing_list <- paste0('"', missing_vars, '"', collapse = ", ")
+        stop(sprintf('%s(): Variables %s not found in dataset "%s"', func_name, missing_list, data_name), call. = FALSE)
+      }
     }
   } else {
     # No data provided - check variables exist in environment
@@ -96,8 +110,13 @@ validate_formula <- function(formula, data = NULL, func_name = "function", calli
     }
     
     if (length(missing_vars) > 0) {
-      missing_list <- paste0("'", missing_vars, "'", collapse = ", ")
-      stop(sprintf("%s(): Variables not found in environment: %s", func_name, missing_list), call. = FALSE)
+      # Match format for environment errors
+      if (length(missing_vars) == 1) {
+        stop(sprintf("%s(): Could not find variable '%s'", func_name, missing_vars[1]), call. = FALSE)
+      } else {
+        missing_list <- paste0("'", missing_vars, "'", collapse = ", ")
+        stop(sprintf("%s(): Could not find variables: %s", func_name, missing_list), call. = FALSE)
+      }
     }
   }
   

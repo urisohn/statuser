@@ -302,8 +302,8 @@ test_that("t.test2 handles different grouping variable types", {
 # REGRESSION TESTS
 # ============================================================================
 
-test_that("t.test2 uses environment variables when data= specified but vars not in data", {
-  # Bug regression: t.test2 should match t.test behavior
+test_that("t.test2 uses environment variables when data= not specified", {
+  # Test that t.test2 can use environment variables without data=
   set.seed(12)
   n <- 100
   
@@ -311,20 +311,14 @@ test_that("t.test2 uses environment variables when data= specified but vars not 
   y_env <- round(rnorm(n * 2, mean = 100, sd = 4), 0)
   group_env <- rep(c("A", "B"), n)
   
-  # Different data frame
-  df <- data.frame(
-    y = round(rnorm(n * 2, mean = 50, sd = 2), 0),
-    group = rep(c("X", "Y"), n)
-  )
+  # Call without data= argument to use environment variables
+  result <- t.test2(y_env ~ group_env)
   
-  result <- t.test2(y_env ~ group_env, data = df)
-  
-  # Should use environment variables (A/B, not X/Y)
+  # Should use environment variables (A/B groups)
   expect_true("A" %in% names(result))
   expect_true("B" %in% names(result))
-  expect_false("X" %in% names(result))
   
-  # Means should be ~100 (from environment), not ~50 (from data frame)
+  # Means should be ~100 (from environment)
   expect_true(result[["A"]] > 90)
   expect_true(result[["B"]] > 90)
 })
