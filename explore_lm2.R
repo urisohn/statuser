@@ -226,20 +226,20 @@ panel_data$y <- 5 +
 # SECTION 7: HETEROSKEDASTICITY & OUTLIERS (RED FLAG TRIGGERS)
 # ============================================================================
 
-hetero_data <- data.frame(x = runif(n, 1, 10))
-hetero_data$y <- 2 + 0.5 * hetero_data$x + rnorm(n, sd = 0.5 * hetero_data$x)
-
-outlier_data <- data.frame(x = rnorm(n))
-outlier_data$y <- 1 + 0.5 * outlier_data$x + rnorm(n, sd = 1)
-outlier_data$y[which.max(outlier_data$x)] <- 50  # Extreme outlier
-
-leverage_data <- data.frame(x = rnorm(n))
-leverage_data$y <- 1 + 0.5 * leverage_data$x + rnorm(n, sd = 1)
-leverage_data$x[1] <- 20  # High leverage point
-
-multi_outlier <- data.frame(x = rnorm(n))
-multi_outlier$y <- 1 + 0.5 * multi_outlier$x + rnorm(n, sd = 1)
-multi_outlier$y[1:5] <- multi_outlier$y[1:5] + 10  # 5 outliers
+  hetero_data <- data.frame(x = runif(n, 1, 10))
+  hetero_data$y <- 2 + 0.5 * hetero_data$x + rnorm(n, sd = 0.5 * hetero_data$x)
+  
+  outlier_data <- data.frame(x = rnorm(n))
+  outlier_data$y <- 1 + 0.5 * outlier_data$x + rnorm(n, sd = 1)
+  outlier_data$y[which.max(outlier_data$x)] <- 50  # Extreme outlier
+  
+  leverage_data <- data.frame(x = rnorm(n))
+  leverage_data$y <- 1 + 0.5 * leverage_data$x + rnorm(n, sd = 1)
+  leverage_data$x[1] <- 20  # High leverage point
+  
+  multi_outlier <- data.frame(x = rnorm(n))
+  multi_outlier$y <- 1 + 0.5 * multi_outlier$x + rnorm(n, sd = 1)
+  multi_outlier$y[1:5] <- multi_outlier$y[1:5] + 10  # 5 outliers
 
 # 7.1 - Heteroskedasticity (variance increases with x)
   lm2(y ~ x, data = hetero_data)

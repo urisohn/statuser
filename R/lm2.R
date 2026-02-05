@@ -1268,7 +1268,33 @@ print.lm2 <- function(x, notes = NULL, ...) {
       cat("  - red.flag:\n")
       # SE flags explanation (only if present)
       if (has_se_flags) {
-        cat("     !, !!, !!!: robust & classical SE differ by more than 25%, 50%, 100%\n")
+        present_se_flags <- intersect(
+          c("!", "!!", "!!!"),
+          unique(unlist(strsplit(se_flag, " ", fixed = TRUE)))
+        )
+        if (length(present_se_flags) > 0) {
+          thresholds <- c("!" = "25%", "!!" = "50%", "!!!" = "100%")
+          thresh_text <- paste(thresholds[present_se_flags], collapse = ", ")
+          flags_text <- paste(present_se_flags, collapse = ", ")
+          cat("     ", flags_text, ": robust & classical SE differ by more than ", thresh_text, "\n", sep = "")
+        }
+        # Get actual variable names for suggestions
+        dv_name <- attr(x, "y_name")
+        term_labels <- attr(x$terms, "term.labels")
+        # Get first simple (non-interaction) term for IV
+        iv_name <- NULL
+        if (!is.null(term_labels) && length(term_labels) > 0) {
+          for (tl in term_labels) {
+            if (!grepl(":", tl)) {
+              iv_name <- tl
+              break
+            }
+          }
+        }
+        dv_label <- if (!is.null(dv_name) && !is.na(dv_name)) dv_name else "DV"
+        iv_label <- if (!is.null(iv_name)) iv_name else "IV"
+        cat("     - Suggestion 1: check distribution with plot_freq(", dv_label, " ~ ", iv_label, ") and/or plot_density(", dv_label, ")\n", sep = "")
+        cat("     - Suggestion 2: check functional form with plot_gam(", dv_label, " ~ ", iv_label, ")\n", sep = "")
       }
       # Correlation flags explanation (only if present)
       if (has_cor_flags) {
