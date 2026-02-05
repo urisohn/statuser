@@ -50,6 +50,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
   # Extract additional arguments
   dots <- list(...)
   
+  # Validate formula early if it is one
+  validate_formula(formula, data, func_name = "plot_freq", calling_env = parent.frame())
+  
   # Check if formula is actually a formula or a vector
   # If it's not a formula, capture the variable name before calling validate_plot
   is_formula_input <- tryCatch(inherits(formula, "formula"), error = function(e) FALSE)

@@ -1,3 +1,109 @@
+#' Validate Formula Variables
+#'
+#' Checks if the input is a formula and validates that all variables mentioned
+#' in the formula exist either in the provided data frame or in the environment.
+#' This is a lightweight validation function that should be called early in functions
+#' that accept formula syntax.
+#'
+#' @param formula A potential formula object to validate (can be any object).
+#' @param data An optional data frame containing the variables.
+#' @param func_name Character string. Name of the calling function (for error messages).
+#' @param calling_env The environment in which to look for variables if data is not provided.
+#'   Defaults to parent.frame().
+#'
+#' @return Returns NULL invisibly. Stops with an error if validation fails.
+#'
+#' @keywords internal
+validate_formula <- function(formula, data = NULL, func_name = "function", calling_env = parent.frame()) {
+  # Capture the call to get the actual expression passed (for better error messages)
+  parent_call <- sys.call(-1)
+  formula_expr <- if (!is.null(parent_call) && length(parent_call) >= 2) {
+    parent_call[[2]]  # Get the formula argument expression
+  } else {
+    NULL
+  }
+  
+  # First, check if we can even access the object
+  # This catches cases like df$var where df doesn't exist
+  obj_result <- tryCatch(
+    {
+      obj <- force(formula)
+      list(success = TRUE, obj = obj)
+    },
+    error = function(e) {
+      list(success = FALSE, error = e$message)
+    }
+  )
+  
+  if (!obj_result$success) {
+    stop(obj_result$error, call. = FALSE)
+  }
+  
+  # Check if the result is NULL (which happens when df$column where column doesn't exist)
+  if (is.null(obj_result$obj)) {
+    # Try to extract df name and column name from the expression
+    if (!is.null(formula_expr) && is.call(formula_expr) && length(formula_expr) >= 3) {
+      if (as.character(formula_expr[[1]]) == "$") {
+        df_name <- as.character(formula_expr[[2]])
+        col_name <- as.character(formula_expr[[3]])
+        stop(sprintf("%s(): Column '%s' not found in '%s'", func_name, col_name, df_name), call. = FALSE)
+      }
+    }
+    # Fallback error if we can't parse the expression
+    stop(sprintf("%s(): The input evaluated to NULL", func_name), call. = FALSE)
+  }
+  
+  # Now check if input is actually a formula
+  if (!inherits(obj_result$obj, "formula")) {
+    # Not a formula, return silently (allow non-formula inputs)
+    return(invisible(NULL))
+  }
+  
+  # From here on, use obj_result$obj instead of formula
+  formula <- obj_result$obj
+  
+  # Extract all variable names from formula
+  formula_vars <- all.vars(formula)
+  
+  # If data is provided, check variables exist in data
+  if (!is.null(data)) {
+    # Verify data is a data frame
+    if (!is.data.frame(data)) {
+      stop(sprintf("%s(): 'data' must be a data frame", func_name), call. = FALSE)
+    }
+    
+    # Check which variables are missing from data
+    missing_vars <- formula_vars[!formula_vars %in% names(data)]
+    
+    if (length(missing_vars) > 0) {
+      missing_list <- paste0("'", missing_vars, "'", collapse = ", ")
+      stop(sprintf("%s(): Variables not found in data: %s", func_name, missing_list), call. = FALSE)
+    }
+  } else {
+    # No data provided - check variables exist in environment
+    # Get formula environment or use calling environment
+    formula_env <- environment(formula)
+    if (is.null(formula_env)) {
+      formula_env <- calling_env
+    }
+    
+    # Check which variables are missing from environment
+    missing_vars <- character(0)
+    for (var in formula_vars) {
+      if (!exists(var, envir = formula_env, inherits = TRUE)) {
+        missing_vars <- c(missing_vars, var)
+      }
+    }
+    
+    if (length(missing_vars) > 0) {
+      missing_list <- paste0("'", missing_vars, "'", collapse = ", ")
+      stop(sprintf("%s(): Variables not found in environment: %s", func_name, missing_list), call. = FALSE)
+    }
+  }
+  
+  invisible(NULL)
+}
+
 #' Validate Inputs for Plotting Functions
 #'
 #' Validates inputs for plotting functions that accept either formula syntax

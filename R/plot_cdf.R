@@ -88,6 +88,9 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     dots$show.ks <- NULL
     dots$show.quantiles <- NULL
   
+  # Validate formula early if it is one
+  validate_formula(formula, data, func_name = "plot_cdf", calling_env = parent.frame())
+  
   # Check if input is a formula or a variable
   is_formula_input <- tryCatch(inherits(formula, "formula"), error = function(e) FALSE)
   

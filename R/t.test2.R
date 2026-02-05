@@ -62,6 +62,11 @@ t.test2 <- function(...) {
     dots_list <- dots_list[names(dots_list) != "digits"]
   }
   
+  # Validate formula early if first argument is one
+  if (length(dots_list) > 0) {
+    validate_formula(dots_list[[1]], dots_list$data, func_name = "t.test2", calling_env = parent.frame())
+  }
+  
   # Run t.test with provided arguments (excluding digits)
   tt_result <- do.call(stats::t.test, dots_list)
   

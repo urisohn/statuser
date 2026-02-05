@@ -189,6 +189,9 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     clusters_vec <- eval(clusters_expr, envir = parent.frame())
   }
   
+  # Validate formula early
+  validate_formula(formula, data, func_name = "lm2", calling_env = parent.frame())
+  
   # Validate inputs and construct data frame if needed
   validated <- validate_lm2(
     formula = formula,

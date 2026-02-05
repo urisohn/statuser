@@ -85,6 +85,9 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
     show_mean_segments <- if ("show.means" %in% names(dots)) dots$show.means else TRUE
     dots$show.means <- NULL  # Remove from dots so it doesn't get passed to plot functions
   
+  # Validate formula early if it is one
+  validate_formula(formula, data, func_name = "plot_density", calling_env = parent.frame())
+  
   # Check if formula is actually a formula or a vector
   # If it's not a formula, capture the variable name before calling validate_plot
   is_formula_input <- tryCatch(inherits(formula, "formula"), error = function(e) FALSE)
