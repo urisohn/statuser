@@ -200,6 +200,11 @@ validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", requ
     stop(sprintf("%s(): 'group' argument is required", func_name), call. = FALSE)
   }
   
+  # Convert factor to character if needed
+  if (!is.null(group) && is.factor(group)) {
+    group <- as.character(group)
+  }
+  
   # Validate group type and length if provided
   if (!is.null(group)) {
     if (!is.vector(group)) {
