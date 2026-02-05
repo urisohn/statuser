@@ -67,7 +67,7 @@ The \code{red.flag} column provides diagnostic warnings:
     latter too time consuming to include in every regression, plus the focus here is on individual variables rather than joint tests.
   \item \code{X}: For interaction terms, the component variables are correlated (|r| > 0.3 or p < .05),
     which means the interaction term is likely to be biased. See Simonsohn (2024) "Interacting with curves"
-    \url{https://doi.org/10.1177/25152459231207795}.
+    \doi{10.1177/25152459231207787}.
 }
 }
 \examples{
@@ -165,7 +165,7 @@ in the linear regression model. \emph{The American Statistician}, 54(3), 217-224
 
 Simonsohn, U. (2024). Interacting with curves: How to validly test and probe 
 interactions in the real (nonlinear) world. \emph{Advances in Methods and Practices in 
-Psychological Science}, 7(1), 1-22.
+Psychological Science}, 7(1), 1-22. \doi{10.1177/25152459231207787}
 }
 \seealso{
 \code{\link[estimatr]{lm_robust}}, \code{\link{scatter.gam}}

@@ -40,7 +40,7 @@
 #'     latter too time consuming to include in every regression, plus the focus here is on individual variables rather than joint tests.
 #'   \item \code{X}: For interaction terms, the component variables are correlated (|r| > 0.3 or p < .05),
 #'     which means the interaction term is likely to be biased. See Simonsohn (2024) "Interacting with curves"
-#'     \url{https://doi.org/10.1177/25152459231207795}.
+#'     \doi{10.1177/25152459231207787}.
 #' }
 #'
 #' @references
@@ -1305,7 +1305,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
       # Correlation flags explanation (only if present)
       if (has_cor_flags) {
         cat("     X: interacted variables are correlated, interaction term is likely to be biased\n")
-        cat("        See Simonsohn (2024) \"Interacting with curves\" https://doi.org/10.1177/25152459231207795\n")
+        cat("        See Simonsohn (2024) \"Interacting with curves\" https://doi.org/10.1177/25152459231207787\n")
       }
     } else {
       if (has_interactions) {
