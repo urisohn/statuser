@@ -57,7 +57,7 @@ introduced by Simonsohn (2018).
 Reference: 
 Simonsohn, Uri (2018) "Two lines: A valid alternative to the invalid testing of 
 U-shaped relationships with quadratic regressions." AMPPS, 538-555. 
-https://doi.org/10.1177/2515245918805755
+\doi{10.1177/2515245918805755}
 
 
 The test beings fitting a GAM model, predicting y with a smooth of x, and optionally with covariates. 

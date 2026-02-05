@@ -18,7 +18,7 @@
 #' Reference: 
 #' Simonsohn, Uri (2018) "Two lines: A valid alternative to the invalid testing of 
 #' U-shaped relationships with quadratic regressions." AMPPS, 538-555. 
-#' https://doi.org/10.1177/2515245918805755
+#' \doi{10.1177/2515245918805755}
 #'
 #' @param f A formula object specifying the model (e.g., y ~ x1 + x2 + x3).
 #'   The first predictor is the one tested for a u-shaped relationship.
