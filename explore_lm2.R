@@ -205,18 +205,19 @@ panel_data$y <- 5 +
 # SECTION 6: MISSING DATA PATTERNS
 # ============================================================================
 
-missing_data <- data.frame(
-  x1 = rnorm(n),
-  x2 = rnorm(n),
-  x3 = rnorm(n)
-)
-missing_data$y <- 1 + 0.5 * missing_data$x1 + 0.3 * missing_data$x2 + 0.2 * missing_data$x3 + 
-  rnorm(n, sd = 1)
-missing_data$x1[sample(n, 5)] <- NA   # 5 missing
-missing_data$x2[sample(n, 20)] <- NA  # 20 missing
-missing_data$x3[sample(n, 40)] <- NA  # 40 missing
-missing_data$y[sample(n, 10)] <- NA   # 10 missing in outcome
-
+  #Gen data
+    missing_data <- data.frame(
+      x1 = rnorm(n),
+      x2 = rnorm(n),
+      x3 = rnorm(n)
+    )
+    missing_data$y <- 1 + 0.5 * missing_data$x1 + 0.3 * missing_data$x2 + 0.2 * missing_data$x3 + 
+      rnorm(n, sd = 1)
+    missing_data$x1[sample(n, 5)] <- NA   # 5 missing
+    missing_data$x2[sample(n, 20)] <- NA  # 20 missing
+    missing_data$x3[sample(n, 40)] <- NA  # 40 missing
+    missing_data$y[sample(n, 10)] <- NA   # 10 missing in outcome
+    
 # 6.1 - Multiple predictors with different missingness rates
   lm2(y ~ x1 + x2 + x3, data = missing_data)
 

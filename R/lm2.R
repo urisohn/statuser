@@ -260,6 +260,14 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   n_original <- nrow(data)
   n_used <- robust_fit$nobs
   n_missing <- n_original - n_used
+  
+  # Missing DV count (from original data)
+  y_name <- all.vars(formula)[1]
+  n_missing_y <- if (!is.null(y_name) && y_name %in% names(data)) {
+    sum(is.na(data[[y_name]]))
+  } else {
+    NA_integer_
+  }
 
   # Fixed effects info (for printing)
   fe_terms <- character(0)
@@ -496,6 +504,8 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   attr(result, "classical_fit") <- classical_fit
   attr(result, "na_counts") <- na_counts
   attr(result, "n_missing") <- n_missing
+  attr(result, "n_missing_y") <- n_missing_y
+  attr(result, "y_name") <- y_name
   attr(result, "notes") <- notes
   attr(result, "has_clusters") <- has_clusters
   attr(result, "fe_terms") <- fe_terms
@@ -1221,6 +1231,12 @@ print.lm2 <- function(x, notes = NULL, ...) {
   }
   if (notes) {
     cat("\nNotes:\n")
+    n_missing_y <- attr(x, "n_missing_y")
+    y_name <- attr(x, "y_name")
+    if (!is.null(n_missing_y) && !is.na(n_missing_y) && n_missing_y > 0) {
+      y_label <- if (!is.null(y_name) && !is.na(y_name)) y_name else "DV"
+      cat("  - ", n_missing_y, " observations have missing \"", y_label, "\" values\n", sep = "")
+    }
     show_dagger <- any(!is.na(tbl$p.value) & tbl$p.value >= 0.05 & tbl$p.value < 0.1)
     show_star <- any(!is.na(tbl$p.value) & tbl$p.value >= 0.01 & tbl$p.value < 0.05)
     show_double_star <- any(!is.na(tbl$p.value) & tbl$p.value < 0.01)
