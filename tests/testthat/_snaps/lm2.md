@@ -39,8 +39,9 @@
         - missing: number of observations excluded due to missing values
         - red.flag:
            !: robust & classical SE differ by more than 25%
-           - Suggestion 1: check distribution with plot_freq(mpg ~ wt) and/or plot_density(mpg)
-           - Suggestion 2: check functional form with plot_gam(mpg ~ wt)
+           - Suggestion 1: to evaluate possible extreme skew or outliers:
+             plot_density() or plot_freq() for mpg and for wt
+           - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(mpg ~ wt)
         - To avoid these notes, lm2(..., notes=FALSE)
 
 # lm2 print output with interaction is stable

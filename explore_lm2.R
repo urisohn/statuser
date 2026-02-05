@@ -243,12 +243,16 @@ panel_data$y <- 5 +
 
 # 7.1 - Heteroskedasticity (variance increases with x)
   lm2(y ~ x, data = hetero_data)
-
+  plot_density(y~x,data=leverage_data)
+  
+  plot(leverage_data$y)
+  
 # 7.2 - Outlier in y (single extreme value)
   lm2(y ~ x, data = outlier_data)
 
 # 7.3 - High leverage point (outlier in x)
   lm2(y ~ x, data = leverage_data)
+  
 
 # 7.4 - Multiple outliers in y
   lm2(y ~ x, data = multi_outlier)
@@ -301,25 +305,25 @@ se_data$y <- 2 + 0.5 * se_data$x + rnorm(n, sd = 0.5 * se_data$x)  # Heteroskeda
 # SECTION 10: EDGE CASES
 # ============================================================================
 
-small_data <- data.frame(x = rnorm(15), y = rnorm(15))
-small_data$y <- 1 + 0.5 * small_data$x + rnorm(15, sd = 1)
-
-many_pred <- data.frame(matrix(rnorm(n * 20), ncol = 20))
-names(many_pred) <- paste0("x", 1:20)
-many_pred$y <- 1 + rowSums(many_pred[, 1:5] * 0.3) + rnorm(n, sd = 1)
-
-multicol <- data.frame(x1 = rnorm(n))
-multicol$x2 <- multicol$x1 + rnorm(n, sd = 0.01)  # Almost identical to x1
-multicol$y <- 1 + multicol$x1 + rnorm(n, sd = 1)
-
-binary_data <- data.frame(x = rnorm(n))
-binary_data$y <- rbinom(n, 1, plogis(binary_data$x))
-
-many_levels <- data.frame(
-  x = rnorm(n),
-  state = factor(sample(state.abb[1:20], n, replace = TRUE))
-)
-many_levels$y <- 1 + 0.5 * many_levels$x + rnorm(n)
+    small_data <- data.frame(x = rnorm(15), y = rnorm(15))
+    small_data$y <- 1 + 0.5 * small_data$x + rnorm(15, sd = 1)
+    
+    many_pred <- data.frame(matrix(rnorm(n * 20), ncol = 20))
+    names(many_pred) <- paste0("x", 1:20)
+    many_pred$y <- 1 + rowSums(many_pred[, 1:5] * 0.3) + rnorm(n, sd = 1)
+    
+    multicol <- data.frame(x1 = rnorm(n))
+    multicol$x2 <- multicol$x1 + rnorm(n, sd = 0.01)  # Almost identical to x1
+    multicol$y <- 1 + multicol$x1 + rnorm(n, sd = 1)
+    
+    binary_data <- data.frame(x = rnorm(n))
+    binary_data$y <- rbinom(n, 1, plogis(binary_data$x))
+    
+    many_levels <- data.frame(
+      x = rnorm(n),
+      state = factor(sample(state.abb[1:20], n, replace = TRUE))
+    )
+    many_levels$y <- 1 + 0.5 * many_levels$x + rnorm(n)
 
 # 10.1 - Small sample (n=15)
   lm2(y ~ x, data = small_data)

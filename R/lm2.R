@@ -1280,21 +1280,24 @@ print.lm2 <- function(x, notes = NULL, ...) {
         }
         # Get actual variable names for suggestions
         dv_name <- attr(x, "y_name")
-        term_labels <- attr(x$terms, "term.labels")
-        # Get first simple (non-interaction) term for IV
-        iv_name <- NULL
-        if (!is.null(term_labels) && length(term_labels) > 0) {
-          for (tl in term_labels) {
-            if (!grepl(":", tl)) {
-              iv_name <- tl
-              break
+        dv_label <- if (!is.null(dv_name) && !is.na(dv_name)) dv_name else "DV"
+        
+        # Find which variables have flags (flagged variables)
+        flagged_vars <- character(0)
+        for (fi in seq_along(se_flag)) {
+          flag_val <- trimws(se_flag[fi])
+          if (flag_val != "" && flag_val != "--") {
+            term_name <- tbl$term[fi]
+            if (term_name != "(Intercept)" && !grepl(":", term_name)) {
+              flagged_vars <- c(flagged_vars, term_name)
             }
           }
         }
-        dv_label <- if (!is.null(dv_name) && !is.na(dv_name)) dv_name else "DV"
-        iv_label <- if (!is.null(iv_name)) iv_name else "IV"
-        cat("     - Suggestion 1: check distribution with plot_freq(", dv_label, " ~ ", iv_label, ") and/or plot_density(", dv_label, ")\n", sep = "")
-        cat("     - Suggestion 2: check functional form with plot_gam(", dv_label, " ~ ", iv_label, ")\n", sep = "")
+        flagged_label <- if (length(flagged_vars) > 0) paste(flagged_vars, collapse = ", ") else "flagged variable(s)"
+        
+        cat("     - Suggestion 1: to evaluate possible extreme skew or outliers:\n")
+        cat("       plot_density() or plot_freq() for ", dv_label, " and for ", flagged_label, "\n", sep = "")
+        cat("     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(", dv_label, " ~ ", flagged_label, ")\n", sep = "")
       }
       # Correlation flags explanation (only if present)
       if (has_cor_flags) {
