@@ -195,6 +195,8 @@ panel_data$y <- 5 +
 # 5.3 - Two-way fixed effects (firm + year)
   lm2(y ~ x, data = panel_data, fixed_effects = ~ firm_id + year)
 
+  summary(estimatr::lm_robust(y ~ x, data = panel_data, fixed_effects = ~ firm_id + year))
+  
 # 5.4 - Fixed effects + clustered SE
   lm2(y ~ x, data = panel_data, fixed_effects = ~ firm_id, clusters = firm_id)
 

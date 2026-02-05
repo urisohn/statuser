@@ -241,10 +241,13 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     df_values <- robust_fit$df
   }
   
-  # Run classical OLS to get classical standard errors
-  classical_fit <- stats::lm(formula = formula, data = data)
-  classical_summary <- summary(classical_fit)
-  classical_se <- classical_summary$coefficients[, "Std. Error"]
+  # Run classical SEs using the same model specification (including fixed effects)
+  classical_args <- list(formula = formula, data = data, se_type = "classical", ...)
+  if (!is.null(fixed_effects)) classical_args$fixed_effects <- fixed_effects
+  # Ensure classical SEs are not clustered
+  if ("clusters" %in% names(classical_args)) classical_args$clusters <- NULL
+  classical_fit <- do.call(estimatr::lm_robust, classical_args)
+  classical_se <- classical_fit$std.error
   
   # Calculate standardized coefficients (beta weights)
   # Beta = b * (SD_x / SD_y)
