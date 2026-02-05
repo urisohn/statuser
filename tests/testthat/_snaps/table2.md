@@ -3,87 +3,78 @@
     Code
       print(result)
     Output
-      
-                          response
-                     Maybe     No    Yes
-      gender Female      9     25     22
-             Male       13     17     14
-      
+              response
+      gender   Maybe No Yes
+        Female     9 25  22
+        Male      13 17  14
 
 # table2 print output with row proportions is stable
 
     Code
       print(result)
     Output
+              response
+      gender   No Yes
+        Female 29  27
+        Male   26  18
       
-      1. Frequencies
-                     response
-                      No  Yes
-      gender Female   29   27
-             Male     26   18
-      
-      
-      2. Relative frequencies: by row
-                          response
-                        No    Yes  Total
-      gender Female   .518   .482  1.000
-             Male     .591   .409  1.000
-      
+      Row proportions:
+              response
+      gender      No   Yes Total
+        Female 0.518 0.482 1.000
+        Male   0.591 0.409 1.000
 
 # table2 print output with column proportions is stable
 
     Code
       print(result)
     Output
+              response
+      gender   No Yes
+        Female 29  27
+        Male   26  18
       
-      1. Frequencies
-                     response
-                      No  Yes
-      gender Female   29   27
-             Male     26   18
-      
-      
-      2. Relative frequencies: by column
-                       response
-                        No    Yes
-      gender Female   .527   .600
-             Male     .473   .400
-             Total   1.000  1.000
-      
+      Column proportions:
+              response
+      gender      No   Yes
+        Female 0.527 0.600
+        Male   0.473 0.400
+        Total  1.000 1.000
 
 # table2 print output with chi-square test is stable
 
     Code
       print(result)
     Output
+              response
+      gender   No Yes
+        Female 29  27
+        Male   26  18
       
-                     response
-                      No  Yes
-      gender Female   29   27
-             Male     26   18
       
-      Chi-squared test, null: independence
-      χ²(1) = 0.53, p = .4661
+      	Pearson's Chi-squared test
+      
+      data:  result
+      X-squared = 0.53129, df = 1, p-value = 0.4661
+      
 
 # table2 print output for three-way table is stable
 
     Code
       print(result)
     Output
+      , , z = High
       
-      z = High
+         y
+      x    X  Y
+        A  9  6
+        B  5 11
       
-             y
-            X   Y
-      x A   9   6
-        B   5  11
+      , , z = Low
       
-      
-      z = Low
-      
-            y
-           X  Y
-      x A  3  9
+         y
+      x    X  Y
+        A  3  9
         B  9  8
       
 

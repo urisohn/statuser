@@ -86,6 +86,14 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
   dot_expressions <- validated$dot_expressions
   data_name <- validated$data_name
   
+  # Track missing values for each variable
+  var_lengths <- integer(length(dots))
+  var_na_counts <- integer(length(dots))
+  for (i in seq_along(dots)) {
+    var_lengths[i] <- length(dots[[i]])
+    var_na_counts[i] <- sum(is.na(dots[[i]]))
+  }
+  
   # Initialize return list elements
   freq <- NULL
   prop_out <- NULL
@@ -150,12 +158,14 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
   }
   
   # TASK 4: Extract variable names from dataframe column references
+  # Initialize var_names
+  var_names <- character(length(dots))
+  
   # Enhance if we have 1, 2 or 3 dimensions matching the number of arguments
   n_dims <- length(dim(result))
   if ((n_dims == 1 && length(dots) == 1) || 
       (n_dims == 2 && length(dots) == 2) || 
       (n_dims == 3 && length(dots) == 3)) {
-    var_names <- character(n_dims)
     
     # Try to extract variable names from expressions
     for (i in 1:n_dims) {
@@ -285,6 +295,7 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       
       # Store proportion metadata
       attr(output, "prop_type") <- prop
+      attr(output, "proportion_digits") <- digits
       var1_name <- if (!is.null(names(orig_dimn)) && length(names(orig_dimn)) >= 1 && 
                        !is.na(names(orig_dimn)[1]) && nchar(names(orig_dimn)[1]) > 0) {
         names(orig_dimn)[1]
@@ -354,6 +365,7 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
       
       # Store proportion metadata
       attr(output, "prop_type") <- prop
+      attr(output, "proportion_digits") <- digits
       attr(output, "var1_name") <- var1_name
       attr(output, "var2_name") <- var2_name
       
@@ -498,12 +510,103 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
   # Store proportion metadata if prop was specified
   if (!is.null(prop)) {
     attr(output, "prop_type") <- prop
+    attr(output, "proportion_digits") <- digits
     attr(output, "var1_name") <- var1_name
     attr(output, "var2_name") <- var2_name
   }
   
+  # Store missing data information and variable names
+  attr(output, "var_lengths") <- var_lengths
+  attr(output, "var_na_counts") <- var_na_counts
+  attr(output, "var_names") <- var_names
+  
   class(output) <- c("table2", class(output))
   return(output)
+}
+
+#' Print method for table2 objects
+#'
+#' @param x An object of class \code{table2}
+#' @param ... Additional arguments (ignored)
+#'
+#' @return Invisibly returns the original object
+#' @export
+print.table2 <- function(x, ...) {
+  # Print the frequency table
+  if (!is.null(x$freq)) {
+    print(x$freq)
+  }
+  
+  # Print proportion table if present
+  if (!is.null(x$prop)) {
+    cat("\n")
+    prop_type <- attr(x, "prop_type")
+    if (!is.null(prop_type)) {
+      if (prop_type == "all" || prop_type == 0) {
+        cat("Overall proportions:\n")
+      } else if (prop_type == "row" || prop_type == 1 || prop_type == "rows") {
+        cat("Row proportions:\n")
+      } else if (prop_type == "col" || prop_type == 2 || 
+                 prop_type == "cols" || prop_type == "column" || prop_type == "columns") {
+        cat("Column proportions:\n")
+      }
+    }
+    # Format and print proportion values with the specified number of digits
+    digits <- attr(x, "proportion_digits")
+    if (is.null(digits)) digits <- 3  # Default
+    
+    # Create a formatted version of the prop table with fixed decimal places
+    prop_table <- x$prop
+    
+    # Convert to character matrix with fixed decimal places using formatC
+    prop_values <- as.numeric(prop_table)
+    prop_formatted <- formatC(prop_values, format = "f", digits = digits)
+    
+    # Restore dimensions and dimnames
+    dim(prop_formatted) <- dim(prop_table)
+    dimnames(prop_formatted) <- dimnames(prop_table)
+    
+    # Print as a formatted table
+    print(noquote(prop_formatted))
+  }
+  
+  # Print chi-square test if present
+  if (!is.null(x$chisq)) {
+    cat("\n")
+    print(x$chisq)
+  }
+  
+  # Print missing data notes (mirroring t.test2 style)
+  var_na_counts <- attr(x, "var_na_counts")
+  var_lengths <- attr(x, "var_lengths")
+  var_names <- attr(x, "var_names")
+  
+  if (!is.null(var_na_counts) && !is.null(var_lengths) && !is.null(var_names)) {
+    # Check if any variables have missing data
+    has_missing <- any(var_na_counts > 0, na.rm = TRUE)
+    
+    if (has_missing) {
+      cat("\n")
+      missing_msgs <- character(0)
+      for (i in seq_along(var_na_counts)) {
+        if (!is.na(var_na_counts[i]) && var_na_counts[i] > 0) {
+          var_name <- if (i <= length(var_names) && !is.na(var_names[i]) && var_names[i] != "") {
+            paste0("'", var_names[i], "'")
+          } else {
+            paste0("variable ", i)
+          }
+          missing_msgs <- c(missing_msgs, 
+                           paste0(var_name, " is missing ", var_na_counts[i], 
+                                 " of ", var_lengths[i], " values"))
+        }
+      }
+      if (length(missing_msgs) > 0) {
+        cat("note:", paste(missing_msgs, collapse = ", while "), "\n")
+      }
+    }
+  }
+  
+  invisible(x)
 }
 
 
