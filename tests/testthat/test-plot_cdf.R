@@ -165,3 +165,42 @@ test_that("plot_cdf handles very small samples per group", {
   expect_true(is.list(result))
   expect_equal(length(result$ecdfs), 2)
 })
+
+test_that("plot_cdf handles order parameter for groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Custom group order
+  expect_error(plot_cdf(y ~ group, order = c("C", "A", "B")), NA)
+  result <- plot_cdf(y ~ group, order = c("C", "A", "B"))
+  expect_true(is.list(result))
+  
+  # Check that ecdfs are in specified order
+  expect_equal(names(result$ecdfs), c("C", "A", "B"))
+})
+
+test_that("plot_cdf order = -1 reverses default order", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Default order is A, B, C (sorted)
+  result_default <- plot_cdf(y ~ group)
+  expect_equal(names(result_default$ecdfs), c("A", "B", "C"))
+  
+  # order = -1 should reverse to C, B, A
+  result_reversed <- plot_cdf(y ~ group, order = -1)
+  expect_true(is.list(result_reversed))
+  expect_equal(names(result_reversed$ecdfs), c("C", "B", "A"))
+})
+
+test_that("plot_cdf respects factor levels for groups when order is NULL", {
+  y <- rnorm(100)
+  group <- factor(rep(c("A", "B", "C"), c(30, 40, 30)),
+                  levels = c("C", "A", "B"))
+  
+  result <- plot_cdf(y ~ group)
+  expect_true(is.list(result))
+  
+  # Check that factor levels are respected (C, A, B)
+  expect_equal(names(result$ecdfs), c("C", "A", "B"))
+})

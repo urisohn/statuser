@@ -165,7 +165,7 @@ in the linear regression model. \emph{The American Statistician}, 54(3), 217-224
 
 Simonsohn, U. (2024). Interacting with curves: How to validly test and probe 
 interactions in the real (nonlinear) world. \emph{Advances in Methods and Practices in 
-Psychological Science}, 7(1), 1-22. \doi{10.1177/25152459231207787}
+Psychological Science}, 7(1), 1-22.
 }
 \seealso{
 \code{\link[estimatr]{lm_robust}}, \code{\link{scatter.gam}}

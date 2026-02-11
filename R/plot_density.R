@@ -4,6 +4,11 @@
 #'
 #' @param formula Either the single variable name \code{y} or a formula like \code{y ~ x}.
 #' @param data An optional data frame containing the variables in the formula.
+#' @param order Controls the order in which groups appear in the plot and legend. 
+#'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+#'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+#'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
+#'   alphabetically/numerically. Only applies when using grouped plots.
 #' @param show_means Logical. If TRUE (default), shows points at means.
 #' @param ... Additional arguments passed to plotting functions.
 
@@ -53,7 +58,7 @@
 #'   The function is primarily called for its side effect of creating a plot.
 #'
 #' @export
-plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
+plot_density <- function(formula, data = NULL, order = NULL, show_means = TRUE, ...) {
   #OUTLINE
   #1. Capture variable names for labels
   #2. Extract and handle parameters
@@ -161,6 +166,9 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
   y_name_raw <- validated$y_name_raw
   group_name_raw <- validated$group_name_raw
   
+  # Store original group for factor level checking (before NA removal)
+  group_original <- group
+  
   #3. Drop missing data
     if (!is.null(group)) {
       isnagroup=is.na(group)
@@ -183,8 +191,47 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
   
   #5. Get unique groups (if group is provided)
     if (!is.null(group)) {
-      unique_x <- sort(unique(group))
-      n_groups <- length(unique_x)
+      unique_groups <- unique(group)
+      n_groups <- length(unique_groups)
+      
+      # Check if order = -1 (reverse default order)
+      reverse_order <- FALSE
+      if (!is.null(order) && length(order) == 1 && is.numeric(order) && order == -1) {
+        reverse_order <- TRUE
+        order <- NULL  # Process as default, then reverse
+      }
+      
+      if (!is.null(order)) {
+        # User specified custom order
+        # Validate that order contains all groups
+        missing_groups <- setdiff(unique_groups, order)
+        extra_groups <- setdiff(order, unique_groups)
+        
+        if (length(missing_groups) > 0) {
+          stop(sprintf("plot_density(): 'order' is missing group(s): %s", 
+                       paste(missing_groups, collapse = ", ")), call. = FALSE)
+        }
+        if (length(extra_groups) > 0) {
+          warning(sprintf("plot_density(): 'order' contains group(s) not in data: %s", 
+                         paste(extra_groups, collapse = ", ")))
+        }
+        
+        # Use the specified order (only groups that exist in data)
+        unique_x <- order[order %in% unique_groups]
+      } else if (is.factor(group_original)) {
+        # Respect factor levels
+        factor_levels <- levels(group_original)
+        # Only include levels that actually appear in the data
+        unique_x <- factor_levels[factor_levels %in% unique_groups]
+      } else {
+        # Default: sort alphabetically/numerically
+        unique_x <- sort(unique_groups)
+      }
+      
+      # Reverse order if order = -1 was specified
+      if (reverse_order) {
+        unique_x <- rev(unique_x)
+      }
     } else {
       unique_x <- NULL
       n_groups <- 0

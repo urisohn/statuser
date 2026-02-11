@@ -6,14 +6,19 @@
 #' @param formula A formula of the form \code{x ~ group} where \code{x} is the
 #'   variable to plot frequencies for and \code{group} is an optional grouping variable
 #'   (with 2 or 3 unique values). For single variable (no grouping), use \code{x ~ 1}.
+#' @param data An optional data frame containing the variables in the formula.
+#'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param freq Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.
+#' @param order Controls the order in which groups appear in the plot and legend. 
+#'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+#'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+#'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
+#'   alphabetically/numerically. Only applies when using grouped plots.
 #' @param col Color for the bars. 
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param width Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.
 #' @param value.labels Logical. If TRUE, displays frequencies on top of each line. 
 #' @param add Logical. If TRUE, adds to an existing plot instead of creating a new one. 
-#' @param data An optional data frame containing the variables in the formula.
-#'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param show.legend Logical. If TRUE (default), displays a legend when \code{group} is specified. If FALSE, no legend is shown.
 #' @param legend.title Character string. Title for the legend when \code{group} is specified. If NULL (default), no title is shown.
 #' @param col.text Color for the value labels. If not specified, uses \code{col} for non-grouped plots or group colors for grouped plots.
@@ -39,14 +44,18 @@
 #' plot_freq(x, col = "dodgerblue")
 #' plot_freq(x + 1, col = "red", add = TRUE)
 #'
-#' # Using a data frame
+#' # Using a data frame with grouping
 #' df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
 #' plot_freq(value ~ 1, data = df)  # single variable
 #' plot_freq(value ~ group, data = df)  # with grouping
 #'
+#' # Control group order in legend and plot
+#' plot_freq(value ~ group, data = df, order = c("B", "A"))  # B first, then A
+#' plot_freq(value ~ group, data = df, order = -1)  # Reverse default order
+#'
 
 #' @export
-plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   # Extract additional arguments
   dots <- list(...)
   
@@ -133,6 +142,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
   x_name_raw <- validated$y_name_raw
   group_name_raw <- validated$group_name_raw
   
+  # Store original group for factor level checking (before NA removal)
+  group_original <- group
+  
   # Drop missing data
   if (!is.null(group)) {
     isnagroup=is.na(group)
@@ -161,10 +173,50 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       stop("'group' must have the same length as 'x'")
     }
     
-    unique_by <- sort(unique(group))
-    n_groups <- length(unique_by)
+    # Determine group ordering
+    unique_groups <- unique(group)
+    n_groups <- length(unique_groups)
     if (n_groups < 2 || n_groups > 3) {
       stop("'group' must have 2 or 3 unique values")
+    }
+    
+    # Check if order = -1 (reverse default order)
+    reverse_order <- FALSE
+    if (!is.null(order) && length(order) == 1 && is.numeric(order) && order == -1) {
+      reverse_order <- TRUE
+      order <- NULL  # Process as default, then reverse
+    }
+    
+    if (!is.null(order)) {
+      # User specified custom order
+      # Validate that order contains all groups
+      missing_groups <- setdiff(unique_groups, order)
+      extra_groups <- setdiff(order, unique_groups)
+      
+      if (length(missing_groups) > 0) {
+        stop(sprintf("plot_freq(): 'order' is missing group(s): %s", 
+                     paste(missing_groups, collapse = ", ")), call. = FALSE)
+      }
+      if (length(extra_groups) > 0) {
+        warning(sprintf("plot_freq(): 'order' contains group(s) not in data: %s", 
+                       paste(extra_groups, collapse = ", ")))
+      }
+      
+      # Use the specified order (only groups that exist in data)
+      unique_by <- order[order %in% unique_groups]
+    } else if (is.factor(group_original)) {
+      # Respect factor levels
+      factor_levels <- levels(group_original)
+      # Only include levels that actually appear in the data
+      unique_by <- factor_levels[factor_levels %in% unique_groups]
+    } else {
+      # Default: sort alphabetically/numerically
+      unique_by <- sort(unique_groups)
+    }
+    
+    # Reverse order if order = -1 was specified
+    if (reverse_order) {
+      unique_by <- rev(unique_by)
     }
     
     # Use provided colors if valid, otherwise use default colors for groups

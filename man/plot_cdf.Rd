@@ -4,7 +4,14 @@
 \alias{plot_cdf}
 \title{Plot Empirical Cumulative Distribution Functions by Group}
 \usage{
-plot_cdf(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...)
+plot_cdf(
+  formula,
+  data = NULL,
+  order = NULL,
+  show.ks = TRUE,
+  show.quantiles = TRUE,
+  ...
+)
 }
 \arguments{
 \item{formula}{A formula of the form \code{y ~ group} where \code{y} is the
@@ -13,6 +20,12 @@ can be just \code{y} (without a grouping variable) to plot a single ECDF.}
 
 \item{data}{An optional data frame containing the variables in the formula.
 If \code{data} is not provided, variables are evaluated from the calling environment.}
+
+\item{order}{Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots.}
 
 \item{show.ks}{Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
 when there are exactly 2 groups. If FALSE, KS test results are not displayed.}

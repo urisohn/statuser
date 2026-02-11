@@ -8,6 +8,7 @@ plot_freq(
   formula,
   data = NULL,
   freq = TRUE,
+  order = NULL,
   col = "dodgerblue",
   lwd = 9,
   width = NULL,
@@ -28,6 +29,12 @@ variable to plot frequencies for and \code{group} is an optional grouping variab
 If \code{data} is not provided, variables are evaluated from the calling environment.}
 
 \item{freq}{Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.}
+
+\item{order}{Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots.}
 
 \item{col}{Color for the bars.}
 
@@ -72,9 +79,13 @@ plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
 plot_freq(x, col = "dodgerblue")
 plot_freq(x + 1, col = "red", add = TRUE)
 
-# Using a data frame
+# Using a data frame with grouping
 df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
 plot_freq(value ~ 1, data = df)  # single variable
 plot_freq(value ~ group, data = df)  # with grouping
+
+# Control group order in legend and plot
+plot_freq(value ~ group, data = df, order = c("B", "A"))  # B first, then A
+plot_freq(value ~ group, data = df, order = -1)  # Reverse default order
 
 }

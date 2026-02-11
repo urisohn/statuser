@@ -9,6 +9,11 @@
 #'   can be just \code{y} (without a grouping variable) to plot a single ECDF.
 #' @param data An optional data frame containing the variables in the formula.
 #'   If \code{data} is not provided, variables are evaluated from the calling environment.
+#' @param order Controls the order in which groups appear in the plot and legend. 
+#'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+#'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+#'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
+#'   alphabetically/numerically. Only applies when using grouped plots.
 #' @param show.ks Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
 #'   when there are exactly 2 groups. If FALSE, KS test results are not displayed.
 #' @param show.quantiles Logical. If TRUE (default), shows horizontal lines and results
@@ -80,7 +85,7 @@
 #' summary(result$quantile_regression_50)
 
 #' @export
-plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
+plot_cdf <- function(formula, data = NULL, order = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
   # Extract plotting parameters from ...
     dots <- list(...)
     
@@ -164,6 +169,9 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
   group_name_raw <- validated$group_name_raw
   data_name <- validated$data_name
   
+  # Store original group for factor level checking (before NA removal)
+  group_original <- group
+  
   # Check if group is provided
   has_group <- !is.null(group)
   
@@ -180,9 +188,48 @@ plot_cdf <- function(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE
     if (n.nagroup>0) message2("plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
     if (n.nay>0) message2("plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
     
-    # Get unique groups and sort them alphabetically
-    unique_x <- sort(unique(group))
-    n_groups <- length(unique_x)
+    # Get unique groups and apply ordering
+    unique_groups <- unique(group)
+    n_groups <- length(unique_groups)
+    
+    # Check if order = -1 (reverse default order)
+    reverse_order <- FALSE
+    if (!is.null(order) && length(order) == 1 && is.numeric(order) && order == -1) {
+      reverse_order <- TRUE
+      order <- NULL  # Process as default, then reverse
+    }
+    
+    if (!is.null(order)) {
+      # User specified custom order
+      # Validate that order contains all groups
+      missing_groups <- setdiff(unique_groups, order)
+      extra_groups <- setdiff(order, unique_groups)
+      
+      if (length(missing_groups) > 0) {
+        stop(sprintf("plot_cdf(): 'order' is missing group(s): %s", 
+                     paste(missing_groups, collapse = ", ")), call. = FALSE)
+      }
+      if (length(extra_groups) > 0) {
+        warning(sprintf("plot_cdf(): 'order' contains group(s) not in data: %s", 
+                       paste(extra_groups, collapse = ", ")))
+      }
+      
+      # Use the specified order (only groups that exist in data)
+      unique_x <- order[order %in% unique_groups]
+    } else if (is.factor(group_original)) {
+      # Respect factor levels
+      factor_levels <- levels(group_original)
+      # Only include levels that actually appear in the data
+      unique_x <- factor_levels[factor_levels %in% unique_groups]
+    } else {
+      # Default: sort alphabetically/numerically
+      unique_x <- sort(unique_groups)
+    }
+    
+    # Reverse order if order = -1 was specified
+    if (reverse_order) {
+      unique_x <- rev(unique_x)
+    }
   } else {
     # No group variable - just drop missing y values
     isnay=is.na(y)

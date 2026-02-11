@@ -134,3 +134,128 @@ test_that("plot_freq error message shows correct dataset name", {
   )
 })
 
+test_that("plot_freq handles order parameter for groups", {
+  df <- data.frame(
+    value = c(1, 1, 2, 2, 2, 5, 5, 1, 5),
+    group = c("A", "A", "A", "B", "B", "A", "B", "B", "A")
+  )
+  
+  # Custom group order
+  expect_error(plot_freq(value ~ group, data = df, order = c("B", "A")), NA)
+  result <- plot_freq(value ~ group, data = df, order = c("B", "A"))
+  expect_true(is.data.frame(result))
+  
+  # Check that columns are in specified order
+  expect_equal(names(result), c("value", "B", "A"))
+})
+
+test_that("plot_freq respects factor levels for groups when order is NULL", {
+  # Create factor with specific level order
+  df <- data.frame(
+    value = c(1, 1, 2, 2, 2, 5, 5, 1, 5),
+    group = factor(c("A", "A", "A", "B", "B", "A", "B", "B", "A"),
+                   levels = c("B", "A"))
+  )
+  
+  expect_error(plot_freq(value ~ group, data = df), NA)
+  result <- plot_freq(value ~ group, data = df)
+  expect_true(is.data.frame(result))
+  
+  # Check that factor levels are respected (B before A)
+  expect_equal(names(result), c("value", "B", "A"))
+})
+
+test_that("plot_freq order parameter validates group names", {
+  df <- data.frame(
+    value = c(1, 1, 2, 2, 2, 5, 5),
+    group = c("A", "A", "A", "B", "B", "A", "B")
+  )
+  
+  # Missing a group in order
+  expect_error(
+    plot_freq(value ~ group, data = df, order = c("A")),
+    "order.*missing group"
+  )
+  
+  # Extra group in order (should warn, not error)
+  expect_warning(
+    plot_freq(value ~ group, data = df, order = c("A", "B", "C")),
+    "order.*contains group.*not in data"
+  )
+})
+
+test_that("plot_freq order works with 3 groups", {
+  df <- data.frame(
+    value = rep(c(1, 2, 5), 6),
+    group = rep(c("A", "B", "C"), each = 6)
+  )
+  
+  # Custom order for 3 groups
+  expect_error(plot_freq(value ~ group, data = df, order = c("C", "A", "B")), NA)
+  result <- plot_freq(value ~ group, data = df, order = c("C", "A", "B"))
+  expect_true(is.data.frame(result))
+  
+  # Check column order
+  expect_equal(names(result), c("value", "C", "A", "B"))
+})
+
+test_that("plot_freq default group order is sorted", {
+  df <- data.frame(
+    value = c(1, 1, 2, 2, 2, 5, 5, 1, 5),
+    group = c("C", "C", "C", "A", "A", "C", "A", "A", "C")
+  )
+  
+  # Without order parameter, groups should be sorted (A before C)
+  result <- plot_freq(value ~ group, data = df)
+  expect_true(is.data.frame(result))
+  expect_equal(names(result), c("value", "A", "C"))
+})
+
+test_that("plot_freq order = -1 reverses default order", {
+  df <- data.frame(
+    value = c(1, 1, 2, 2, 2, 5, 5, 1, 5),
+    group = c("A", "A", "A", "B", "B", "A", "B", "B", "A")
+  )
+  
+  # Default order is A, B (sorted)
+  result_default <- plot_freq(value ~ group, data = df)
+  expect_equal(names(result_default), c("value", "A", "B"))
+  
+  # order = -1 should reverse to B, A
+  result_reversed <- plot_freq(value ~ group, data = df, order = -1)
+  expect_true(is.data.frame(result_reversed))
+  expect_equal(names(result_reversed), c("value", "B", "A"))
+})
+
+test_that("plot_freq order = -1 reverses factor levels", {
+  df <- data.frame(
+    value = c(1, 1, 2, 2, 2, 5, 5, 1, 5),
+    group = factor(c("A", "A", "A", "B", "B", "A", "B", "B", "A"),
+                   levels = c("A", "B"))
+  )
+  
+  # Default respects factor levels: A, B
+  result_default <- plot_freq(value ~ group, data = df)
+  expect_equal(names(result_default), c("value", "A", "B"))
+  
+  # order = -1 should reverse factor levels to B, A
+  result_reversed <- plot_freq(value ~ group, data = df, order = -1)
+  expect_true(is.data.frame(result_reversed))
+  expect_equal(names(result_reversed), c("value", "B", "A"))
+})
+
+test_that("plot_freq order = -1 works with 3 groups", {
+  df <- data.frame(
+    value = rep(c(1, 2, 5), 6),
+    group = rep(c("A", "B", "C"), each = 6)
+  )
+  
+  # Default order is A, B, C (sorted)
+  result_default <- plot_freq(value ~ group, data = df)
+  expect_equal(names(result_default), c("value", "A", "B", "C"))
+  
+  # order = -1 should reverse to C, B, A
+  result_reversed <- plot_freq(value ~ group, data = df, order = -1)
+  expect_true(is.data.frame(result_reversed))
+  expect_equal(names(result_reversed), c("value", "C", "B", "A"))
+})

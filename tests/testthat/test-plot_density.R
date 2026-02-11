@@ -138,3 +138,42 @@ test_that("plot_density handles many groups", {
   expect_true(is.list(result))
   expect_equal(length(result$densities), 10)
 })
+
+test_that("plot_density handles order parameter for groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Custom group order
+  expect_error(plot_density(y ~ group, order = c("C", "A", "B")), NA)
+  result <- plot_density(y ~ group, order = c("C", "A", "B"))
+  expect_true(is.list(result))
+  
+  # Check that densities are in specified order
+  expect_equal(names(result$densities), c("C", "A", "B"))
+})
+
+test_that("plot_density order = -1 reverses default order", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Default order is A, B, C (sorted)
+  result_default <- plot_density(y ~ group)
+  expect_equal(names(result_default$densities), c("A", "B", "C"))
+  
+  # order = -1 should reverse to C, B, A
+  result_reversed <- plot_density(y ~ group, order = -1)
+  expect_true(is.list(result_reversed))
+  expect_equal(names(result_reversed$densities), c("C", "B", "A"))
+})
+
+test_that("plot_density respects factor levels for groups when order is NULL", {
+  y <- rnorm(100)
+  group <- factor(rep(c("A", "B", "C"), c(30, 40, 30)),
+                  levels = c("C", "A", "B"))
+  
+  result <- plot_density(y ~ group)
+  expect_true(is.list(result))
+  
+  # Check that factor levels are respected (C, A, B)
+  expect_equal(names(result$densities), c("C", "A", "B"))
+})

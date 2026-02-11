@@ -4,12 +4,18 @@
 \alias{plot_density}
 \title{Plot density of a variable, optionally by another variable}
 \usage{
-plot_density(formula, data = NULL, show_means = TRUE, ...)
+plot_density(formula, data = NULL, order = NULL, show_means = TRUE, ...)
 }
 \arguments{
 \item{formula}{Either the single variable name \code{y} or a formula like \code{y ~ x}.}
 
 \item{data}{An optional data frame containing the variables in the formula.}
+
+\item{order}{Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots.}
 
 \item{show_means}{Logical. If TRUE (default), shows points at means.}
 
