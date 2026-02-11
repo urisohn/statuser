@@ -6,6 +6,10 @@
 #' @param formula A formula of the form \code{x ~ group} where \code{x} is the
 #'   variable to plot frequencies for and \code{group} is an optional grouping variable
 #'   (with 2 or 3 unique values). For single variable (no grouping), use \code{x ~ 1}.
+#'   Alternatively, pass a single vector \code{x} for a simple frequency plot.
+#' @param y An optional second vector to compare with \code{formula}. When provided,
+#'   creates a comparison plot of two variables (like grouped plot but with separate variables).
+#'   This allows syntax like \code{plot_freq(y1, y2)} to compare two vectors.
 #' @param data An optional data frame containing the variables in the formula.
 #'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param freq Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.
@@ -13,7 +17,7 @@
 #'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
 #'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
 #'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
-#'   alphabetically/numerically. Only applies when using grouped plots.
+#'   alphabetically/numerically. Only applies when using grouped plots or comparing two variables.
 #' @param col Color for the bars. 
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param width Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.
@@ -44,6 +48,11 @@
 #' plot_freq(x, col = "dodgerblue")
 #' plot_freq(x + 1, col = "red", add = TRUE)
 #'
+#' # Compare two vectors
+#' y1 <- c(1, 1, 2, 2, 2, 5, 5)
+#' y2 <- c(1, 2, 2, 3, 3, 3)
+#' plot_freq(y1, y2)
+#'
 #' # Using a data frame with grouping
 #' df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
 #' plot_freq(value ~ 1, data = df)  # single variable
@@ -55,10 +64,47 @@
 #'
 
 #' @export
-plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+plot_freq <- function(formula, y=NULL, data=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   # Extract additional arguments
   dots <- list(...)
   
+  # Check if we're in two-vector comparison mode (formula is vector, y is vector)
+  if (!is.null(y) && !inherits(formula, "formula")) {
+    # Two-vector comparison mode: plot_freq(y1, y2)
+    # Capture variable names
+    mc <- match.call()
+    y1_name <- deparse(mc$formula)
+    y1_name <- paste(y1_name, collapse = "")
+    y1_name <- gsub('^"|"$', '', y1_name)
+    
+    y2_name <- deparse(mc$y)
+    y2_name <- paste(y2_name, collapse = "")
+    y2_name <- gsub('^"|"$', '', y2_name)
+    
+    # Validate inputs
+    if (!is.numeric(formula) || !is.vector(formula)) {
+      stop(sprintf("plot_freq(): First argument '%s' must be a numeric vector", y1_name), call. = FALSE)
+    }
+    if (!is.numeric(y) || !is.vector(y)) {
+      stop(sprintf("plot_freq(): Second argument '%s' must be a numeric vector", y2_name), call. = FALSE)
+    }
+    
+    # Create a data frame and recursively call with grouped syntax
+    df <- data.frame(
+      value = c(formula, y),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      stringsAsFactors = FALSE
+    )
+    
+    # Forward all arguments to the grouped version
+    return(plot_freq(value ~ group, data = df, freq = freq, order = order, 
+                     col = col, lwd = lwd, width = width, 
+                     value.labels = value.labels, add = add, 
+                     show.legend = show.legend, legend.title = legend.title, 
+                     col.text = col.text, ...))
+  }
+  
+  # Standard mode: formula syntax
   # Validate formula early if it is one
   validate_formula(formula, data, func_name = "plot_freq", calling_env = parent.frame())
   
@@ -239,7 +285,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
     group_freqs <- list()
     group_freqs_original <- list()  # Store original frequencies for return value
     total <- length(x)  # Total sample size
-    for (i in 1:n_groups) {
+    for (i in seq_len(n_groups)) {
       # Extract frequencies for this group, ensuring all x values are included
       group_fs <- numeric(length(all_xs))
       # Match table row names (x values) to all_xs
@@ -283,7 +329,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
       if (!"ylab" %in% names(dots) && !freq) dots$ylab <- "% of Observations"
       
       # Set default main title if not provided
-      if (!"main" %in% names(dots)) dots$main <- paste0("Distribution of ", x_name, "")
+      if (!"main" %in% names(dots)) {
+        dots$main <- paste0("Distribution of ", x_name, "")
+      }
       
       # Set default ylim to start at 0 if not provided
       if (!"ylim" %in% names(dots)) {
@@ -399,7 +447,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
     }
     
     # Draw polygons for each group (side by side, touching exactly)
-    for (i in 1:n_groups) {
+    for (i in seq_len(n_groups)) {
       gf <- group_freqs[[i]]
       non_zero <- gf$fs > 0
       if (any(non_zero)) {
@@ -420,9 +468,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
     # Add value labels with frequencies (colored by group)
     if (value.labels) {
       # For each x value and group, add label if frequency > 0
-      for (j in 1:length(all_xs)) {
+      for (j in seq_along(all_xs)) {
         x_val <- all_xs[j]
-        for (i in 1:n_groups) {
+        for (i in seq_len(n_groups)) {
           freq_val <- group_freqs[[i]]$fs[j]
           if (freq_val > 0) {
             x_label_pos <- x_val + offsets[i]
@@ -444,7 +492,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
     # Add legend showing groups and colors
     if (!add && show.legend) {
       # Calculate sample sizes for each group
-      group_ns <- sapply(1:n_groups, function(i) {
+      group_ns <- sapply(seq_len(n_groups), function(i) {
         length(x[group == unique_by[i]])
       })
       
@@ -462,7 +510,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
       total_text_width <- max_name_width + sample_n_width
       
       # Format labels with padding to align N=xxx
-      padded_labels <- sapply(1:n_groups, function(i) {
+      padded_labels <- sapply(seq_len(n_groups), function(i) {
         name_width <- text_widths[i]
         padding_needed <- max_name_width - name_width
         # Estimate number of spaces needed (using space width)
@@ -471,7 +519,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
         paste0(group_names[i], strrep(" ", n_spaces), " (N=", group_ns[i], ")")
       })
       legend_labels <- padded_labels
-      legend_cols <- group_cols[1:n_groups]
+      legend_cols <- group_cols[seq_len(n_groups)]
       
       # Add legend with text.width to ensure consistent alignment
       legend_args <- list("topleft", legend = legend_labels, fill = legend_cols, 
@@ -486,7 +534,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, order=NULL, col='dodgerblue
     # Return frequencies or percentages invisibly (full table with separate columns for each group)
     # Build data frame with value column and one column per group
     result_df <- data.frame(value = all_xs, stringsAsFactors = FALSE)
-    for (i in 1:n_groups) {
+    for (i in seq_len(n_groups)) {
       # Use percentages if freq=FALSE, otherwise use frequencies
       if (freq == FALSE) {
         result_df[[as.character(unique_by[i])]] <- group_freqs[[i]]$fs

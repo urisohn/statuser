@@ -259,3 +259,90 @@ test_that("plot_freq order = -1 works with 3 groups", {
   expect_true(is.data.frame(result_reversed))
   expect_equal(names(result_reversed), c("value", "C", "B", "A"))
 })
+
+test_that("plot_freq handles two-vector comparison", {
+  y1 <- c(1, 1, 2, 2, 2, 5, 5)
+  y2 <- c(1, 2, 2, 3, 3, 3)
+  
+  # Should not throw errors
+  expect_error(plot_freq(y1, y2), NA)
+  
+  result <- plot_freq(y1, y2)
+  expect_true(is.data.frame(result))
+  
+  # Should have columns for value and both vector names
+  expect_equal(ncol(result), 3)
+  expect_true("value" %in% names(result))
+})
+
+test_that("plot_freq two-vector comparison returns correct structure", {
+  y1 <- c(1, 1, 2, 2, 2)
+  y2 <- c(2, 3, 3, 3)
+  
+  result <- plot_freq(y1, y2)
+  
+  # Check structure
+  expect_true(is.data.frame(result))
+  expect_equal(ncol(result), 3)
+  expect_true("value" %in% names(result))
+  expect_true("y1" %in% names(result))
+  expect_true("y2" %in% names(result))
+})
+
+test_that("plot_freq two-vector comparison with custom parameters", {
+  y1 <- c(1, 1, 2, 2, 2)
+  y2 <- c(2, 3, 3, 3)
+  
+  # Custom colors
+  expect_error(plot_freq(y1, y2, col = c("red", "blue")), NA)
+  
+  # Percentages
+  expect_error(plot_freq(y1, y2, freq = FALSE), NA)
+  
+  # Without legend
+  expect_error(plot_freq(y1, y2, show.legend = FALSE), NA)
+})
+
+test_that("plot_freq two-vector comparison handles order parameter", {
+  y1 <- c(1, 1, 2, 2, 2)
+  y2 <- c(2, 3, 3, 3)
+  
+  # Default order (alphabetical)
+  result_default <- plot_freq(y1, y2)
+  expect_equal(names(result_default), c("value", "y1", "y2"))
+  
+  # Reverse order
+  result_reversed <- plot_freq(y1, y2, order = -1)
+  expect_equal(names(result_reversed), c("value", "y2", "y1"))
+  
+  # Custom order
+  result_custom <- plot_freq(y1, y2, order = c("y2", "y1"))
+  expect_equal(names(result_custom), c("value", "y2", "y1"))
+})
+
+test_that("plot_freq two-vector comparison handles missing values", {
+  y1 <- c(1, 1, 2, NA, 2)
+  y2 <- c(2, NA, 3, 3)
+  
+  # Should handle NAs gracefully
+  expect_error(plot_freq(y1, y2), NA)
+  
+  result <- plot_freq(y1, y2)
+  expect_true(is.data.frame(result))
+})
+
+test_that("plot_freq two-vector comparison validates inputs", {
+  y1 <- c(1, 1, 2, 2, 2)
+  
+  # Non-numeric second argument
+  expect_error(
+    plot_freq(y1, "not a vector"),
+    "must be a numeric vector"
+  )
+  
+  # Non-numeric first argument
+  expect_error(
+    plot_freq("not a vector", y1),
+    "must be a numeric vector"
+  )
+})
