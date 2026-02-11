@@ -8,6 +8,7 @@ plot_freq(
   formula,
   y = NULL,
   data = NULL,
+  labels = NULL,
   freq = TRUE,
   order = NULL,
   col = "dodgerblue",
@@ -31,7 +32,11 @@ Alternatively, pass a single vector \code{x} for a simple frequency plot.}
 creates a comparison plot of two variables (like grouped plot but with separate variables).
 This allows syntax like \code{plot_freq(y1, y2)} to compare two vectors.}
 
-\item{data}{An optional data frame containing the variables in the formula.
+\item{data}{An optional data frame containing the variables in the formula.}
+
+\item{labels}{An optional character vector of length 2 providing custom labels for the
+two vectors when using two-vector syntax. Only applicable when \code{y} is provided.
+If \code{NULL} (default), uses the variable names.
 If \code{data} is not provided, variables are evaluated from the calling environment.}
 
 \item{freq}{Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.}
@@ -89,6 +94,9 @@ plot_freq(x + 1, col = "red", add = TRUE)
 y1 <- c(1, 1, 2, 2, 2, 5, 5)
 y2 <- c(1, 2, 2, 3, 3, 3)
 plot_freq(y1, y2)
+
+# Compare two vectors with custom labels
+plot_freq(y1, y2, labels = c("men", "women"))
 
 # Using a data frame with grouping
 df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))

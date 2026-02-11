@@ -346,3 +346,75 @@ test_that("plot_freq two-vector comparison validates inputs", {
     "must be a numeric vector"
   )
 })
+
+test_that("plot_freq two-vector with custom labels", {
+  y1 <- c(1, 1, 2, 2, 2)
+  y2 <- c(2, 3, 3, 3)
+  
+  # Custom labels
+  result <- plot_freq(y1, y2, labels = c("men", "women"))
+  expect_true(is.data.frame(result))
+  expect_true("men" %in% names(result))
+  expect_true("women" %in% names(result))
+})
+
+test_that("plot_freq validates labels parameter", {
+  y1 <- c(1, 1, 2, 2, 2)
+  y2 <- c(2, 3, 3, 3)
+  
+  # Wrong length
+  expect_error(
+    plot_freq(y1, y2, labels = c("men")),
+    "labels.*must be.*length 2"
+  )
+  
+  expect_error(
+    plot_freq(y1, y2, labels = c("men", "women", "other")),
+    "labels.*must be.*length 2"
+  )
+  
+  # Wrong type
+  expect_error(
+    plot_freq(y1, y2, labels = c(1, 2)),
+    "labels.*must be.*character"
+  )
+})
+
+test_that("plot_freq custom labels work with order parameter", {
+  y1 <- c(1, 1, 2, 2, 2)
+  y2 <- c(2, 3, 3, 3)
+  
+  # Custom labels with reversed order
+  result <- plot_freq(y1, y2, labels = c("men", "women"), order = -1)
+  expect_equal(names(result), c("value", "women", "men"))
+  
+  # Custom labels with explicit order
+  result2 <- plot_freq(y1, y2, labels = c("men", "women"), order = c("women", "men"))
+  expect_equal(names(result2), c("value", "women", "men"))
+})
+
+test_that("plot_freq two-vector handles continuous data", {
+  # Test with continuous data (runif, rnorm) which have floating point values
+  set.seed(123)
+  y1 <- runif(50)
+  y2 <- rnorm(50)
+  
+  # Should not throw errors with continuous data
+  expect_error(plot_freq(y1, y2), NA)
+  
+  result <- plot_freq(y1, y2)
+  expect_true(is.data.frame(result))
+})
+
+test_that("plot_freq xlim includes all bars", {
+  # Test that bars at edges are not clipped
+  y1 <- c(1, 1, 2, 2, 3)
+  y2 <- c(1, 4, 4, 4)
+  
+  # Should include padding so bars at min (1) and max (4) are visible
+  expect_error(plot_freq(y1, y2), NA)
+  
+  # Test with single variable at edges
+  x <- c(1, 1, 5, 5)
+  expect_error(plot_freq(x), NA)
+})
