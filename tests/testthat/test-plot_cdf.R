@@ -165,3 +165,113 @@ test_that("plot_cdf handles very small samples per group", {
   expect_true(is.list(result))
   expect_equal(length(result$ecdfs), 2)
 })
+
+test_that("plot_cdf handles order parameter for groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Custom group order
+  expect_error(plot_cdf(y ~ group, order = c("C", "A", "B")), NA)
+  result <- plot_cdf(y ~ group, order = c("C", "A", "B"))
+  expect_true(is.list(result))
+  
+  # Check that ecdfs are in specified order
+  expect_equal(names(result$ecdfs), c("C", "A", "B"))
+})
+
+test_that("plot_cdf order = -1 reverses default order", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Default order is A, B, C (sorted)
+  result_default <- plot_cdf(y ~ group)
+  expect_equal(names(result_default$ecdfs), c("A", "B", "C"))
+  
+  # order = -1 should reverse to C, B, A
+  result_reversed <- plot_cdf(y ~ group, order = -1)
+  expect_true(is.list(result_reversed))
+  expect_equal(names(result_reversed$ecdfs), c("C", "B", "A"))
+})
+
+test_that("plot_cdf respects factor levels for groups when order is NULL", {
+  y <- rnorm(100)
+  group <- factor(rep(c("A", "B", "C"), c(30, 40, 30)),
+                  levels = c("C", "A", "B"))
+  
+  result <- plot_cdf(y ~ group)
+  expect_true(is.list(result))
+  
+  # Check that factor levels are respected (C, A, B)
+  expect_equal(names(result$ecdfs), c("C", "A", "B"))
+})
+
+test_that("plot_cdf handles two-vector comparison", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Should not throw errors
+  expect_error(plot_cdf(y1, y2), NA)
+  
+  result <- plot_cdf(y1, y2)
+  expect_true(is.list(result))
+  expect_equal(length(result$ecdfs), 2)
+  expect_true("ks_test" %in% names(result))
+})
+
+test_that("plot_cdf two-vector with custom parameters", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Custom colors
+  expect_error(plot_cdf(y1, y2, col = c("red", "blue")), NA)
+  
+  # Without KS test
+  expect_error(plot_cdf(y1, y2, show.ks = FALSE), NA)
+  
+  # Without quantiles
+  expect_error(plot_cdf(y1, y2, show.quantiles = FALSE), NA)
+})
+
+test_that("plot_cdf two-vector handles order parameter", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  result <- plot_cdf(y1, y2, order = -1)
+  expect_equal(names(result$ecdfs), c("y2", "y1"))
+})
+
+test_that("plot_cdf two-vector with different lengths", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(30)  # Different length
+  
+  # Should handle different lengths
+  expect_error(plot_cdf(y1, y2), NA)
+  
+  result <- plot_cdf(y1, y2)
+  expect_equal(length(result$ecdfs), 2)
+})
+
+test_that("plot_cdf reserves space for legend with groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  # Should reserve space for legend
+  expect_error(plot_cdf(y ~ group), NA)
+  
+  # Test with two-vector
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  expect_error(plot_cdf(y1, y2), NA)
+})
+
+test_that("plot_cdf xlim adds padding", {
+  # Test that xlim includes padding to prevent edge clipping
+  y1 <- c(1, 2, 3, 4, 5)
+  y2 <- c(1, 2, 3)
+  
+  expect_error(plot_cdf(y1, y2), NA)
+  
+  # Single variable
+  x <- c(1, 2, 3, 4, 5)
+  expect_error(plot_cdf(x), NA)
+})

@@ -6,8 +6,11 @@
 \usage{
 plot_freq(
   formula,
+  y = NULL,
   data = NULL,
+  labels = NULL,
   freq = TRUE,
+  order = NULL,
   col = "dodgerblue",
   lwd = 9,
   width = NULL,
@@ -22,12 +25,27 @@ plot_freq(
 \arguments{
 \item{formula}{A formula of the form \code{x ~ group} where \code{x} is the
 variable to plot frequencies for and \code{group} is an optional grouping variable
-(with 2 or 3 unique values). For single variable (no grouping), use \code{x ~ 1}.}
+(with 2 or 3 unique values). For single variable (no grouping), use \code{x ~ 1}.
+Alternatively, pass a single vector \code{x} for a simple frequency plot.}
 
-\item{data}{An optional data frame containing the variables in the formula.
+\item{y}{An optional second vector to compare with \code{formula}. When provided,
+creates a comparison plot of two variables (like grouped plot but with separate variables).
+This allows syntax like \code{plot_freq(y1, y2)} to compare two vectors.}
+
+\item{data}{An optional data frame containing the variables in the formula.}
+
+\item{labels}{An optional character vector of length 2 providing custom labels for the
+two vectors when using two-vector syntax. Only applicable when \code{y} is provided.
+If \code{NULL} (default), uses the variable names.
 If \code{data} is not provided, variables are evaluated from the calling environment.}
 
 \item{freq}{Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.}
+
+\item{order}{Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots or comparing two variables.}
 
 \item{col}{Color for the bars.}
 
@@ -72,9 +90,21 @@ plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
 plot_freq(x, col = "dodgerblue")
 plot_freq(x + 1, col = "red", add = TRUE)
 
-# Using a data frame
+# Compare two vectors
+y1 <- c(1, 1, 2, 2, 2, 5, 5)
+y2 <- c(1, 2, 2, 3, 3, 3)
+plot_freq(y1, y2)
+
+# Compare two vectors with custom labels
+plot_freq(y1, y2, labels = c("men", "women"))
+
+# Using a data frame with grouping
 df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
 plot_freq(value ~ 1, data = df)  # single variable
 plot_freq(value ~ group, data = df)  # with grouping
+
+# Control group order in legend and plot
+plot_freq(value ~ group, data = df, order = c("B", "A"))  # B first, then A
+plot_freq(value ~ group, data = df, order = -1)  # Reverse default order
 
 }

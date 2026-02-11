@@ -138,3 +138,97 @@ test_that("plot_density handles many groups", {
   expect_true(is.list(result))
   expect_equal(length(result$densities), 10)
 })
+
+test_that("plot_density handles order parameter for groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Custom group order
+  expect_error(plot_density(y ~ group, order = c("C", "A", "B")), NA)
+  result <- plot_density(y ~ group, order = c("C", "A", "B"))
+  expect_true(is.list(result))
+  
+  # Check that densities are in specified order
+  expect_equal(names(result$densities), c("C", "A", "B"))
+})
+
+test_that("plot_density order = -1 reverses default order", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Default order is A, B, C (sorted)
+  result_default <- plot_density(y ~ group)
+  expect_equal(names(result_default$densities), c("A", "B", "C"))
+  
+  # order = -1 should reverse to C, B, A
+  result_reversed <- plot_density(y ~ group, order = -1)
+  expect_true(is.list(result_reversed))
+  expect_equal(names(result_reversed$densities), c("C", "B", "A"))
+})
+
+test_that("plot_density respects factor levels for groups when order is NULL", {
+  y <- rnorm(100)
+  group <- factor(rep(c("A", "B", "C"), c(30, 40, 30)),
+                  levels = c("C", "A", "B"))
+  
+  result <- plot_density(y ~ group)
+  expect_true(is.list(result))
+  
+  # Check that factor levels are respected (C, A, B)
+  expect_equal(names(result$densities), c("C", "A", "B"))
+})
+
+test_that("plot_density handles two-vector comparison", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Should not throw errors
+  expect_error(plot_density(y1, y2), NA)
+  
+  result <- plot_density(y1, y2)
+  expect_true(is.list(result))
+  expect_equal(length(result$densities), 2)
+})
+
+test_that("plot_density two-vector with custom parameters", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Custom colors
+  expect_error(plot_density(y1, y2, col = c("red", "blue")), NA)
+  
+  # Show means
+  expect_error(plot_density(y1, y2, show_means = FALSE), NA)
+})
+
+test_that("plot_density two-vector handles order parameter", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  result <- plot_density(y1, y2, order = -1)
+  expect_equal(names(result$densities), c("y2", "y1"))
+})
+
+test_that("plot_density two-vector with different lengths", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(30)  # Different length
+  
+  # Should handle different lengths
+  expect_error(plot_density(y1, y2), NA)
+  
+  result <- plot_density(y1, y2)
+  expect_equal(length(result$densities), 2)
+})
+
+test_that("plot_density reserves space for legend with groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  # Should reserve space for legend
+  expect_error(plot_density(y ~ group), NA)
+  
+  # Test with two-vector
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  expect_error(plot_density(y1, y2), NA)
+})

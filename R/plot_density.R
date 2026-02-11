@@ -3,7 +3,16 @@
 #' Plots the distribution of a variable by group, simply: \code{plot_density(y ~ x)}
 #'
 #' @param formula Either the single variable name \code{y} or a formula like \code{y ~ x}.
+#'   Alternatively, pass a single vector for a simple density plot.
+#' @param y An optional second vector to compare with \code{formula}. When provided,
+#'   creates a comparison plot of two variables. This allows syntax like 
+#'   \code{plot_density(y1, y2)} to compare two vectors.
 #' @param data An optional data frame containing the variables in the formula.
+#' @param order Controls the order in which groups appear in the plot and legend. 
+#'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+#'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+#'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
+#'   alphabetically/numerically. Only applies when using grouped plots.
 #' @param show_means Logical. If TRUE (default), shows points at means.
 #' @param ... Additional arguments passed to plotting functions.
 
@@ -42,6 +51,11 @@
 #' plot_density(value ~ group, data = df)
 #' plot_density(value ~ group, data = df, col = c("red", "blue"))
 #'
+#' # Compare two vectors
+#' y1 <- rnorm(50)
+#' y2 <- rnorm(50, mean = 1)
+#' plot_density(y1, y2)
+#'
 #' @return Invisibly returns a list with the following element:
 #'   \describe{
 #'     \item{densities}{A named list of density objects (class \code{"density"}), 
@@ -53,7 +67,7 @@
 #'   The function is primarily called for its side effect of creating a plot.
 #'
 #' @export
-plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
+plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_means = TRUE, ...) {
   #OUTLINE
   #1. Capture variable names for labels
   #2. Extract and handle parameters
@@ -81,6 +95,39 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
   # Extract plotting parameters from ...
     dots <- list(...)
     
+  # Check if we're in two-vector comparison mode (formula is vector, y is vector)
+  if (!is.null(y) && !inherits(formula, "formula")) {
+    # Two-vector comparison mode: plot_density(y1, y2)
+    # Capture variable names
+    mc <- match.call()
+    y1_name <- deparse(mc$formula)
+    y1_name <- paste(y1_name, collapse = "")
+    y1_name <- gsub('^"|"$', '', y1_name)
+    
+    y2_name <- deparse(mc$y)
+    y2_name <- paste(y2_name, collapse = "")
+    y2_name <- gsub('^"|"$', '', y2_name)
+    
+    # Validate inputs
+    if (!is.numeric(formula) || !is.vector(formula)) {
+      stop(sprintf("plot_density(): First argument '%s' must be a numeric vector", y1_name), call. = FALSE)
+    }
+    if (!is.numeric(y) || !is.vector(y)) {
+      stop(sprintf("plot_density(): Second argument '%s' must be a numeric vector", y2_name), call. = FALSE)
+    }
+    
+    # Create a data frame and recursively call with grouped syntax
+    df <- data.frame(
+      value = c(formula, y),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      stringsAsFactors = FALSE
+    )
+    
+    # Forward all arguments to the grouped version
+    return(plot_density(value ~ group, data = df, order = order, 
+                       show_means = show_means, ...))
+  }
+    
     # Extract show.means parameter (from dots, as it's not a formal parameter)
     show_mean_segments <- if ("show.means" %in% names(dots)) dots$show.means else TRUE
     dots$show.means <- NULL  # Remove from dots so it doesn't get passed to plot functions
@@ -100,6 +147,28 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
     gsub('^"|"$', '', data_name_val)
   } else {
     NULL
+  }
+  
+  # Capture original group before validation (to preserve factor levels)
+  group_original_before_validation <- NULL
+  if (is_formula_input) {
+    formula_vars <- all.vars(formula)
+    if (length(formula_vars) >= 2) {
+      group_var_name <- formula_vars[2]
+      if (!is.null(data)) {
+        # Extract from data frame
+        if (group_var_name %in% names(data)) {
+          group_original_before_validation <- data[[group_var_name]]
+        }
+      } else {
+        # Extract from environment
+        tryCatch({
+          group_original_before_validation <- eval(as.name(group_var_name), envir = parent.frame())
+        }, error = function(e) {
+          # If we can't find it, that's ok - validation will handle the error
+        })
+      }
+    }
   }
   
   #2. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
@@ -161,6 +230,14 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
   y_name_raw <- validated$y_name_raw
   group_name_raw <- validated$group_name_raw
   
+  # Store original group for factor level checking (before NA removal)
+  # Use the version captured before validation if available (to preserve factor levels)
+  group_original <- if (!is.null(group_original_before_validation)) {
+    group_original_before_validation
+  } else {
+    group
+  }
+  
   #3. Drop missing data
     if (!is.null(group)) {
       isnagroup=is.na(group)
@@ -183,8 +260,47 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
   
   #5. Get unique groups (if group is provided)
     if (!is.null(group)) {
-      unique_x <- sort(unique(group))
-      n_groups <- length(unique_x)
+      unique_groups <- unique(group)
+      n_groups <- length(unique_groups)
+      
+      # Check if order = -1 (reverse default order)
+      reverse_order <- FALSE
+      if (!is.null(order) && length(order) == 1 && is.numeric(order) && order == -1) {
+        reverse_order <- TRUE
+        order <- NULL  # Process as default, then reverse
+      }
+      
+      if (!is.null(order)) {
+        # User specified custom order
+        # Validate that order contains all groups
+        missing_groups <- setdiff(unique_groups, order)
+        extra_groups <- setdiff(order, unique_groups)
+        
+        if (length(missing_groups) > 0) {
+          stop(sprintf("plot_density(): 'order' is missing group(s): %s", 
+                       paste(missing_groups, collapse = ", ")), call. = FALSE)
+        }
+        if (length(extra_groups) > 0) {
+          warning(sprintf("plot_density(): 'order' contains group(s) not in data: %s", 
+                         paste(extra_groups, collapse = ", ")))
+        }
+        
+        # Use the specified order (only groups that exist in data)
+        unique_x <- order[order %in% unique_groups]
+      } else if (is.factor(group_original)) {
+        # Respect factor levels
+        factor_levels <- levels(group_original)
+        # Only include levels that actually appear in the data
+        unique_x <- factor_levels[factor_levels %in% unique_groups]
+      } else {
+        # Default: sort alphabetically/numerically
+        unique_x <- sort(unique_groups)
+      }
+      
+      # Reverse order if order = -1 was specified
+      if (reverse_order) {
+        unique_x <- rev(unique_x)
+      }
     } else {
       unique_x <- NULL
       n_groups <- 0
@@ -263,7 +379,12 @@ plot_density <- function(formula, data = NULL, show_means = TRUE, ...) {
     x_range <- x_max - x_min
     x_lim <- c(x_min - 0.05 * x_range, x_max + 0.05 * x_range)
     y_max_density <- max(all_y_density, na.rm = TRUE)
-    y_lim_density <- c(0, y_max_density * 1.3)  # Add 30% space for legend
+    # Reserve space for legend if there's a group (legend will be shown)
+    if (!is.null(group)) {
+      y_lim_density <- c(0, y_max_density * 1.3)  # Add 30% space for legend
+    } else {
+      y_lim_density <- c(0, y_max_density * 1.1)  # Add 10% space for margins only
+    }
 
   #12. Helper function: NULL coalescing
     `%||%` <- function(x, y) if (is.null(x)) y else x

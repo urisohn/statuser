@@ -6,14 +6,26 @@
 #' @param formula A formula of the form \code{x ~ group} where \code{x} is the
 #'   variable to plot frequencies for and \code{group} is an optional grouping variable
 #'   (with 2 or 3 unique values). For single variable (no grouping), use \code{x ~ 1}.
+#'   Alternatively, pass a single vector \code{x} for a simple frequency plot.
+#' @param y An optional second vector to compare with \code{formula}. When provided,
+#'   creates a comparison plot of two variables (like grouped plot but with separate variables).
+#'   This allows syntax like \code{plot_freq(y1, y2)} to compare two vectors.
+#' @param data An optional data frame containing the variables in the formula.
+#' @param labels An optional character vector of length 2 providing custom labels for the
+#'   two vectors when using two-vector syntax. Only applicable when \code{y} is provided.
+#'   If \code{NULL} (default), uses the variable names.
+#'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param freq Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.
+#' @param order Controls the order in which groups appear in the plot and legend. 
+#'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+#'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+#'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
+#'   alphabetically/numerically. Only applies when using grouped plots or comparing two variables.
 #' @param col Color for the bars. 
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param width Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.
 #' @param value.labels Logical. If TRUE, displays frequencies on top of each line. 
 #' @param add Logical. If TRUE, adds to an existing plot instead of creating a new one. 
-#' @param data An optional data frame containing the variables in the formula.
-#'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param show.legend Logical. If TRUE (default), displays a legend when \code{group} is specified. If FALSE, no legend is shown.
 #' @param legend.title Character string. Title for the legend when \code{group} is specified. If NULL (default), no title is shown.
 #' @param col.text Color for the value labels. If not specified, uses \code{col} for non-grouped plots or group colors for grouped plots.
@@ -39,17 +51,76 @@
 #' plot_freq(x, col = "dodgerblue")
 #' plot_freq(x + 1, col = "red", add = TRUE)
 #'
-#' # Using a data frame
+#' # Compare two vectors
+#' y1 <- c(1, 1, 2, 2, 2, 5, 5)
+#' y2 <- c(1, 2, 2, 3, 3, 3)
+#' plot_freq(y1, y2)
+#'
+#' # Compare two vectors with custom labels
+#' plot_freq(y1, y2, labels = c("men", "women"))
+#'
+#' # Using a data frame with grouping
 #' df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
 #' plot_freq(value ~ 1, data = df)  # single variable
 #' plot_freq(value ~ group, data = df)  # with grouping
 #'
+#' # Control group order in legend and plot
+#' plot_freq(value ~ group, data = df, order = c("B", "A"))  # B first, then A
+#' plot_freq(value ~ group, data = df, order = -1)  # Reverse default order
+#'
 
 #' @export
-plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   # Extract additional arguments
   dots <- list(...)
   
+  # Check if we're in two-vector comparison mode (formula is vector, y is vector)
+  if (!is.null(y) && !inherits(formula, "formula")) {
+    # Two-vector comparison mode: plot_freq(y1, y2)
+    
+    # Validate labels parameter
+    if (!is.null(labels)) {
+      if (!is.character(labels) || length(labels) != 2) {
+        stop("plot_freq(): 'labels' must be a character vector of length 2", call. = FALSE)
+      }
+      y1_name <- labels[1]
+      y2_name <- labels[2]
+    } else {
+      # Capture variable names
+      mc <- match.call()
+      y1_name <- deparse(mc$formula)
+      y1_name <- paste(y1_name, collapse = "")
+      y1_name <- gsub('^"|"$', '', y1_name)
+      
+      y2_name <- deparse(mc$y)
+      y2_name <- paste(y2_name, collapse = "")
+      y2_name <- gsub('^"|"$', '', y2_name)
+    }
+    
+    # Validate inputs
+    if (!is.numeric(formula) || !is.vector(formula)) {
+      stop(sprintf("plot_freq(): First argument must be a numeric vector"), call. = FALSE)
+    }
+    if (!is.numeric(y) || !is.vector(y)) {
+      stop(sprintf("plot_freq(): Second argument must be a numeric vector"), call. = FALSE)
+    }
+    
+    # Create a data frame and recursively call with grouped syntax
+    df <- data.frame(
+      value = c(formula, y),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      stringsAsFactors = FALSE
+    )
+    
+    # Forward all arguments to the grouped version
+    return(plot_freq(value ~ group, data = df, freq = freq, order = order, 
+                     col = col, lwd = lwd, width = width, 
+                     value.labels = value.labels, add = add, 
+                     show.legend = show.legend, legend.title = legend.title, 
+                     col.text = col.text, ...))
+  }
+  
+  # Standard mode: formula syntax
   # Validate formula early if it is one
   validate_formula(formula, data, func_name = "plot_freq", calling_env = parent.frame())
   
@@ -65,6 +136,28 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     gsub('^"|"$', '', data_name_val)
   } else {
     NULL
+  }
+  
+  # Capture original group before validation (to preserve factor levels)
+  group_original_before_validation <- NULL
+  if (is_formula_input) {
+    formula_vars <- all.vars(formula)
+    if (length(formula_vars) >= 2) {
+      group_var_name <- formula_vars[2]
+      if (!is.null(data)) {
+        # Extract from data frame
+        if (group_var_name %in% names(data)) {
+          group_original_before_validation <- data[[group_var_name]]
+        }
+      } else {
+        # Extract from environment
+        tryCatch({
+          group_original_before_validation <- eval(as.name(group_var_name), envir = parent.frame())
+        }, error = function(e) {
+          # If we can't find it, that's ok - validation will handle the error
+        })
+      }
+    }
   }
   
   # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
@@ -133,6 +226,14 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
   x_name_raw <- validated$y_name_raw
   group_name_raw <- validated$group_name_raw
   
+  # Store original group for factor level checking (before NA removal)
+  # Use the version captured before validation if available (to preserve factor levels)
+  group_original <- if (!is.null(group_original_before_validation)) {
+    group_original_before_validation
+  } else {
+    group
+  }
+  
   # Drop missing data
   if (!is.null(group)) {
     isnagroup=is.na(group)
@@ -161,10 +262,50 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       stop("'group' must have the same length as 'x'")
     }
     
-    unique_by <- sort(unique(group))
-    n_groups <- length(unique_by)
+    # Determine group ordering
+    unique_groups <- unique(group)
+    n_groups <- length(unique_groups)
     if (n_groups < 2 || n_groups > 3) {
       stop("'group' must have 2 or 3 unique values")
+    }
+    
+    # Check if order = -1 (reverse default order)
+    reverse_order <- FALSE
+    if (!is.null(order) && length(order) == 1 && is.numeric(order) && order == -1) {
+      reverse_order <- TRUE
+      order <- NULL  # Process as default, then reverse
+    }
+    
+    if (!is.null(order)) {
+      # User specified custom order
+      # Validate that order contains all groups
+      missing_groups <- setdiff(unique_groups, order)
+      extra_groups <- setdiff(order, unique_groups)
+      
+      if (length(missing_groups) > 0) {
+        stop(sprintf("plot_freq(): 'order' is missing group(s): %s", 
+                     paste(missing_groups, collapse = ", ")), call. = FALSE)
+      }
+      if (length(extra_groups) > 0) {
+        warning(sprintf("plot_freq(): 'order' contains group(s) not in data: %s", 
+                       paste(extra_groups, collapse = ", ")))
+      }
+      
+      # Use the specified order (only groups that exist in data)
+      unique_by <- order[order %in% unique_groups]
+    } else if (is.factor(group_original)) {
+      # Respect factor levels
+      factor_levels <- levels(group_original)
+      # Only include levels that actually appear in the data
+      unique_by <- factor_levels[factor_levels %in% unique_groups]
+    } else {
+      # Default: sort alphabetically/numerically
+      unique_by <- sort(unique_groups)
+    }
+    
+    # Reverse order if order = -1 was specified
+    if (reverse_order) {
+      unique_by <- rev(unique_by)
     }
     
     # Use provided colors if valid, otherwise use default colors for groups
@@ -183,23 +324,34 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     # Match table columns to unique_by order to ensure correct group assignment
     col_indices <- match(unique_by, table_by_cols)
     
+    # Check for any NA values in col_indices (shouldn't happen but defensive programming)
+    if (any(is.na(col_indices))) {
+      stop(sprintf("plot_freq(): Internal error - group matching failed. unique_by: %s, table_by_cols: %s",
+                   paste(unique_by, collapse=", "), paste(table_by_cols, collapse=", ")), call. = FALSE)
+    }
+    
     # Convert to list format for each group
     group_freqs <- list()
     group_freqs_original <- list()  # Store original frequencies for return value
     total <- length(x)  # Total sample size
-    for (i in 1:n_groups) {
+    for (i in seq_len(n_groups)) {
       # Extract frequencies for this group, ensuring all x values are included
       group_fs <- numeric(length(all_xs))
       # Match table row names (x values) to all_xs
       # Handle both numeric and character/factor x values
       if (is.numeric(x)) {
-        table_xs <- as.numeric(rownames(freq_table))
+        # For numeric x, use the sorted unique values from x directly
+        # instead of converting from character rownames (which loses precision)
+        # Build frequency vector by matching x values to groups
+        x_in_group <- x[group == unique_by[i]]
+        for (val in all_xs) {
+          group_fs[which(all_xs == val)] <- sum(x_in_group == val)
+        }
       } else {
         table_xs <- rownames(freq_table)
+        idx <- match(table_xs, all_xs)
+        group_fs[idx] <- freq_table[, col_indices[i]]
       }
-      idx <- match(table_xs, all_xs)
-      # Use the correct column index that matches unique_by[i]
-      group_fs[idx] <- freq_table[, col_indices[i]]
       
       # Store original frequencies for return value
       group_freqs_original[[i]] <- list(xs = all_xs, fs = group_fs)
@@ -216,11 +368,28 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     # Find overall max frequency for ylim (already in percentages if freq=FALSE)
     max_fs <- max(sapply(group_freqs, function(gf) max(gf$fs, na.rm = TRUE)), na.rm = TRUE)
     
+    # Calculate bar width if not provided (needed for xlim calculation and later use)
+    if (is.null(width)) {
+      if (length(all_xs) > 1) {
+        min_spacing <- min(diff(sort(all_xs)))
+        width_calc <- min_spacing * 0.2  # 20% of minimum spacing
+      } else {
+        width_calc <- 0.15  # fallback
+      }
+    } else {
+      width_calc <- width
+    }
+    
     # Only set up plot if not adding to existing plot
     if (!add) {
-      # Set default xlim if not set
+      
+      # Set default xlim if not set, with padding for bar width
       if (!"xlim" %in% names(dots)) {
-        dots$xlim <- c(min(all_xs), max(all_xs))
+        # For 3 groups, bars extend width on each side of center
+        # For 2 groups, bars extend width/2 on each side
+        bar_extent <- if (n_groups == 3) width_calc else width_calc / 2
+        padding <- bar_extent * 1.1  # Add 10% extra padding
+        dots$xlim <- c(min(all_xs) - padding, max(all_xs) + padding)
       }
       
       # Set default xlab if not provided
@@ -231,7 +400,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       if (!"ylab" %in% names(dots) && !freq) dots$ylab <- "% of Observations"
       
       # Set default main title if not provided
-      if (!"main" %in% names(dots)) dots$main <- paste0("Distribution of ", x_name, "")
+      if (!"main" %in% names(dots)) {
+        dots$main <- paste0("Distribution of ", x_name, "")
+      }
       
       # Set default ylim to start at 0 if not provided
       if (!"ylim" %in% names(dots)) {
@@ -239,6 +410,10 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
         # Add extra space at top if value labels are shown
         if (value.labels == TRUE && y_max > 0) {
           y_max <- y_max + max(1, y_max * 0.15)  # Add 15% or at least 1 unit
+        }
+        # Reserve top 20% for legend if legend will be shown
+        if (show.legend) {
+          y_max <- y_max * 1.25  # Increase by 25% to make room for legend
         }
         dots$ylim <- c(0, y_max)
       }
@@ -327,14 +502,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       }
     }
     
-    # Calculate bar width if not provided
+    # Use the width calculated earlier (or user-provided width)
     if (is.null(width)) {
-      if (length(all_xs) > 1) {
-        min_spacing <- min(diff(sort(all_xs)))
-        width <- min_spacing * 0.2  # 20% of minimum spacing
-      } else {
-        width <- 0.15  # fallback
-      }
+      width <- width_calc
     }
     
     # Calculate offsets for each group so bars touch exactly
@@ -347,7 +517,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     }
     
     # Draw polygons for each group (side by side, touching exactly)
-    for (i in 1:n_groups) {
+    for (i in seq_len(n_groups)) {
       gf <- group_freqs[[i]]
       non_zero <- gf$fs > 0
       if (any(non_zero)) {
@@ -368,9 +538,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     # Add value labels with frequencies (colored by group)
     if (value.labels) {
       # For each x value and group, add label if frequency > 0
-      for (j in 1:length(all_xs)) {
+      for (j in seq_along(all_xs)) {
         x_val <- all_xs[j]
-        for (i in 1:n_groups) {
+        for (i in seq_len(n_groups)) {
           freq_val <- group_freqs[[i]]$fs[j]
           if (freq_val > 0) {
             x_label_pos <- x_val + offsets[i]
@@ -392,7 +562,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     # Add legend showing groups and colors
     if (!add && show.legend) {
       # Calculate sample sizes for each group
-      group_ns <- sapply(1:n_groups, function(i) {
+      group_ns <- sapply(seq_len(n_groups), function(i) {
         length(x[group == unique_by[i]])
       })
       
@@ -410,7 +580,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       total_text_width <- max_name_width + sample_n_width
       
       # Format labels with padding to align N=xxx
-      padded_labels <- sapply(1:n_groups, function(i) {
+      padded_labels <- sapply(seq_len(n_groups), function(i) {
         name_width <- text_widths[i]
         padding_needed <- max_name_width - name_width
         # Estimate number of spaces needed (using space width)
@@ -419,11 +589,12 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
         paste0(group_names[i], strrep(" ", n_spaces), " (N=", group_ns[i], ")")
       })
       legend_labels <- padded_labels
-      legend_cols <- group_cols[1:n_groups]
+      legend_cols <- group_cols[seq_len(n_groups)]
       
       # Add legend with text.width to ensure consistent alignment
-      legend_args <- list("topleft", legend = legend_labels, fill = legend_cols, 
-                          bty = "n", inset = 0.05, cex=1.2, text.width = total_text_width)
+      # Position at top center since we reserved 20% of space
+      legend_args <- list("top", legend = legend_labels, fill = legend_cols, 
+                          bty = "n", inset = 0.02, cex=1.2, text.width = total_text_width, horiz = FALSE)
       if (!is.null(legend.title)) {
         legend_args$title <- legend.title
         legend_args$title.font <- 2
@@ -434,7 +605,7 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     # Return frequencies or percentages invisibly (full table with separate columns for each group)
     # Build data frame with value column and one column per group
     result_df <- data.frame(value = all_xs, stringsAsFactors = FALSE)
-    for (i in 1:n_groups) {
+    for (i in seq_len(n_groups)) {
       # Use percentages if freq=FALSE, otherwise use frequencies
       if (freq == FALSE) {
         result_df[[as.character(unique_by[i])]] <- group_freqs[[i]]$fs
@@ -459,14 +630,29 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
     fs <- (fs / total) * 100  # Convert to percentages
     fsp <- paste0(round(fs, 0),"%")
   }
+  
+  # Calculate bar width if not provided (needed for xlim calculation and later use)
+  if (is.null(width)) {
+    if (length(xs) > 1) {
+      min_spacing <- min(diff(sort(xs)))
+      width_calc <- min_spacing * 0.2  # 20% of minimum spacing
+    } else {
+      width_calc <- 0.15  # fallback
+    }
+  } else {
+    width_calc <- width
+  }
     
   # Only set up plot if not adding to existing plot
   if (!add) {
     #########################################################
     #Default figure parameters if not set
-      # xlim if not set
+      
+      # xlim if not set - add padding for bar width
           if (!"xlim" %in% names(dots)) {
-            dots$xlim <- c(min(xs), max(xs))
+            # For single variable, bars are centered, so add half-width padding
+            padding <- width_calc * 0.6  # 60% of width for padding
+            dots$xlim <- c(min(xs) - padding, max(xs) + padding)
           }
       
       # Set default xlab if not provided
@@ -577,14 +763,9 @@ plot_freq <- function(formula, data=NULL, freq=TRUE, col='dodgerblue', lwd=9, wi
       }
   }
     
-  # Calculate bar width if not provided (for non-grouped case)
+  # Use the width calculated earlier (or user-provided width)
   if (is.null(width)) {
-    if (length(xs) > 1) {
-      min_spacing <- min(diff(sort(xs)))
-      width <- min_spacing * 0.2  # 20% of minimum spacing
-    } else {
-      width <- 0.15  # fallback
-    }
+    width <- width_calc
   }
   
   # Identify non-zero frequencies (only draw polygons and labels for these)

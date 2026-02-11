@@ -4,15 +4,33 @@
 \alias{plot_cdf}
 \title{Plot Empirical Cumulative Distribution Functions by Group}
 \usage{
-plot_cdf(formula, data = NULL, show.ks = TRUE, show.quantiles = TRUE, ...)
+plot_cdf(
+  formula,
+  y = NULL,
+  data = NULL,
+  order = NULL,
+  show.ks = TRUE,
+  show.quantiles = TRUE,
+  ...
+)
 }
 \arguments{
 \item{formula}{A formula of the form \code{y ~ group} where \code{y} is the
 response variable and \code{group} is the grouping variable. Alternatively,
 can be just \code{y} (without a grouping variable) to plot a single ECDF.}
 
+\item{y}{An optional second vector to compare with \code{formula}. When provided,
+creates a comparison plot of two variables. This allows syntax like 
+\code{plot_cdf(y1, y2)} to compare two vectors.}
+
 \item{data}{An optional data frame containing the variables in the formula.
 If \code{data} is not provided, variables are evaluated from the calling environment.}
+
+\item{order}{Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots.}
 
 \item{show.ks}{Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
 when there are exactly 2 groups. If FALSE, KS test results are not displayed.}
@@ -73,6 +91,11 @@ plot_cdf(y ~ group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
 df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
 plot_cdf(value ~ group, data = df)
 plot_cdf(value ~ group, data = df, col = c("red", "blue"))
+
+# Compare two vectors
+y1 <- rnorm(50)
+y2 <- rnorm(50, mean = 1)
+plot_cdf(y1, y2)
 
 # Formula syntax without data (variables evaluated from environment)
 widgetness <- rnorm(100)
