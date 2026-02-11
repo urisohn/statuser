@@ -383,6 +383,10 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
         if (value.labels == TRUE && y_max > 0) {
           y_max <- y_max + max(1, y_max * 0.15)  # Add 15% or at least 1 unit
         }
+        # Reserve top 20% for legend if legend will be shown
+        if (show.legend) {
+          y_max <- y_max * 1.25  # Increase by 25% to make room for legend
+        }
         dots$ylim <- c(0, y_max)
       }
       
@@ -560,8 +564,9 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
       legend_cols <- group_cols[seq_len(n_groups)]
       
       # Add legend with text.width to ensure consistent alignment
-      legend_args <- list("topleft", legend = legend_labels, fill = legend_cols, 
-                          bty = "n", inset = 0.05, cex=1.2, text.width = total_text_width)
+      # Position at top center since we reserved 20% of space
+      legend_args <- list("top", legend = legend_labels, fill = legend_cols, 
+                          bty = "n", inset = 0.02, cex=1.2, text.width = total_text_width, horiz = FALSE)
       if (!is.null(legend.title)) {
         legend_args$title <- legend.title
         legend_args$title.font <- 2

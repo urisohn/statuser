@@ -418,3 +418,14 @@ test_that("plot_freq xlim includes all bars", {
   x <- c(1, 1, 5, 5)
   expect_error(plot_freq(x), NA)
 })
+
+test_that("plot_freq reserves space for legend", {
+  y1 <- c(1, 1, 2, 2, 3)
+  y2 <- c(1, 4, 4, 4)
+  
+  # With legend (default)
+  expect_error(plot_freq(y1, y2, show.legend = TRUE), NA)
+  
+  # Without legend
+  expect_error(plot_freq(y1, y2, show.legend = FALSE), NA)
+})

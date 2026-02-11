@@ -352,7 +352,12 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
     x_range <- x_max - x_min
     x_lim <- c(x_min - 0.05 * x_range, x_max + 0.05 * x_range)
     y_max_density <- max(all_y_density, na.rm = TRUE)
-    y_lim_density <- c(0, y_max_density * 1.3)  # Add 30% space for legend
+    # Reserve space for legend if there's a group (legend will be shown)
+    if (!is.null(group)) {
+      y_lim_density <- c(0, y_max_density * 1.3)  # Add 30% space for legend
+    } else {
+      y_lim_density <- c(0, y_max_density * 1.1)  # Add 10% space for margins only
+    }
 
   #12. Helper function: NULL coalescing
     `%||%` <- function(x, y) if (is.null(x)) y else x

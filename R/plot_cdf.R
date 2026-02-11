@@ -375,15 +375,23 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
     # Set ylab if not provided
       ylab_title <- if ("ylab" %in% names(dots)) dots$ylab else "% of observations"
     
-    # Set default ylim if not provided (extend to 1.15 to accommodate legend above plot if groups exist)
+    # Set default ylim if not provided (extend to accommodate legend above plot if groups exist)
       if (!"ylim" %in% names(dots)) {
         if (has_group && n_groups > 1) {
-          default_ylim <- c(0, 1.15)
+          default_ylim <- c(0, 1.25)  # Reserve top 20% for legend (1.25 = 1 / 0.8)
         } else {
           default_ylim <- c(0, 1)
         }
       } else {
         default_ylim <- dots$ylim
+      }
+      
+    # Set default xlim if not provided (add padding to prevent clipping at edges)
+      if (!"xlim" %in% names(dots)) {
+        x_range <- y_max - y_min
+        default_xlim <- c(y_min - 0.05 * x_range, y_max + 0.05 * x_range)
+      } else {
+        default_xlim <- dots$xlim
       }
     
     # Ensure adequate top margin for main title and legend
@@ -418,6 +426,7 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
                       main = main_title,
                       font.main = font_main,
                       cex.main = cex_main,
+                      xlim = default_xlim,
                       ylim = default_ylim,
                       font.lab = 2, cex.lab = 1.2, las = 1,
                       yaxt = "n",  # Suppress default y-axis to draw custom percentage axis
