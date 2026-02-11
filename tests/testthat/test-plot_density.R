@@ -177,3 +177,34 @@ test_that("plot_density respects factor levels for groups when order is NULL", {
   # Check that factor levels are respected (C, A, B)
   expect_equal(names(result$densities), c("C", "A", "B"))
 })
+
+test_that("plot_density handles two-vector comparison", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Should not throw errors
+  expect_error(plot_density(y1, y2), NA)
+  
+  result <- plot_density(y1, y2)
+  expect_true(is.list(result))
+  expect_equal(length(result$densities), 2)
+})
+
+test_that("plot_density two-vector with custom parameters", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Custom colors
+  expect_error(plot_density(y1, y2, col = c("red", "blue")), NA)
+  
+  # Show means
+  expect_error(plot_density(y1, y2, show_means = FALSE), NA)
+})
+
+test_that("plot_density two-vector handles order parameter", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  result <- plot_density(y1, y2, order = -1)
+  expect_equal(names(result$densities), c("y2", "y1"))
+})

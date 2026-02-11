@@ -4,10 +4,22 @@
 \alias{plot_density}
 \title{Plot density of a variable, optionally by another variable}
 \usage{
-plot_density(formula, data = NULL, order = NULL, show_means = TRUE, ...)
+plot_density(
+  formula,
+  y = NULL,
+  data = NULL,
+  order = NULL,
+  show_means = TRUE,
+  ...
+)
 }
 \arguments{
-\item{formula}{Either the single variable name \code{y} or a formula like \code{y ~ x}.}
+\item{formula}{Either the single variable name \code{y} or a formula like \code{y ~ x}.
+Alternatively, pass a single vector for a simple density plot.}
+
+\item{y}{An optional second vector to compare with \code{formula}. When provided,
+creates a comparison plot of two variables. This allows syntax like 
+\code{plot_density(y1, y2)} to compare two vectors.}
 
 \item{data}{An optional data frame containing the variables in the formula.}
 
@@ -68,5 +80,10 @@ plot_density(y ~ group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd =
 df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
 plot_density(value ~ group, data = df)
 plot_density(value ~ group, data = df, col = c("red", "blue"))
+
+# Compare two vectors
+y1 <- rnorm(50)
+y2 <- rnorm(50, mean = 1)
+plot_density(y1, y2)
 
 }

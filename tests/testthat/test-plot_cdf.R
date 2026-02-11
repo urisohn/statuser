@@ -204,3 +204,38 @@ test_that("plot_cdf respects factor levels for groups when order is NULL", {
   # Check that factor levels are respected (C, A, B)
   expect_equal(names(result$ecdfs), c("C", "A", "B"))
 })
+
+test_that("plot_cdf handles two-vector comparison", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Should not throw errors
+  expect_error(plot_cdf(y1, y2), NA)
+  
+  result <- plot_cdf(y1, y2)
+  expect_true(is.list(result))
+  expect_equal(length(result$ecdfs), 2)
+  expect_true("ks_test" %in% names(result))
+})
+
+test_that("plot_cdf two-vector with custom parameters", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Custom colors
+  expect_error(plot_cdf(y1, y2, col = c("red", "blue")), NA)
+  
+  # Without KS test
+  expect_error(plot_cdf(y1, y2, show.ks = FALSE), NA)
+  
+  # Without quantiles
+  expect_error(plot_cdf(y1, y2, show.quantiles = FALSE), NA)
+})
+
+test_that("plot_cdf two-vector handles order parameter", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  result <- plot_cdf(y1, y2, order = -1)
+  expect_equal(names(result$ecdfs), c("y2", "y1"))
+})

@@ -7,6 +7,9 @@
 #' @param formula A formula of the form \code{y ~ group} where \code{y} is the
 #'   response variable and \code{group} is the grouping variable. Alternatively,
 #'   can be just \code{y} (without a grouping variable) to plot a single ECDF.
+#' @param y An optional second vector to compare with \code{formula}. When provided,
+#'   creates a comparison plot of two variables. This allows syntax like 
+#'   \code{plot_cdf(y1, y2)} to compare two vectors.
 #' @param data An optional data frame containing the variables in the formula.
 #'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param order Controls the order in which groups appear in the plot and legend. 
@@ -65,6 +68,11 @@
 #' df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
 #' plot_cdf(value ~ group, data = df)
 #' plot_cdf(value ~ group, data = df, col = c("red", "blue"))
+#'
+#' # Compare two vectors
+#' y1 <- rnorm(50)
+#' y2 <- rnorm(50, mean = 1)
+#' plot_cdf(y1, y2)
 #' 
 #' # Formula syntax without data (variables evaluated from environment)
 #' widgetness <- rnorm(100)
@@ -85,13 +93,46 @@
 #' summary(result$quantile_regression_50)
 
 #' @export
-plot_cdf <- function(formula, data = NULL, order = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
+plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
   # Extract plotting parameters from ...
     dots <- list(...)
     
     # Remove show.ks and show.quantiles from dots if passed (they're formal parameters)
     dots$show.ks <- NULL
     dots$show.quantiles <- NULL
+    
+  # Check if we're in two-vector comparison mode (formula is vector, y is vector)
+  if (!is.null(y) && !inherits(formula, "formula")) {
+    # Two-vector comparison mode: plot_cdf(y1, y2)
+    # Capture variable names
+    mc <- match.call()
+    y1_name <- deparse(mc$formula)
+    y1_name <- paste(y1_name, collapse = "")
+    y1_name <- gsub('^"|"$', '', y1_name)
+    
+    y2_name <- deparse(mc$y)
+    y2_name <- paste(y2_name, collapse = "")
+    y2_name <- gsub('^"|"$', '', y2_name)
+    
+    # Validate inputs
+    if (!is.numeric(formula) || !is.vector(formula)) {
+      stop(sprintf("plot_cdf(): First argument '%s' must be a numeric vector", y1_name), call. = FALSE)
+    }
+    if (!is.numeric(y) || !is.vector(y)) {
+      stop(sprintf("plot_cdf(): Second argument '%s' must be a numeric vector", y2_name), call. = FALSE)
+    }
+    
+    # Create a data frame and recursively call with grouped syntax
+    df <- data.frame(
+      value = c(formula, y),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      stringsAsFactors = FALSE
+    )
+    
+    # Forward all arguments to the grouped version
+    return(plot_cdf(value ~ group, data = df, order = order, 
+                    show.ks = show.ks, show.quantiles = show.quantiles, ...))
+  }
   
   # Validate formula early if it is one
   validate_formula(formula, data, func_name = "plot_cdf", calling_env = parent.frame())

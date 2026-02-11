@@ -3,6 +3,10 @@
 #' Plots the distribution of a variable by group, simply: \code{plot_density(y ~ x)}
 #'
 #' @param formula Either the single variable name \code{y} or a formula like \code{y ~ x}.
+#'   Alternatively, pass a single vector for a simple density plot.
+#' @param y An optional second vector to compare with \code{formula}. When provided,
+#'   creates a comparison plot of two variables. This allows syntax like 
+#'   \code{plot_density(y1, y2)} to compare two vectors.
 #' @param data An optional data frame containing the variables in the formula.
 #' @param order Controls the order in which groups appear in the plot and legend. 
 #'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
@@ -47,6 +51,11 @@
 #' plot_density(value ~ group, data = df)
 #' plot_density(value ~ group, data = df, col = c("red", "blue"))
 #'
+#' # Compare two vectors
+#' y1 <- rnorm(50)
+#' y2 <- rnorm(50, mean = 1)
+#' plot_density(y1, y2)
+#'
 #' @return Invisibly returns a list with the following element:
 #'   \describe{
 #'     \item{densities}{A named list of density objects (class \code{"density"}), 
@@ -58,7 +67,7 @@
 #'   The function is primarily called for its side effect of creating a plot.
 #'
 #' @export
-plot_density <- function(formula, data = NULL, order = NULL, show_means = TRUE, ...) {
+plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_means = TRUE, ...) {
   #OUTLINE
   #1. Capture variable names for labels
   #2. Extract and handle parameters
@@ -85,6 +94,39 @@ plot_density <- function(formula, data = NULL, order = NULL, show_means = TRUE, 
   #1. Extract and handle parameters
   # Extract plotting parameters from ...
     dots <- list(...)
+    
+  # Check if we're in two-vector comparison mode (formula is vector, y is vector)
+  if (!is.null(y) && !inherits(formula, "formula")) {
+    # Two-vector comparison mode: plot_density(y1, y2)
+    # Capture variable names
+    mc <- match.call()
+    y1_name <- deparse(mc$formula)
+    y1_name <- paste(y1_name, collapse = "")
+    y1_name <- gsub('^"|"$', '', y1_name)
+    
+    y2_name <- deparse(mc$y)
+    y2_name <- paste(y2_name, collapse = "")
+    y2_name <- gsub('^"|"$', '', y2_name)
+    
+    # Validate inputs
+    if (!is.numeric(formula) || !is.vector(formula)) {
+      stop(sprintf("plot_density(): First argument '%s' must be a numeric vector", y1_name), call. = FALSE)
+    }
+    if (!is.numeric(y) || !is.vector(y)) {
+      stop(sprintf("plot_density(): Second argument '%s' must be a numeric vector", y2_name), call. = FALSE)
+    }
+    
+    # Create a data frame and recursively call with grouped syntax
+    df <- data.frame(
+      value = c(formula, y),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      stringsAsFactors = FALSE
+    )
+    
+    # Forward all arguments to the grouped version
+    return(plot_density(value ~ group, data = df, order = order, 
+                       show_means = show_means, ...))
+  }
     
     # Extract show.means parameter (from dots, as it's not a formal parameter)
     show_mean_segments <- if ("show.means" %in% names(dots)) dots$show.means else TRUE
