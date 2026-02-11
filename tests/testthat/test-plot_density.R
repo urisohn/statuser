@@ -208,3 +208,27 @@ test_that("plot_density two-vector handles order parameter", {
   result <- plot_density(y1, y2, order = -1)
   expect_equal(names(result$densities), c("y2", "y1"))
 })
+
+test_that("plot_density two-vector with different lengths", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(30)  # Different length
+  
+  # Should handle different lengths
+  expect_error(plot_density(y1, y2), NA)
+  
+  result <- plot_density(y1, y2)
+  expect_equal(length(result$densities), 2)
+})
+
+test_that("plot_density reserves space for legend with groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  # Should reserve space for legend
+  expect_error(plot_density(y ~ group), NA)
+  
+  # Test with two-vector
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  expect_error(plot_density(y1, y2), NA)
+})

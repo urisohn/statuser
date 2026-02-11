@@ -149,6 +149,28 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
     NULL
   }
   
+  # Capture original group before validation (to preserve factor levels)
+  group_original_before_validation <- NULL
+  if (is_formula_input) {
+    formula_vars <- all.vars(formula)
+    if (length(formula_vars) >= 2) {
+      group_var_name <- formula_vars[2]
+      if (!is.null(data)) {
+        # Extract from data frame
+        if (group_var_name %in% names(data)) {
+          group_original_before_validation <- data[[group_var_name]]
+        }
+      } else {
+        # Extract from environment
+        tryCatch({
+          group_original_before_validation <- eval(as.name(group_var_name), envir = parent.frame())
+        }, error = function(e) {
+          # If we can't find it, that's ok - validation will handle the error
+        })
+      }
+    }
+  }
+  
   #2. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
   # If not a formula, we need to pass it in a way that preserves the variable name
   if (is_formula_input) {
@@ -209,7 +231,12 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
   group_name_raw <- validated$group_name_raw
   
   # Store original group for factor level checking (before NA removal)
-  group_original <- group
+  # Use the version captured before validation if available (to preserve factor levels)
+  group_original <- if (!is.null(group_original_before_validation)) {
+    group_original_before_validation
+  } else {
+    group
+  }
   
   #3. Drop missing data
     if (!is.null(group)) {

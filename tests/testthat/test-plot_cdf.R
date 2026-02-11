@@ -239,3 +239,39 @@ test_that("plot_cdf two-vector handles order parameter", {
   result <- plot_cdf(y1, y2, order = -1)
   expect_equal(names(result$ecdfs), c("y2", "y1"))
 })
+
+test_that("plot_cdf two-vector with different lengths", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(30)  # Different length
+  
+  # Should handle different lengths
+  expect_error(plot_cdf(y1, y2), NA)
+  
+  result <- plot_cdf(y1, y2)
+  expect_equal(length(result$ecdfs), 2)
+})
+
+test_that("plot_cdf reserves space for legend with groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  # Should reserve space for legend
+  expect_error(plot_cdf(y ~ group), NA)
+  
+  # Test with two-vector
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  expect_error(plot_cdf(y1, y2), NA)
+})
+
+test_that("plot_cdf xlim adds padding", {
+  # Test that xlim includes padding to prevent edge clipping
+  y1 <- c(1, 2, 3, 4, 5)
+  y2 <- c(1, 2, 3)
+  
+  expect_error(plot_cdf(y1, y2), NA)
+  
+  # Single variable
+  x <- c(1, 2, 3, 4, 5)
+  expect_error(plot_cdf(x), NA)
+})

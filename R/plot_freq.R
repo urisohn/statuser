@@ -138,6 +138,28 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     NULL
   }
   
+  # Capture original group before validation (to preserve factor levels)
+  group_original_before_validation <- NULL
+  if (is_formula_input) {
+    formula_vars <- all.vars(formula)
+    if (length(formula_vars) >= 2) {
+      group_var_name <- formula_vars[2]
+      if (!is.null(data)) {
+        # Extract from data frame
+        if (group_var_name %in% names(data)) {
+          group_original_before_validation <- data[[group_var_name]]
+        }
+      } else {
+        # Extract from environment
+        tryCatch({
+          group_original_before_validation <- eval(as.name(group_var_name), envir = parent.frame())
+        }, error = function(e) {
+          # If we can't find it, that's ok - validation will handle the error
+        })
+      }
+    }
+  }
+  
   # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
   # If not a formula, we need to pass it in a way that preserves the variable name
   if (is_formula_input) {
@@ -205,7 +227,12 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
   group_name_raw <- validated$group_name_raw
   
   # Store original group for factor level checking (before NA removal)
-  group_original <- group
+  # Use the version captured before validation if available (to preserve factor levels)
+  group_original <- if (!is.null(group_original_before_validation)) {
+    group_original_before_validation
+  } else {
+    group
+  }
   
   # Drop missing data
   if (!is.null(group)) {
@@ -341,19 +368,20 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     # Find overall max frequency for ylim (already in percentages if freq=FALSE)
     max_fs <- max(sapply(group_freqs, function(gf) max(gf$fs, na.rm = TRUE)), na.rm = TRUE)
     
+    # Calculate bar width if not provided (needed for xlim calculation and later use)
+    if (is.null(width)) {
+      if (length(all_xs) > 1) {
+        min_spacing <- min(diff(sort(all_xs)))
+        width_calc <- min_spacing * 0.2  # 20% of minimum spacing
+      } else {
+        width_calc <- 0.15  # fallback
+      }
+    } else {
+      width_calc <- width
+    }
+    
     # Only set up plot if not adding to existing plot
     if (!add) {
-      # Calculate bar width if not provided (needed for xlim calculation)
-      if (is.null(width)) {
-        if (length(all_xs) > 1) {
-          min_spacing <- min(diff(sort(all_xs)))
-          width_calc <- min_spacing * 0.2  # 20% of minimum spacing
-        } else {
-          width_calc <- 0.15  # fallback
-        }
-      } else {
-        width_calc <- width
-      }
       
       # Set default xlim if not set, with padding for bar width
       if (!"xlim" %in% names(dots)) {
@@ -602,22 +630,23 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     fs <- (fs / total) * 100  # Convert to percentages
     fsp <- paste0(round(fs, 0),"%")
   }
+  
+  # Calculate bar width if not provided (needed for xlim calculation and later use)
+  if (is.null(width)) {
+    if (length(xs) > 1) {
+      min_spacing <- min(diff(sort(xs)))
+      width_calc <- min_spacing * 0.2  # 20% of minimum spacing
+    } else {
+      width_calc <- 0.15  # fallback
+    }
+  } else {
+    width_calc <- width
+  }
     
   # Only set up plot if not adding to existing plot
   if (!add) {
     #########################################################
     #Default figure parameters if not set
-      # Calculate bar width if not provided (needed for xlim calculation)
-      if (is.null(width)) {
-        if (length(xs) > 1) {
-          min_spacing <- min(diff(sort(xs)))
-          width_calc <- min_spacing * 0.2  # 20% of minimum spacing
-        } else {
-          width_calc <- 0.15  # fallback
-        }
-      } else {
-        width_calc <- width
-      }
       
       # xlim if not set - add padding for bar width
           if (!"xlim" %in% names(dots)) {
