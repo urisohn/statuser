@@ -8,7 +8,7 @@ Miscellaneous R functions for papers, blogposts, & teaching by Uri Simonsohn.
 # Install with `groundhog` (for version control)
 groundhog::groundhog.library("statuser", date)   #date used for version control 
 
-# Or with base R install from GitHub with `devtools`
+# Or with base R
 install.packages("statuser")
 ```
 
