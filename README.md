@@ -5,11 +5,11 @@ Miscellaneous R functions for papers, blogposts, & teaching by Uri Simonsohn.
 ## Installation
 
 ```r
-# Install from GitHub with `groundhog` (for version control)
-groundhog::groundhog.library("urisohn/statuser", date)   #date used for version control 
+# Install with `groundhog` (for version control)
+groundhog::groundhog.library("statuser", date)   #date used for version control 
 
-# Or install from GitHub with `devtools`
-devtools::install_github("urisohn/statuser")
+# Or with base R install from GitHub with `devtools`
+install.packages("statuser")
 ```
 
 ## Overview
