@@ -2,27 +2,38 @@
 % Please edit documentation in R/clear.R
 \name{clear}
 \alias{clear}
-\title{Clear All: Environment, Console, and Graphics}
+\title{Clear Plot, Global Environment, and Console}
 \usage{
-clear(envir = parent.frame())
+clear(envir = parent.frame(), allow_global = FALSE)
 }
 \arguments{
 \item{envir}{The environment to clear. Defaults to the calling environment.
-The global environment is not modified by this function.}
+When clearing the global environment, the first interactive run may prompt
+to save your preference; see Details.}
+
+\item{allow_global}{If \code{TRUE}, clear the global environment without
+prompting or using the saved preference. Default \code{FALSE} uses the
+saved preference or prompts once.}
 }
 \value{
 Invisibly returns NULL. Prints a colored confirmation message.
 }
 \description{
-Clear All: Environment, Console, and Graphics
+Clears plot, global environment, and console. On first use the user is
+prompted to authorize clearing the environment to comply with CRAN rules.
 }
 \details{
 This function performs three cleanup operations:
 \itemize{
-  \item \strong{Environment}: Removes all objects from the specified environment
+  \item \strong{Plot}: Closes all open graphics devices (except the null device)
+  \item \strong{Global environment}: Removes all objects from the specified environment
   \item \strong{Console}: Clears the console screen (only in interactive sessions)
-  \item \strong{Graphics}: Closes all open graphics devices (except the null device)
 }
+
+When \code{envir} is the global environment, \code{clear()} will not modify it
+unless (1) you pass \code{allow_global = TRUE}, or (2) you have previously
+typed "yes" when prompted. If you do not type "yes", you are asked again next
+time; only "yes" is remembered for future sessions.
 
 \strong{Warning}: This function deletes all objects in the specified
 environment. Save anything that you wish to keep before running.
@@ -35,5 +46,7 @@ tmp_env$x <- 1:10
 tmp_env$y <- rnorm(10)
 clear(tmp_env)
 }
+# Interactive use: clear workspace, console, and plots
+# First run may prompt; then clear(allow_global = TRUE) or your saved preference applies.
 
 }
