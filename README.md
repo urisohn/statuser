@@ -341,7 +341,9 @@ message2("This is a cyan message", col = "cyan")
 </details>
 
 <details>
-<summary><code>clear()</code>: Clear environment, console, and all graphics devices</summary>
+<summary><code>clear()</code>: Clear plot, global environment, and console</summary>
+
+Clears plot, global environment, and console. On first use you are prompted to authorize (one-time; your choice is saved).
 
 ```r
 # Create some objects
@@ -349,7 +351,7 @@ message2("This is a cyan message", col = "cyan")
 	y <- rnorm(10)
 	plot(x, y)
 
-# Clear everything
+# Clear everything (first run may prompt for one-time permission)
 	clear()
 ```
 </details> 
@@ -374,5 +376,6 @@ GPL-3
 
 ## Version
 
-0.1.4
+- **Release:** 0.1.8  
+- **Development:** 0.1.8.9001
 
