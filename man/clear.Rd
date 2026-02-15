@@ -4,16 +4,7 @@
 \alias{clear}
 \title{Clear Plot, Global Environment, and Console}
 \usage{
-clear(envir = parent.frame(), allow_global = FALSE)
-}
-\arguments{
-\item{envir}{The environment to clear. Defaults to the calling environment.
-When clearing the global environment, the first interactive run may prompt
-to save your preference; see Details.}
-
-\item{allow_global}{If \code{TRUE}, clear the global environment without
-prompting or using the saved preference. Default \code{FALSE} uses the
-saved preference or prompts once.}
+clear()
 }
 \value{
 Invisibly returns NULL. Prints a colored confirmation message.
@@ -26,27 +17,22 @@ prompted to authorize clearing the environment to comply with CRAN rules.
 This function performs three cleanup operations:
 \itemize{
   \item \strong{Plot}: Closes all open graphics devices (except the null device)
-  \item \strong{Global environment}: Removes all objects from the specified environment
+  \item \strong{Global environment}: Removes all objects from the global environment
   \item \strong{Console}: Clears the console screen (only in interactive sessions)
 }
 
-When \code{envir} is the global environment, \code{clear()} will not modify it
-unless (1) you pass \code{allow_global = TRUE}, or (2) you have previously
-typed "yes" when prompted. If you do not type "yes", you are asked again next
-time; only "yes" is remembered for future sessions.
+\code{clear()} will not modify the global environment unless you have
+previously typed "yes" when prompted. If you do not type "yes", you are asked
+again next time; only "yes" is remembered for future sessions.
 
-\strong{Warning}: This function deletes all objects in the specified
-environment. Save anything that you wish to keep before running.
+\strong{Warning}: This function deletes all objects in the global environment.
+Save anything that you wish to keep before running.
 }
 \examples{
-\donttest{
-# Clear a temporary environment (safe for examples)
-tmp_env <- new.env()
-tmp_env$x <- 1:10
-tmp_env$y <- rnorm(10)
-clear(tmp_env)
-}
+\dontrun{
 # Interactive use: clear workspace, console, and plots
-# First run may prompt; then clear(allow_global = TRUE) or your saved preference applies.
+# First run may prompt; once you type "yes", your preference is saved.
+clear()
+}
 
 }

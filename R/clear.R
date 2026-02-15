@@ -3,65 +3,51 @@
 #' Clears plot, global environment, and console. On first use the user is
 #' prompted to authorize clearing the environment to comply with CRAN rules.
 #'
-#' @param envir The environment to clear. Defaults to the calling environment.
-#'   When clearing the global environment, the first interactive run may prompt
-#'   to save your preference; see Details.
-#' @param allow_global If \code{TRUE}, clear the global environment without
-#'   prompting or using the saved preference. Default \code{FALSE} uses the
-#'   saved preference or prompts once.
-#'
 #' @return Invisibly returns NULL. Prints a colored confirmation message.
 #'
 #' @details
 #' This function performs three cleanup operations:
 #' \itemize{
 #'   \item \strong{Plot}: Closes all open graphics devices (except the null device)
-#'   \item \strong{Global environment}: Removes all objects from the specified environment
+#'   \item \strong{Global environment}: Removes all objects from the global environment
 #'   \item \strong{Console}: Clears the console screen (only in interactive sessions)
 #' }
 #'
-#' When \code{envir} is the global environment, \code{clear()} will not modify it
-#' unless (1) you pass \code{allow_global = TRUE}, or (2) you have previously
-#' typed "yes" when prompted. If you do not type "yes", you are asked again next
-#' time; only "yes" is remembered for future sessions.
+#' \code{clear()} will not modify the global environment unless you have
+#' previously typed "yes" when prompted. If you do not type "yes", you are asked
+#' again next time; only "yes" is remembered for future sessions.
 #'
-#' \strong{Warning}: This function deletes all objects in the specified
-#' environment. Save anything that you wish to keep before running.
+#' \strong{Warning}: This function deletes all objects in the global environment.
+#' Save anything that you wish to keep before running.
 #'
 #' @examples
 #' \donttest{
-#' # Clear a temporary environment (safe for examples)
-#' tmp_env <- new.env()
-#' tmp_env$x <- 1:10
-#' tmp_env$y <- rnorm(10)
-#' clear(tmp_env)
-#' }
 #' # Interactive use: clear workspace, console, and plots
-#' # First run may prompt; then clear(allow_global = TRUE) or your saved preference applies.
+#' # First run may prompt; once you type "yes", your preference is saved.
+#' clear()
+#' }
 #'
 #' @export
-clear <- function(envir = parent.frame(), allow_global = FALSE) {
-  if (identical(envir, .GlobalEnv) && !isTRUE(allow_global)) {
-    pref <- clear_allow_global_preference()
-    if (!isTRUE(pref)) {
-      if (interactive()) {
-        msg <- "To allow clear() to clear your environment, console, and plot, type \"yes\"\n(you will not be asked again if you say \"yes\").\n"
-        message2(msg, col = "red4")
-        ans <- trimws(tolower(readline(prompt = "")))
-        if (!identical(ans, "yes")) {
-          message2("You did not write 'yes', so clear() will not work.", col = "red4")
-          return(invisible(NULL))  # End without clearing; will prompt again next time
-        }
-        clear_save_allow_global_preference(TRUE)
-      } else {
-        warning("clear() will not modify the global environment. In non-interactive sessions use clear(allow_global = TRUE) or set the preference interactively first.")
-        return(invisible(NULL))
+clear <- function() {
+  pref <- clear_allow_global_preference()
+  if (!isTRUE(pref)) {
+    if (interactive()) {
+      msg <- "To allow clear() to clear your environment, console, and plot, type \"yes\"\n(you will not be asked again if you say \"yes\").\n"
+      message2(msg, col = "red4")
+      ans <- trimws(tolower(readline(prompt = "")))
+      if (!identical(ans, "yes")) {
+        message2("You did not write 'yes', so clear() will not work.", col = "red4")
+        return(invisible(NULL))  # End without clearing; will prompt again next time
       }
+      clear_save_allow_global_preference(TRUE)
+    } else {
+      warning("clear() will not modify the global environment. Set the preference interactively first.")
+      return(invisible(NULL))
     }
   }
 
   # Clear environment
-  rm(list = ls(envir = envir), envir = envir)
+  rm(list = ls(envir = .GlobalEnv), envir = .GlobalEnv)
   
   # Clear console (only in interactive sessions)
   if (interactive()) {
