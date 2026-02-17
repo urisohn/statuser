@@ -124,6 +124,27 @@ table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN),
     # Check if it's a dataframe column reference: df$var
     if (is.call(expr) && length(expr) >= 3) {
       op <- expr[[1]]
+      
+      # Handle comparison operators: show full expression like "var>10"
+      # For expressions like df$var > 10, the operator is >, not $
+      if (identical(op, quote(`>`)) || identical(op, quote(`<`)) || 
+          identical(op, quote(`>=`)) || identical(op, quote(`<=`)) || 
+          identical(op, quote(`==`)) || identical(op, quote(`!=`))) {
+        # Extract variable name from left-hand side
+        left_var <- extract_var_name(expr[[2]])
+        # Get the operator as string
+        op_str <- as.character(op)
+        # Get the right-hand side value
+        right_val <- deparse(expr[[3]])
+        # Construct full expression like "var>10"
+        full_expr <- paste0(left_var, op_str, right_val)
+        # Truncate if longer than 30 characters
+        if (nchar(full_expr) > 30) {
+          full_expr <- paste0(substr(full_expr, 1, 27), "...")
+        }
+        return(full_expr)
+      }
+      
       # Handle df$var
       if (identical(op, quote(`$`)) || identical(op, as.name("$"))) {
         var_name <- as.character(expr[[3]])

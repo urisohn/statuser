@@ -640,3 +640,111 @@ test_that("table2 chi-square matches prop.test for 2x2 tables", {
     tolerance = 1e-10
   )
 })
+
+# Tests for comparison operators in table2
+test_that("table2 handles comparison operators and shows full expression", {
+  # Create test data
+  df <- data.frame(
+    x = c(rep(5, 30), rep(15, 70)),
+    y = c(rep(3, 40), rep(12, 60))
+  )
+  
+  # Test with > operator (1D table)
+  result_gt <- table2(df$x > 10)
+  expect_true("x>10" %in% names(dimnames(result_gt$freq)))
+  
+  # Test with < operator (1D table)
+  result_lt <- table2(df$y < 10)
+  expect_true("y<10" %in% names(dimnames(result_lt$freq)))
+  
+  # Test with >= operator (1D table)
+  result_gte <- table2(df$x >= 10)
+  expect_true("x>=10" %in% names(dimnames(result_gte$freq)))
+  
+  # Test with <= operator (1D table)
+  result_lte <- table2(df$y <= 5)
+  expect_true("y<=5" %in% names(dimnames(result_lte$freq)))
+  
+  # Test with == operator (1D table)
+  result_eq <- table2(df$x == 15)
+  expect_true("x==15" %in% names(dimnames(result_eq$freq)))
+  
+  # Test with != operator (1D table)
+  result_neq <- table2(df$y != 3)
+  expect_true("y!=3" %in% names(dimnames(result_neq$freq)))
+})
+
+test_that("table2 handles comparison operators in 2D tables", {
+  # Create test data
+  df <- data.frame(
+    score = c(rep(5, 20), rep(15, 30), rep(8, 25), rep(18, 25)),
+    grade = c(rep(6, 35), rep(9, 65))
+  )
+  
+  # Test 2D table with comparison operators
+  result <- table2(df$score > 10, df$grade > 7)
+  
+  # Check that both dimension names include the full expression
+  dimn <- dimnames(result$freq)
+  expect_true("score>10" %in% names(dimn))
+  expect_true("grade>7" %in% names(dimn))
+  
+  # Verify the table has correct dimensions
+  expect_equal(length(dim(result$freq)), 2)
+  expect_equal(dim(result$freq), c(2, 2))
+})
+
+test_that("table2 truncates long comparison expressions", {
+  # Create test data with a long variable name
+  df <- data.frame(
+    very_long_variable_name_that_exceeds_limit = c(rep(100, 50), rep(500, 50))
+  )
+  
+  # Test with a long expression
+  result <- table2(df$very_long_variable_name_that_exceeds_limit > 200)
+  
+  # Check that the name is truncated to 30 characters
+  var_name <- names(dimnames(result$freq))[1]
+  expect_lte(nchar(var_name), 30)
+  expect_true(grepl("\\.\\.\\.$", var_name))  # Should end with "..."
+})
+
+test_that("table2 comparison operators work with proportions", {
+  # Create test data
+  df <- data.frame(
+    x = c(rep(5, 30), rep(15, 70)),
+    y = c(rep(3, 40), rep(12, 60))
+  )
+  
+  # Test with proportions
+  result <- table2(df$x > 10, df$y > 8, prop = "all")
+  
+  # Check that dimension names are preserved
+  expect_true("x>10" %in% names(dimnames(result$freq)))
+  expect_true("y>8" %in% names(dimnames(result$freq)))
+  
+  # Check that proportions were calculated
+  expect_false(is.null(result$prop))
+  expect_equal(sum(result$prop[1:2, 1:2]), 1, tolerance = 0.01)
+})
+
+test_that("table2 comparison operators work with chi-square test", {
+  # Create test data
+  set.seed(123)
+  df <- data.frame(
+    x = sample(c(5, 15), 100, replace = TRUE),
+    y = sample(c(3, 12), 100, replace = TRUE)
+  )
+  
+  # Test with chi-square
+  result <- table2(df$x > 10, df$y > 8, chi = TRUE)
+  
+  # Check that dimension names are preserved
+  expect_true("x>10" %in% names(dimnames(result$freq)))
+  expect_true("y>8" %in% names(dimnames(result$freq)))
+  
+  # Check that chi-square test was performed
+  expect_false(is.null(result$chisq))
+  expect_true("statistic" %in% names(result$chisq))
+  expect_true("p.value" %in% names(result$chisq))
+})
