@@ -294,9 +294,11 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   # Calculate standardized coefficients, means/percentages, and NA counts
   standardized_coefs <- numeric(length(term_names))
   mean_or_pct <- numeric(length(term_names))
+  mean_is_pct <- logical(length(term_names))  # TRUE when mean_or_pct is 0-100 % (factor/factor*factor)
   na_counts <- integer(length(term_names))
   names(standardized_coefs) <- term_names
   names(mean_or_pct) <- term_names
+  names(mean_is_pct) <- term_names
   names(na_counts) <- term_names
   
   # Get model matrix for dummy variable percentages
@@ -402,6 +404,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
             } else if (info1$type == "factor_level" && info2$type == "factor_level") {
               filter_idx <- (info1$var == info1$filter) & (info2$var == info2$filter)
               mean_or_pct[i] <- mean(filter_idx, na.rm = TRUE) * 100
+              mean_is_pct[i] <- TRUE
             } else {
               mean_or_pct[i] <- NA_real_
             }
@@ -432,8 +435,8 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
           na_counts[i] <- NA_integer_
         }
       } else {
-        # For factor levels (e.g., "groupB"), get standardized coef and % from model matrix
-        # Try to get percentage from model matrix (dummy variable)
+        # For factor levels (e.g., "groupB"), get standardized coef and % from model matrix or model frame
+        # Try to get percentage from model matrix (dummy variable) first
         if (!is.null(model_matrix) && term %in% colnames(model_matrix)) {
           dummy_col <- model_matrix[, term]
           # Calculate standardized coefficient: b * sd(dummy) / sd(y)
@@ -450,18 +453,20 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
           } else {
             # Treatment contrasts (dummy 0/1): calculate percentage of 1s
             mean_or_pct[i] <- mean(dummy_col, na.rm = TRUE) * 100
+            mean_is_pct[i] <- TRUE
           }
           
           # Count NAs in the original factor variable
           # Find the factor variable name by checking which data column this term came from
           found_na_count <- FALSE
-          for (var_name in names(data)) {
-            if (is.factor(data[[var_name]]) || is.character(data[[var_name]])) {
-              # Check if this term starts with the variable name
-              if (startsWith(term, var_name)) {
-                na_counts[i] <- sum(is.na(data[[var_name]]))
-                found_na_count <- TRUE
-                break
+          if (!is.null(data)) {
+            for (var_name in names(data)) {
+              if (is.factor(data[[var_name]]) || is.character(data[[var_name]])) {
+                if (startsWith(term, var_name)) {
+                  na_counts[i] <- sum(is.na(data[[var_name]]))
+                  found_na_count <- TRUE
+                  break
+                }
               }
             }
           }
@@ -469,9 +474,50 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
             na_counts[i] <- 0L
           }
         } else {
-          standardized_coefs[i] <- NA_real_
-          mean_or_pct[i] <- NA_real_
-          na_counts[i] <- NA_integer_
+          # Fallback: infer factor level from term (e.g. "groupB" -> variable "group", level "B")
+          # and compute % from model frame (works when model.matrix fails or colnames don't match)
+          found_pct <- FALSE
+          for (var_name in names(model_data)) {
+            if (var_name == term) next
+            v <- model_data[[var_name]]
+            if (is.factor(v) || is.character(v)) {
+              levs <- levels(factor(v))
+              for (lev in levs[-1L]) {  # skip baseline (first level)
+                if (term == paste0(var_name, lev)) {
+                  mean_or_pct[i] <- mean(v == lev, na.rm = TRUE) * 100
+                  mean_is_pct[i] <- TRUE
+                  found_pct <- TRUE
+                  # Standardized coef from dummy
+                  dummy_col <- as.numeric(v == lev)
+                  sd_dummy <- stats::sd(dummy_col, na.rm = TRUE)
+                  standardized_coefs[i] <- b * sd_dummy / sd_y
+                  break
+                }
+              }
+              if (found_pct) break
+            }
+          }
+          if (!found_pct) {
+            standardized_coefs[i] <- NA_real_
+            mean_or_pct[i] <- NA_real_
+            mean_is_pct[i] <- FALSE
+          }
+          # NA count for factor variable
+          if (!is.null(data)) {
+            found_na_count <- FALSE
+            for (var_name in names(data)) {
+              if (is.factor(data[[var_name]]) || is.character(data[[var_name]])) {
+                if (startsWith(term, var_name)) {
+                  na_counts[i] <- sum(is.na(data[[var_name]]))
+                  found_na_count <- TRUE
+                  break
+                }
+              }
+            }
+            if (!found_na_count) na_counts[i] <- NA_integer_
+          } else {
+            na_counts[i] <- NA_integer_
+          }
         }
       }
     }
@@ -488,6 +534,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     p.value = p_values,
     B = standardized_coefs,
     mean_or_pct = mean_or_pct,
+    mean_is_pct = mean_is_pct,
     row.names = NULL,
     stringsAsFactors = FALSE
   )
@@ -742,7 +789,7 @@ print.lm2 <- function(x, notes = NULL, ...) {
   # Parse factor terms
   factor_info <- parse_factor_terms(tbl, xlevels)
   
-  # Get model data for correlation checks (x itself is now the lm_robust object)
+  # Get model data for correlation checks and baseline % (lm_robust may not have $model)
   model_data <- x$model
   if (is.null(model_data)) {
     # Fallback: reconstruct from formula and data
@@ -750,6 +797,16 @@ print.lm2 <- function(x, notes = NULL, ...) {
       stats::model.frame(x$terms, data = attr(x, "classical_fit")$model),
       error = function(e) NULL
     )
+  }
+  if (is.null(model_data)) {
+    # Second fallback: use data from the call (e.g. lm2(y ~ x + group, data = d))
+    cl <- attr(x, "lm2_call")
+    if (!is.null(cl) && !is.null(cl$data)) {
+      model_data <- tryCatch(
+        stats::model.frame(x$terms, data = eval(cl$data, envir = parent.frame())),
+        error = function(e) NULL
+      )
+    }
   }
 
   # Build model matrix for factor level handling (if available)
@@ -886,39 +943,15 @@ print.lm2 <- function(x, notes = NULL, ...) {
     val
   })
   
-  # Format mean column: mean for numeric vars, % for factor levels
-  # For interactions: mean of x for factor level, mean of x*z for numeric*numeric, % for factor*factor
+  # Format mean column: mean for numeric vars, % only when mean_is_pct is TRUE (factor levels / factor*factor)
+  mean_is_pct <- if (!is.null(tbl$mean_is_pct)) tbl$mean_is_pct else rep(FALSE, nrow(tbl))
   mean_formatted <- sapply(seq_along(tbl$mean_or_pct), function(i) {
     if (tbl$term[i] == "(Intercept)") return("--")
     if (is.na(tbl$mean_or_pct[i])) return("--")
     val <- tbl$mean_or_pct[i]
-    term <- tbl$term[i]
-    
-    # Check if this is a factor*factor interaction (show as %)
-    # We stored percentages (0-100) for these
-    if (grepl(":", term)) {
-      # Interaction term - check if it's factor*factor by looking at value range
-      # Factor*factor interactions have percentage values (0-100)
-      # We need to check components to determine
-      components <- strsplit(term, ":")[[1]]
-      is_factor_factor <- TRUE
-      for (comp in components) {
-        # If component is in model_data and is numeric, it's not factor*factor
-        if (comp %in% names(model_data) && is.numeric(model_data[[comp]])) {
-          is_factor_factor <- FALSE
-          break
-        }
-      }
-      if (is_factor_factor) {
-        paste0(format(round(val, 1), nsmall = 1), "%")
-      } else {
-        smart_round(val)
-      }
-    } else if (!(term %in% names(model_data))) {
-      # This is a factor level (main effect) - show as percentage with % sign
+    if (mean_is_pct[i]) {
       paste0(format(round(val, 1), nsmall = 1), "%")
     } else {
-      # Numeric variable - show mean
       smart_round(val)
     }
   })
@@ -1076,13 +1109,27 @@ print.lm2 <- function(x, notes = NULL, ...) {
       }
       baseline_row$estimate <- "[baseline]"
       
-      # Calculate percentage for the baseline level
-      if (bl$var_name %in% names(model_data)) {
+      # Calculate percentage for the baseline level (show in mean column like other factor levels)
+      factor_col <- NULL
+      if (!is.null(model_data) && bl$var_name %in% names(model_data)) {
         factor_col <- model_data[[bl$var_name]]
+      }
+      if (is.null(factor_col)) {
+        # Fallback: get data from call (lm_robust often has no $model)
+        cl <- attr(x, "lm2_call")
+        if (!is.null(cl) && !is.null(cl$data)) {
+          data_from_call <- tryCatch(eval(cl$data, envir = parent.frame()), error = function(e) NULL)
+          if (!is.null(data_from_call) && bl$var_name %in% names(data_from_call)) {
+            factor_col <- data_from_call[[bl$var_name]]
+            # Align to model: use same rows as used in fit (model frame may subset)
+            mf <- tryCatch(stats::model.frame(x$terms, data = data_from_call), error = function(e) NULL)
+            if (!is.null(mf) && bl$var_name %in% names(mf)) factor_col <- mf[[bl$var_name]]
+          }
+        }
+      }
+      if (!is.null(factor_col)) {
         baseline_pct <- mean(factor_col == bl$baseline_level, na.rm = TRUE) * 100
         baseline_pct_str <- paste0(format(round(baseline_pct, 1), nsmall = 1), "%")
-        # Match the width of existing mean column values for alignment
-        # right_align adds 1 trailing space, so we need width-1 for the content, then add trailing space
         existing_width <- max(nchar(display_df$`  mean`))
         baseline_row$`  mean` <- paste0(format(baseline_pct_str, width = existing_width - 1, justify = "right"), " ")
       }
