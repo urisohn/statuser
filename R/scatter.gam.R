@@ -76,62 +76,64 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
   is_formula <- tryCatch(inherits(x, "formula"), error = function(e) FALSE)
   
   if (is_formula) {
-    # Formula syntax: y ~ x
+    # Formula syntax: y ~ x (supports both bare names and expressions like mpg$hwy ~ mpg$displ)
     formula_vars <- all.vars(x)
-    if (length(formula_vars) != 2) {
-      stop("scatter.gam(): Formula must have exactly two variables: y ~ x", call. = FALSE)
-    }
-    
-    y_var_name <- formula_vars[1]
-    x_var_name <- formula_vars[2]
-    
-    # Get environment for evaluating variables
+    # Environment for evaluation: data first if provided, then formula env
     formula_env <- environment(x)
     if (is.null(formula_env)) {
-      calling_env <- parent.frame()
-    } else {
-      calling_env <- formula_env
+      formula_env <- parent.frame()
     }
-    
-    if (!is.null(data)) {
-      # Data provided: extract from data frame
+    eval_env <- if (!is.null(data)) {
       if (!is.data.frame(data)) {
         stop("scatter.gam(): 'data' must be a data frame", call. = FALSE)
       }
-      
-      # Check if variables exist in data
-      if (!y_var_name %in% names(data)) {
-        stop(sprintf("scatter.gam(): Variable \"%s\" not found in dataset", y_var_name), call. = FALSE)
-      }
-      if (!x_var_name %in% names(data)) {
-        stop(sprintf("scatter.gam(): Variable \"%s\" not found in dataset", x_var_name), call. = FALSE)
-      }
-      
-      # Extract variables from data
-      y <- data[[y_var_name]]
-      x <- data[[x_var_name]]
-      
-      # Set names for labels
-      y_name <- y_var_name
-      x_name <- x_var_name
+      list2env(data, parent = formula_env)
     } else {
-      # No data: evaluate variables from environment
-      y_exists <- exists(y_var_name, envir = calling_env, inherits = TRUE)
-      x_exists <- exists(x_var_name, envir = calling_env, inherits = TRUE)
-      
-      if (!y_exists) {
-        stop(sprintf("scatter.gam(): Could not find variable '%s'", y_var_name), call. = FALSE)
+      formula_env
+    }
+
+    if (length(formula_vars) == 2) {
+      # Two variable names: use names for labels and extract from data or env
+      y_var_name <- formula_vars[1]
+      x_var_name <- formula_vars[2]
+      if (!is.null(data)) {
+        if (!y_var_name %in% names(data)) {
+          stop(sprintf("scatter.gam(): Variable \"%s\" not found in dataset", y_var_name), call. = FALSE)
+        }
+        if (!x_var_name %in% names(data)) {
+          stop(sprintf("scatter.gam(): Variable \"%s\" not found in dataset", x_var_name), call. = FALSE)
+        }
+        y <- data[[y_var_name]]
+        x <- data[[x_var_name]]
+      } else {
+        y_exists <- exists(y_var_name, envir = formula_env, inherits = TRUE)
+        x_exists <- exists(x_var_name, envir = formula_env, inherits = TRUE)
+        if (!y_exists) {
+          stop(sprintf("scatter.gam(): Could not find variable '%s'", y_var_name), call. = FALSE)
+        }
+        if (!x_exists) {
+          stop(sprintf("scatter.gam(): Could not find variable '%s'", x_var_name), call. = FALSE)
+        }
+        y <- get(y_var_name, envir = formula_env, inherits = TRUE)
+        x <- get(x_var_name, envir = formula_env, inherits = TRUE)
       }
-      if (!x_exists) {
-        stop(sprintf("scatter.gam(): Could not find variable '%s'", x_var_name), call. = FALSE)
-      }
-      
-      y <- eval(as.name(y_var_name), envir = calling_env)
-      x <- eval(as.name(x_var_name), envir = calling_env)
-      
-      # Set names for labels
       y_name <- y_var_name
       x_name <- x_var_name
+    } else if (length(x) >= 3) {
+      # LHS ~ RHS with complex expressions (e.g. mpg$hwy ~ mpg$displ): evaluate both sides
+      form <- x
+      y <- eval(form[[2]], envir = eval_env)
+      x <- eval(form[[3]], envir = eval_env)
+      if (!is.numeric(y) || !is.numeric(x)) {
+        stop("scatter.gam(): Formula sides must evaluate to numeric vectors", call. = FALSE)
+      }
+      # Use variable names only (strip data frame prefix e.g. mtcars$hp -> hp)
+      y_name <- paste(deparse(form[[2]], width.cutoff = 60L), collapse = " ")
+      x_name <- paste(deparse(form[[3]], width.cutoff = 60L), collapse = " ")
+      y_name <- sub("^.*\\$", "", trimws(y_name))
+      x_name <- sub("^.*\\$", "", trimws(x_name))
+    } else {
+      stop("scatter.gam(): Formula must have exactly two terms: y ~ x", call. = FALSE)
     }
   } else {
     # Standard syntax: x, y
@@ -228,8 +230,11 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
     y3_means <- y3_agg$x  # Mean y values for each tertile
   }
   
-  # Determine ylim
-  if (data.dots == TRUE && three.dots == TRUE) {
+  # Determine ylim (user ylim from ... overrides computed value to avoid duplicate-argument error)
+  if ("ylim" %in% names(plot_args)) {
+    ylim <- plot_args$ylim
+    plot_args$ylim <- NULL
+  } else if (data.dots == TRUE && three.dots == TRUE) {
     ylim <- range(c(y, yh, y3_means), na.rm = TRUE)
   } else if (data.dots == TRUE) {
     ylim <- range(y, na.rm = TRUE)
@@ -400,14 +405,10 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
     if ("las" %in% names(plot_args)) dist_plot_args$las <- plot_args$las
     
     if (use_plot_freq) {
-      # Calculate ylim from frequencies for background plot
+      # Calculate ylim from frequencies for background plot (10% buffer at top)
       freq_table <- table(x)
       max_freq <- max(freq_table, na.rm = TRUE)
-      ylim_freq <- c(0, max_freq)
-      # Add extra space at top if value labels might be shown (plot_freq default behavior)
-      if (max_freq > 0) {
-        ylim_freq[2] <- max_freq + max(1, max_freq * 0.15)  # Add 15% or at least 1 unit
-      }
+      ylim_freq <- c(0, if (max_freq > 0) max_freq * 1.10 else 0)
       
       # Get cex.lab for consistency
       cex_lab <- if ("cex.lab" %in% names(plot_args)) plot_args$cex.lab else 1.2
@@ -438,9 +439,11 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
       # Use line = 3 to match the default ylab position from plot() (mgp[1] = 3)
       mtext(side = 2, text = "Frequency", line = 3, font = 2, cex = cex_lab, col = "gray40")
     } else if (use_hist) {
-      # Use hist() for distribution plot of x
-      # Suppress default y-axis to draw custom one
-      hist_args <- c(list(x = x, yaxt = "n"), dist_plot_args)
+      # Use hist() for distribution plot of x (10% buffer on ylim)
+      h <- hist(x, plot = FALSE, breaks = "Sturges")
+      max_count <- max(h$counts, na.rm = TRUE)
+      ylim_hist <- c(0, if (max_count > 0) max_count * 1.10 else 0)
+      hist_args <- c(list(x = x, yaxt = "n", ylim = ylim_hist, breaks = h$breaks), dist_plot_args)
       do.call(hist, hist_args)
       axis(2, las = 1, col = "gray40", col.axis = "gray40")  # y-axis on left side with gray40 color
       
