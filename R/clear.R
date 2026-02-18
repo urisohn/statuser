@@ -33,10 +33,10 @@ clear <- function() {
   if (!isTRUE(pref)) {
     if (interactive()) {
       msg <- "To allow clear() to clear your environment, console, and plot, type \"yes\"\n(you will not be asked again if you say \"yes\").\n"
-      message2(msg, col = "red4")
+      message2(msg, col = "red2")
       ans <- trimws(tolower(readline(prompt = "")))
       if (!identical(ans, "yes")) {
-        message2("You did not write 'yes', so clear() will not work.", col = "red4")
+        message2("You did not write 'yes', so clear() will not work.", col = "red2")
         return(invisible(NULL))  # End without clearing; will prompt again next time
       }
       clear_save_allow_global_preference(TRUE)
@@ -71,8 +71,8 @@ clear <- function() {
   
   # Print confirmation message
   
-  message2("statuser::clear()", font=2,col = "red4")
-  message2("Cleared plot, global environment, and console",col = "red4")
+  message2("statuser::clear()", font=2,col = "red2")
+  message2("Cleared plot, global environment, and console",col = "red2")
   
   invisible(NULL)
 }

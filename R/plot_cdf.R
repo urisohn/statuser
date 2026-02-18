@@ -253,8 +253,8 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
     n.nagroup = sum(isnagroup)
     n.nay = sum(isnay)
     
-    if (n.nagroup>0) message2("plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
-    if (n.nay>0) message2("plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+    if (n.nagroup>0) message2("plot_cdf() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red2')
+    if (n.nay>0) message2("plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red2')
     
     # Get unique groups and apply ordering
     unique_groups <- unique(group)
@@ -304,7 +304,7 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
     y=y[!isnay]
     
     n.nay = sum(isnay)
-    if (n.nay>0) message2("plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+    if (n.nay>0) message2("plot_cdf() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red2')
     
     unique_x <- NULL
     n_groups <- 1

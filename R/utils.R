@@ -52,7 +52,7 @@ init_bottom_plot <- function(xlim, ylim, xlab, ylab, bg, cex.lab) {
       
       
 #2 Nice exit
-  exit <- function(msg, col='red4',font=2) {
+  exit <- function(msg, col='red2',font=2) {
     message2(msg,col=col,font=font)
     invokeRestart("abort") 
   }
