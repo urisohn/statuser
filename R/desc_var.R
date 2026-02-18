@@ -482,9 +482,9 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
     if (any(result_df$n.total == 0)) {
       zero_groups <- sum(result_df$n.total == 0)
       if (zero_groups == 1) {
-        message2(format_msg("1 group has 0 observations"))
+        message2(format_msg("1 group has 0 observations"), col = "red2")
       } else {
-        message2(format_msg(sprintf("%d groups have 0 observations", zero_groups)))
+        message2(format_msg(sprintf("%d groups have 0 observations", zero_groups)), col = "red2")
       }
     }
     
