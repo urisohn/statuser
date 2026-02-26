@@ -8,3 +8,8 @@
 ^CRAN_FIXES\.md$
 ^cran-comments\.md$
 ^explore_lm2\.R$
+^\.r_path_note\.txt$
+^NSE_IMPLEMENTATION_SUMMARY\.md$
+^Rplots\.pdf$
+^CHANGELOG\.md$
+^examples/

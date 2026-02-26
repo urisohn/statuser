@@ -334,16 +334,16 @@ test_that("plot_freq two-vector comparison handles missing values", {
 test_that("plot_freq two-vector comparison validates inputs", {
   y1 <- c(1, 1, 2, 2, 2)
   
-  # Non-numeric second argument
+  # Non-existent variable name as second argument
   expect_error(
-    plot_freq(y1, "not a vector"),
-    "must be a numeric vector"
+    plot_freq(y1, "not_a_vector"),
+    "Could not find variable"
   )
   
-  # Non-numeric first argument
+  # Non-existent variable name as first argument
   expect_error(
-    plot_freq("not a vector", y1),
-    "must be a numeric vector"
+    plot_freq("not_a_vector", y1),
+    "Could not find variable"
   )
 })
 

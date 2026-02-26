@@ -29,7 +29,7 @@ again next time; only "yes" is remembered for future sessions.
 Save anything that you wish to keep before running.
 }
 \examples{
-\dontrun{
+\donttest{
 # Interactive use: clear workspace, console, and plots
 # First run may prompt; once you type "yes", your preference is saved.
 clear()

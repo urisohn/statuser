@@ -64,6 +64,25 @@ test_that("scatter.gam throws error for invalid data", {
   expect_error(scatter.gam(x, y, data = df))
 })
 
+test_that("scatter.gam accepts formula syntax with and without data", {
+  skip_if_not_installed("mgcv")
+  
+  # Formula with data= (y ~ x, data = df)
+  df <- data.frame(x = rnorm(80), y = 2 * rnorm(80) + rnorm(80))
+  expect_error(scatter.gam(y ~ x, data = df), NA)
+  
+  # Formula with $ syntax and no data (LHS/RHS evaluated in calling env)
+  expect_error(scatter.gam(df$y ~ df$x), NA)
+})
+
+test_that("scatter.gam accepts ylim via ... without duplicate-argument error", {
+  skip_if_not_installed("mgcv")
+  
+  x <- rnorm(50)
+  y <- 2 * x + rnorm(50)
+  expect_error(scatter.gam(x, y, ylim = c(-5, 5)), NA)
+})
+
 test_that("plot_gam throws error for non-GAM model", {
   # Should error if model is not a GAM
   expect_error(plot_gam(lm(mpg ~ hp, data = mtcars), "hp"), 
@@ -72,7 +91,9 @@ test_that("plot_gam throws error for non-GAM model", {
 
 test_that("plot_gam validates predictor parameter", {
   skip_if_not_installed("mgcv")
-  
+  pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(dev.off(), add = TRUE)
+
   # Create a simple GAM model
   x <- rnorm(100)
   y <- 2*x + rnorm(100)
@@ -90,7 +111,9 @@ test_that("plot_gam validates predictor parameter", {
 
 test_that("plot_gam validates quantile.others parameter", {
   skip_if_not_installed("mgcv")
-  
+  pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(dev.off(), add = TRUE)
+
   x <- rnorm(100)
   y <- 2*x + rnorm(100)
   model <- mgcv::gam(y ~ s(x))
@@ -107,7 +130,9 @@ test_that("plot_gam validates quantile.others parameter", {
 
 test_that("plot_gam returns correct structure", {
   skip_if_not_installed("mgcv")
-  
+  pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(dev.off(), add = TRUE)
+
   x <- rnorm(100)
   y <- 2*x + rnorm(100)
   model <- mgcv::gam(y ~ s(x))
@@ -215,7 +240,9 @@ test_that("scatter.gam returns sensible fitted values", {
 
 test_that("plot_gam predicted values are reasonable", {
   skip_if_not_installed("mgcv")
-  
+  pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(dev.off(), add = TRUE)
+
   set.seed(456)
   x <- rnorm(100)
   y <- 2 * x + rnorm(100)
@@ -235,7 +262,9 @@ test_that("plot_gam predicted values are reasonable", {
 
 test_that("plot_gam works with multiple predictors", {
   skip_if_not_installed("mgcv")
-  
+  pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(dev.off(), add = TRUE)
+
   set.seed(789)
   x1 <- rnorm(100)
   x2 <- rnorm(100)
