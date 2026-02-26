@@ -53,22 +53,21 @@
 #' t.test2(y ~ group, data = data)
 #'
 #' @export t.test2
-t.test2 <- function(...) {
+t.test2 <- function(..., digits = NULL) {
   
-  # Get arguments and filter out digits (not a parameter for stats::t.test)
+  # Note: digits parameter is captured separately so it doesn't go into ...
+  # This allows us to pass ... directly to t.test without do.call
+  
+  # Get dots_list for validation and later use (extracting group names, etc.)
   dots_list <- list(...)
-  # Remove digits if present (it's not a parameter for stats::t.test)
-  if ("digits" %in% names(dots_list)) {
-    dots_list <- dots_list[names(dots_list) != "digits"]
-  }
   
   # Validate formula early if first argument is one
   if (length(dots_list) > 0) {
     validate_formula(dots_list[[1]], dots_list$data, func_name = "t.test2", calling_env = parent.frame())
   }
   
-  # Run t.test with provided arguments (excluding digits)
-  tt_result <- do.call(stats::t.test, dots_list)
+  # Run t.test with provided arguments (avoiding do.call to prevent expensive deparse)
+  tt_result <- stats::t.test(...)
   
   # Determine test type
   is_paired <- grepl("Paired", tt_result$method, ignore.case = TRUE)
@@ -105,12 +104,17 @@ t.test2 <- function(...) {
   corr_value <- NA_real_
   
   # Extract data to get group names and sample sizes
-  call_args <- match.call(expand.dots = TRUE)
+  call_args <- sys.call()
   calling_env <- parent.frame()
   dots_list <- list(...)
   
   # Helper function to extract variable name from expression
   extract_var_name <- function(expr) {
+    # Fast path for simple symbols (common case) - avoid expensive deparse()
+    if (is.symbol(expr)) {
+      return(as.character(expr))
+    }
+    # For complex expressions (e.g., df$col), use deparse
     expr_str <- deparse(expr, width.cutoff = 500)
     if (grepl("\\$", expr_str)) {
       var_name <- sub(".*\\$", "", expr_str)

@@ -1,0 +1,8 @@
+R Installation Path
+===================
+R executable: C:\Program Files\R\R-4.5.2\bin\R.exe
+Rscript: C:\Program Files\R\R-4.5.2\bin\Rscript.exe
+
+Usage:
+- Run R scripts: "C:\Program Files\R\R-4.5.2\bin\Rscript.exe" script.R
+- Interactive R: "C:\Program Files\R\R-4.5.2\bin\R.exe"

@@ -91,6 +91,37 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
   #20. Add legend
   #21. Return densities
   
+  #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
+  mc <- match.call()
+  
+  # Resolve first argument (formula or first vector)
+  formula_resolved <- evaluate_variable_arguments(
+    arg_expr = mc$formula,
+    arg_name = "formula",
+    data = data,
+    calling_env = parent.frame(),
+    func_name = "plot_density",
+    allow_null = FALSE
+  )
+  
+  # Resolve second argument if present (for two-vector mode)
+  y_resolved <- if (!is.null(mc$y)) {
+    evaluate_variable_arguments(
+      arg_expr = mc$y,
+      arg_name = "y",
+      data = data,
+      calling_env = parent.frame(),
+      func_name = "plot_density",
+      allow_null = TRUE
+    )
+  } else {
+    list(value = NULL, name = NULL, name_raw = NULL, was_symbol = FALSE)
+  }
+  
+  # Now overwrite the arguments with resolved values
+  formula <- formula_resolved$value
+  y <- y_resolved$value
+  
   #1. Extract and handle parameters
   # Extract plotting parameters from ...
     dots <- list(...)
@@ -98,15 +129,9 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
   # Check if we're in two-vector comparison mode (formula is vector, y is vector)
   if (!is.null(y) && !inherits(formula, "formula")) {
     # Two-vector comparison mode: plot_density(y1, y2)
-    # Capture variable names
-    mc <- match.call()
-    y1_name <- deparse(mc$formula)
-    y1_name <- paste(y1_name, collapse = "")
-    y1_name <- gsub('^"|"$', '', y1_name)
-    
-    y2_name <- deparse(mc$y)
-    y2_name <- paste(y2_name, collapse = "")
-    y2_name <- gsub('^"|"$', '', y2_name)
+    # Use resolved names
+    y1_name <- formula_resolved$name
+    y2_name <- y_resolved$name
     
     # Validate inputs
     if (!is.numeric(formula) || !is.vector(formula)) {
@@ -136,11 +161,9 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
   validate_formula(formula, data, func_name = "plot_density", calling_env = parent.frame())
   
   # Check if formula is actually a formula or a vector
-  # If it's not a formula, capture the variable name before calling validate_plot
-  is_formula_input <- tryCatch(inherits(formula, "formula"), error = function(e) FALSE)
+  is_formula_input <- inherits(formula, "formula")
   
   # Capture data name for error messages
-  mc <- match.call()
   data_expr <- mc$data
   data_name <- if (!is.null(data_expr)) {
     data_name_val <- deparse(data_expr)
@@ -172,56 +195,20 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
   }
   
   #2. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
-  # If not a formula, we need to pass it in a way that preserves the variable name
+  # If formula input, use validate_plot
   if (is_formula_input) {
     validated <- validate_plot(formula, NULL, data, func_name = "plot_density", require_group = FALSE, data_name = data_name)
   } else {
-    # Not a formula - capture the actual variable name first
-    formula_expr <- mc$formula
-    actual_name <- if (!is.null(formula_expr)) {
-      deparse(formula_expr)
-    } else {
-      deparse(substitute(formula))
-    }
-    # Remove quotes if present
-    actual_name <- gsub('^"|"$', '', actual_name)
-    
-    # If data is provided, extract the variable from data frame first
-    # This prevents validate_plot from looking for "formula" in the data frame
-    if (!is.null(data)) {
-      if (!is.data.frame(data)) {
-        stop("plot_density(): 'data' must be a data frame", call. = FALSE)
-      }
-      # Clean the variable name (remove $ prefix if present)
-      clean_name <- if (grepl("\\$", actual_name)) {
-        strsplit(actual_name, "\\$")[[1]][length(strsplit(actual_name, "\\$")[[1]])]
-      } else {
-        actual_name
-      }
-      # Check if variable exists in data
-      if (!clean_name %in% names(data)) {
-        stop(sprintf("plot_density(): Column \"%s\" not found in dataset \"%s\"", clean_name, data_name), call. = FALSE)
-      }
-      # Extract variable from data frame
-      formula <- data[[clean_name]]
-      # Now call validate_plot without data (since we've already extracted the variable)
-      validated <- validate_plot(formula, NULL, NULL, func_name = "plot_density", require_group = FALSE, data_name = data_name)
-      # Override the names with the actual variable name
-      validated$y_name_raw <- clean_name
-      validated$y_name <- clean_name
-    } else {
-      # No data - pass it to validation (will evaluate from environment)
-      validated <- validate_plot(formula, NULL, data, func_name = "plot_density", require_group = FALSE, data_name = data_name)
-      # Override the name if it got "formula" instead of the actual variable name
-      if (validated$y_name_raw == "formula") {
-        validated$y_name_raw <- actual_name
-        validated$y_name <- if (grepl("\\$", actual_name)) {
-          strsplit(actual_name, "\\$")[[1]][length(strsplit(actual_name, "\\$")[[1]])]
-        } else {
-          actual_name
-        }
-      }
-    }
+    # Not a formula - use resolved names from evaluate_variable_arguments
+    validated <- list(
+      y = formula,
+      group = NULL,
+      y_name = formula_resolved$name,
+      group_name = NULL,
+      y_name_raw = formula_resolved$name_raw,
+      group_name_raw = NULL,
+      data_name = data_name
+    )
   }
   y <- validated$y
   group <- validated$group
@@ -248,14 +235,14 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
       n.nagroup = sum(isnagroup)
       n.nay = sum(isnay)
       
-      if (n.nagroup>0) message2("plot_density() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red4')
-      if (n.nay>0) message2("plot_density() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+      if (n.nagroup>0) message2("plot_density() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red2')
+      if (n.nay>0) message2("plot_density() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red2')
     } else {
       isnay=is.na(y)
       y=y[!isnay]
       
       n.nay = sum(isnay)
-      if (n.nay>0) message2("plot_density() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red4')
+      if (n.nay>0) message2("plot_density() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red2')
     }
   
   #5. Get unique groups (if group is provided)

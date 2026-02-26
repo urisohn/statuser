@@ -342,7 +342,7 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "",
           )
           message2(msg, col = "blue4")
       
-      message2("\nNote: you may turn off this message by setting `quiet=TRUE`", col = "red4")
+      message2("\nNote: you may turn off this message by setting `quiet=TRUE`", col = "red2")
       
     }
   

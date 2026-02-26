@@ -544,6 +544,30 @@ test_that("lm2 classical SE matches lm SE", {
   )
 })
 
+test_that("lm2 mean column shows mean for numeric, % for factor levels", {
+  skip_if_not_installed("estimatr")
+
+  set.seed(1)
+  n <- 50
+  d <- data.frame(
+    x = runif(n, 0, 10),
+    group = factor(sample(c("A", "B", "C"), n, replace = TRUE)),
+    y = 0
+  )
+  d$y <- 2 * d$x + as.numeric(d$group) + rnorm(n)
+
+  m <- lm2(y ~ x + group, data = d, notes = FALSE)
+  tbl <- attr(m, "statuser_table")
+
+  expect_true("x" %in% tbl$term)
+  if ("mean_is_pct" %in% names(tbl)) {
+    # x is numeric: display as mean, not %
+    expect_false(tbl$mean_is_pct[tbl$term == "x"])
+    # at least one factor level term displayed as %
+    expect_true(any(tbl$mean_is_pct))
+  }
+})
+
 # ============================================================================
 # EDGE CASES
 # ============================================================================

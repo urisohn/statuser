@@ -121,13 +121,15 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
   }
   
   # 1. Check if y is a formula and extract variables
-  # Use tryCatch to avoid "object not found" error if y is a symbol in data
-  is_formula <- tryCatch(inherits(y, "formula"), error = function(e) FALSE)
+  # Use unevaluated call to detect formula so we never evaluate y (avoids
+  # "restarting interrupted promise evaluation" when the object does not exist)
   calling_env <- parent.frame()
   call_match <- match.call()
-  
+  y_quote <- call_match[["y"]]
+  is_formula <- is.call(y_quote) && identical(y_quote[[1]], as.symbol("~"))
+
   if (is_formula) {
-    # Parse formula: y ~ x or y ~ x1 + x2
+    # Parse formula: y ~ x or y ~ x1 + x2 (evaluate only now that we know it's a formula)
     formula_vars <- all.vars(y)
     
     if (length(formula_vars) < 1) {
@@ -480,9 +482,9 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
     if (any(result_df$n.total == 0)) {
       zero_groups <- sum(result_df$n.total == 0)
       if (zero_groups == 1) {
-        message2(format_msg("1 group has 0 observations"))
+        message2(format_msg("1 group has 0 observations"), col = "red2")
       } else {
-        message2(format_msg(sprintf("%d groups have 0 observations", zero_groups)))
+        message2(format_msg(sprintf("%d groups have 0 observations", zero_groups)), col = "red2")
       }
     }
     
