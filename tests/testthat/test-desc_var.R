@@ -230,3 +230,62 @@ test_that("desc_var digits parameter actually rounds differently", {
   expect_true(nchar(format(result2$mean, nsmall = 2)) < nchar(format(result4$mean, nsmall = 4)) ||
               result2$mean != result4$mean)
 })
+
+test_that("desc_var errors clearly for non-numeric y", {
+  df <- data.frame(
+    y_char = as.character(1:10),
+    y_factor = factor(1:10),
+    group = rep(c("A", "B"), each = 5)
+  )
+
+  # Non-formula, data frame input
+  expect_error(
+    desc_var(y_char, group, data = df),
+    "'y_char' must be numeric; currently character"
+  )
+
+  # Formula syntax
+  expect_error(
+    desc_var(y_char ~ group, data = df),
+    "'y_char' must be numeric; currently character"
+  )
+
+  # Factor response
+  expect_error(
+    desc_var(y_factor ~ group, data = df),
+    "'y_factor' must be numeric; currently factor"
+  )
+})
+
+test_that("desc_var still errors when variable truly does not exist", {
+  df <- data.frame(
+    y = rnorm(10),
+    group = rep(c("A", "B"), each = 5)
+  )
+
+  expect_error(
+    desc_var(nonexistent, group, data = df),
+    "'nonexistent' not found in data"
+  )
+
+  expect_error(
+    desc_var(nonexistent ~ group, data = df),
+    "'nonexistent' not found in data"
+  )
+})
+
+test_that("desc_var evaluates df$col expressions before numeric validation", {
+  df <- data.frame(x = 1:10)
+
+  # Numeric expression works
+  result <- desc_var(df$x)
+  expect_true(is.data.frame(result))
+  expect_equal(as.numeric(result$mean), 5.5)
+
+  # Existing but non-numeric expression gives numeric-type error (not not-found)
+  df$x <- "a"
+  expect_error(
+    desc_var(df$x),
+    "'x' must be numeric; currently character"
+  )
+})
