@@ -365,10 +365,13 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
       
       # Set default xlim if not set, with padding for bar width
       if (!"xlim" %in% names(dots)) {
-        # For 3 groups, bars extend width on each side of center
-        # For 2 groups, bars extend width/2 on each side
-        bar_extent <- if (n_groups == 3) width_calc else width_calc / 2
-        padding <- bar_extent * 1.1  # Add 10% extra padding
+        # Bars are drawn with group-specific center offsets, so the outer edge can extend
+        # beyond min/max(all_xs) by more than width/2.
+        #
+        # - 2 groups: centers at x ± width/2 -> outer edge at x ± width
+        # - 3 groups: centers at x ± width  -> outer edge at x ± 1.5*width
+        outer_extent <- if (n_groups == 3) 1.5 * width_calc else width_calc
+        padding <- outer_extent * 1.1  # Add 10% extra padding
         dots$xlim <- c(min(all_xs) - padding, max(all_xs) + padding)
       }
       
