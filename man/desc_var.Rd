@@ -8,9 +8,7 @@ desc_var(y, group = NULL, data = NULL, digits = 3)
 }
 \arguments{
 \item{y}{A numeric vector of values, a column name (character string or unquoted) if \code{data} is provided,
-or a formula of the form \code{y ~ x} or \code{y ~ x1 + x2} (for multiple grouping variables).
-The response variable must be numeric; if an existing non-numeric variable is supplied, \code{desc_var()} will
-stop with a clear error indicating that the variable must be numeric.}
+or a formula of the form \code{y ~ x} or \code{y ~ x1 + x2} (for multiple grouping variables).}
 
 \item{group}{Optional grouping variable, if not provided computed for the full data.
 Ignored if \code{y} is a formula.}
@@ -39,8 +37,12 @@ A data frame with one row per group (or one row if no group is specified) contai
   }
 }
 \description{
-Returns a dataframe with one row per group. The response variable \code{y} must be numeric; passing an existing
-non-numeric variable (e.g., character or factor) will result in an informative error.
+Returns a dataframe with one row per group.
+}
+\details{
+The dependent variable (`y`) must be numeric. If you pass an existing
+non-numeric variable (e.g., character, factor), `desc_var()` will stop with
+a clear error indicating that the variable must be numeric.
 }
 \examples{
 # With grouping

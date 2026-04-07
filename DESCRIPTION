@@ -19,6 +19,7 @@ Encoding: UTF-8
 RoxygenNote: 7.3.3
 Imports:
     mgcv,
+    marginaleffects,
     rsvg,
     magick,
     labelled,
@@ -30,7 +31,6 @@ Suggests:
     crayon,
     quantreg,
     estimatr,
-    marginaleffects,
     broom,
     modelsummary
 Config/testthat/edition: 3
