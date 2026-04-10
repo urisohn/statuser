@@ -483,6 +483,69 @@ ip_estimate_model <- function(nux, data, k, xvar, zvar, yvar, engine = c("gam", 
   model
 }
 
+ip_format_p_apa <- function(p, digits = 3, eps = 1e-3) {
+  if (!is.finite(p)) return("p = NA")
+  if (p < eps) return("p < .001")
+  paste0("p = ", formatC(p, format = "f", digits = digits))
+}
+
+ip_get_linear_interaction_test_apa <- function(data, xvar, zvar, yvar) {
+  fo <- stats::as.formula(paste(yvar, "~", xvar, "*", zvar))
+  fit <- tryCatch(lm2(fo, data = data, notes = FALSE), error = function(e) NULL)
+  if (is.null(fit)) return("linear model: unavailable")
+  tbl <- attr(fit, "statuser_table")
+  if (is.null(tbl)) return("linear model: unavailable")
+  term <- paste0(xvar, ":", zvar)
+  idx <- which(tbl$term == term)
+  if (length(idx) != 1) return("linear model: unavailable")
+  tval <- as.numeric(tbl$t[idx])
+  df <- as.numeric(tbl$df[idx])
+  p <- as.numeric(tbl$p.value[idx])
+  if (!is.finite(tval) || !is.finite(df)) return("linear model: unavailable")
+  paste0(
+    "linear model: t(", formatC(df, format = "f", digits = 0), ") = ",
+    formatC(tval, format = "f", digits = 2), ", ",
+    ip_format_p_apa(p)
+  )
+}
+
+ip_get_gam_interaction_test_apa <- function(model, xvar, zvar) {
+  sm <- tryCatch(summary(model), error = function(e) NULL)
+  if (is.null(sm) || is.null(sm$s.table)) return("GAM: unavailable")
+  st <- sm$s.table
+  rn <- rownames(st)
+  if (is.null(rn)) return("GAM: unavailable")
+
+  preferred <- c(
+    paste0("ti(", xvar, ",", zvar, ")"),
+    paste0("ti(", zvar, ",", xvar, ")")
+  )
+  idx <- match(preferred, rn)
+  idx <- idx[!is.na(idx)]
+  if (length(idx) < 1) {
+    hits <- which(grepl(xvar, rn, fixed = TRUE) & grepl(zvar, rn, fixed = TRUE))
+    if (length(hits) == 0) return("GAM: unavailable")
+    idx <- hits
+  }
+
+  row <- idx[1]
+  p <- as.numeric(st[row, "p-value"])
+  edf <- if ("edf" %in% colnames(st)) as.numeric(st[row, "edf"]) else NA_real_
+  refdf <- if ("Ref.df" %in% colnames(st)) as.numeric(st[row, "Ref.df"]) else NA_real_
+  fval <- if ("F" %in% colnames(st)) as.numeric(st[row, "F"]) else NA_real_
+
+  if (is.finite(fval) && is.finite(edf) && is.finite(refdf)) {
+    return(paste0(
+      "GAM: F(", formatC(edf, format = "f", digits = 2), ", ",
+      formatC(refdf, format = "f", digits = 2), ") = ",
+      formatC(fval, format = "f", digits = 2), ", ",
+      ip_format_p_apa(p)
+    ))
+  }
+
+  paste0("GAM: ", ip_format_p_apa(p))
+}
+
 ip_compute_slopes_continuous <- function(spotlights, data, xs, zs, model, xvar, zvar, moderator.on.x.axis) {
   simple.slopes <- list()
   j <- 1

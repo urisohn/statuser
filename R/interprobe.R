@@ -50,8 +50,10 @@
 #'   \item \code{simple.slopes}: data.frame of predicted values and confidence intervals
 #'   \item \code{johnson.neyman}: data.frame of marginal effects and confidence intervals
 #'   \item \code{frequencies}: data.frame with bin frequencies used for shading/histogram
-#'   \item \code{model}: the fitted model when estimated inside \code{interprobe()}
-#'     (e.g. a \code{mgcv::gam} or \code{lm2} object)
+#'   \item \code{gam_results}: the fitted GAM model when estimated inside \code{interprobe()}
+#'   \item \code{lm2_results}: when \code{interprobe()} estimates a GAM internally, also returns the
+#'     corresponding linear fit \code{lm2(y ~ x * z)} (or \code{NULL} if package \code{estimatr}
+#'     is not installed)
 #' }
 #'
 #' @export
@@ -182,6 +184,11 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
     if (!is.null(model) && !is.null(model_label)) {
       attr(model, "interprobe_modelname") <- model_label
     }
+    if (quiet == FALSE && identical(engine, "gam")) {
+      cat("p-value for the interaction:\n")
+      cat("  ", ip_get_linear_interaction_test_apa(data, xvar, zvar, yvar), "\n", sep = "")
+      cat("  ", ip_get_gam_interaction_test_apa(model, xvar, zvar), "\n\n", sep = "")
+    }
   }
 
   if (is.null(spotlights) & focal != "categorical") {
@@ -227,7 +234,19 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
 
   output <- list(simple.slopes = df1, johnson.neyman = df2, frequencies = frequencies)
   if (v$input.model == FALSE) {
-    output$model <- model
+    output$gam_results <- model
+    if (identical(engine, "gam")) {
+      output$lm2_results <- tryCatch(
+        {
+          if (!requireNamespace("estimatr", quietly = TRUE)) {
+            NULL
+          } else {
+            lm2(stats::as.formula(paste(yvar, "~", xvar, "*", zvar)), data = data, notes = FALSE)
+          }
+        },
+        error = function(e) NULL
+      )
+    }
   }
 
   if (v$input.model == TRUE) {

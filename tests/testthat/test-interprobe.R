@@ -49,6 +49,7 @@ test_that("interprobe works with lm() model input and returns expected structure
 test_that("interprobe returns fitted model when estimating internally", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("mgcv")
+  skip_if_not_installed("estimatr")
 
   set.seed(333)
   n <- 250
@@ -69,8 +70,37 @@ test_that("interprobe returns fitted model when estimating internally", {
   )
 
   expect_true(is.list(res))
-  expect_true("model" %in% names(res))
-  expect_s3_class(res$model, "gam")
+  expect_true("gam_results" %in% names(res))
+  expect_s3_class(res$gam_results, "gam")
+  expect_true("lm2_results" %in% names(res))
+  expect_s3_class(res$lm2_results, "lm2")
+})
+
+test_that("quiet=TRUE suppresses interaction APA printing", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("mgcv")
+
+  set.seed(444)
+  n <- 200
+  x <- rnorm(n)
+  z <- rnorm(n)
+  y <- x * z + rnorm(n)
+
+  grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  out <- capture.output(
+    interprobe(
+      x, z, y,
+      quiet = TRUE,
+      draw = "jn",
+      histogram = FALSE,
+      spotlights = c(-1, 0, 1),
+      probe.bins = 30
+    )
+  )
+
+  expect_false(any(grepl("p-value for the interaction", out, fixed = TRUE)))
 })
 
 test_that("interprobe works with lm2() model input", {
