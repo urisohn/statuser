@@ -115,6 +115,8 @@ Invisibly returns a list with:
   \item \code{simple.slopes}: data.frame of predicted values and confidence intervals
   \item \code{johnson.neyman}: data.frame of marginal effects and confidence intervals
   \item \code{frequencies}: data.frame with bin frequencies used for shading/histogram
+  \item \code{model}: the fitted model when estimated inside \code{interprobe()}
+  (e.g. a \code{mgcv::gam} or \code{lm2} object)
 }
 }
 \description{

@@ -50,6 +50,8 @@
 #'   \item \code{simple.slopes}: data.frame of predicted values and confidence intervals
 #'   \item \code{johnson.neyman}: data.frame of marginal effects and confidence intervals
 #'   \item \code{frequencies}: data.frame with bin frequencies used for shading/histogram
+#'   \item \code{model}: the fitted model when estimated inside \code{interprobe()}
+#'     (e.g. a \code{mgcv::gam} or \code{lm2} object)
 #' }
 #'
 #' @export
@@ -224,6 +226,9 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   if (ncol(fxz) == 3) frequencies <- data.frame(bin = rownames(fxz), f1 = fxz[, 1], f2 = fxz[, 2], f3 = fxz[, 3], row.names = NULL)
 
   output <- list(simple.slopes = df1, johnson.neyman = df2, frequencies = frequencies)
+  if (v$input.model == FALSE) {
+    output$model <- model
+  }
 
   if (v$input.model == TRUE) {
     if (!inherits(model, "gam")) {
