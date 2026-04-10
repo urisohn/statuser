@@ -292,7 +292,7 @@ ip_validate_arguments <- function(
 ) {
   if (!is.null(data)) {
     dataname <- deparse(substitute(data))
-    if (class(data) != "data.frame") {
+    if (!inherits(data, "data.frame")) {
       exit(paste0("interprobe says(): the 'data' argument must be a data.frame, but '", dataname, "' is not a data.frame."))
     }
 
@@ -391,7 +391,7 @@ ip_validate_arguments <- function(
     nux <- length(unique(x_model))
     model_txt <- ip_clean_string(deparse(substitute(model)))
 
-    if (nux <= 3 & class(x_model) != "factor") {
+    if (nux <= 3 & !inherits(x_model, "factor")) {
       exit(
         paste0(
           "ERROR.\n   ",
@@ -427,10 +427,10 @@ ip_validate_arguments <- function(
     exit(paste0("interprobe() says: the argument 'y2.ticks' must be either a numeric vector or a dataframe, but it is '", class(y2.ticks), "'."))
   }
 
-  if (!is.null(y1.ticks) && class(y1.ticks) == "data.frame" && ncol(y1.ticks) != 2) {
+  if (!is.null(y1.ticks) && inherits(y1.ticks, "data.frame") && ncol(y1.ticks) != 2) {
     exit(paste0("interprobe() says: the argument 'y1.ticks' must be a dataframe with 2 columns, but it has '", ncol(y1.ticks), "' columns."))
   }
-  if (!is.null(y2.ticks) && class(y2.ticks) == "data.frame" && ncol(y2.ticks) != 2) {
+  if (!is.null(y2.ticks) && inherits(y2.ticks, "data.frame") && ncol(y2.ticks) != 2) {
     exit(paste0("interprobe() says: the argument 'y2.ticks' must be a dataframe with 2 columns, but it has '", ncol(y2.ticks), "' columns."))
   }
 
@@ -834,7 +834,7 @@ ip_make_plot <- function(
     x1.axis <- "z"
   }
 
-  if (!is.null(y.ticks) & class(y.ticks) == "data.frame") {
+  if (!is.null(y.ticks) & inherits(y.ticks, "data.frame")) {
     yline.adj <- max(nchar(y.ticks[, 2])) / 3.25
     m0 <- par("mar")
     m1 <- m0

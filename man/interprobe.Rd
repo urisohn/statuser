@@ -57,7 +57,7 @@ argument to  interprobe. This is the way to include covariates for a probed inte
 \item{moderator.on.x.axis}{Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.}
 
 \item{k}{Integer. Smoothness parameter passed to `mgcv::gam()` when estimating with the default
-GAM engine. Ignored when \code{model} is \code{"lm"}, \code{"linear"}, or \code{lm} (linear \code{lm2} fit).}
+GAM engine.}
 
 \item{spotlights}{Numeric vector of length 3. Values at which curves are computed.}
 
@@ -117,11 +117,11 @@ Invisibly returns a list with:
   \item \code{frequencies}: data.frame with bin frequencies used for shading/histogram
   \item \code{gam_results}: the fitted GAM model when estimated inside \code{interprobe()}
   \item \code{gam_results_testing}: when \code{interprobe()} estimates a GAM internally and \code{x}
-  has exactly 2 unique values, a separate GAM fit used for interaction testing (with a \code{ti()}
-  term and numeric coding of \code{x})
+    has exactly 2 unique values, a separate GAM fit used for interaction testing (with a \code{ti()}
+    term and numeric coding of \code{x})
   \item \code{lm2_results}: when \code{interprobe()} estimates a GAM internally, also returns the
-  corresponding linear fit \code{lm2(y ~ x * z)} (or \code{NULL} if package \code{estimatr}
-  is not installed)
+    corresponding linear fit \code{lm2(y ~ x * z)} (or \code{NULL} if package \code{estimatr}
+    is not installed)
 }
 }
 \description{

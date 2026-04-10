@@ -31,3 +31,20 @@ so no user options are modified.
 
 Note: The remaining NOTE is "checking for future file timestamps ... unable to verify current time"
 on the local Windows build.
+
+The S3 generic/method consistency check produces a NOTE for `t.test2`:
+
+    checking S3 generic/method consistency ... NOTE
+    t:
+      function(x)
+    t.test2:
+      function(..., digits)
+
+`t.test2` is an intentional standalone function name — a user-facing wrapper
+around `stats::t.test`. It is not an S3 method of `base::t`. The NOTE is a
+false positive from R CMD check's dot-in-name heuristic, which treats any
+`foo.bar` function as an apparent method of generic `foo`. Registering it as
+`S3method(t, test2)` was considered but rejected because it would create
+incorrect dispatch semantics (objects of class `"test2"` calling `t()` would
+be routed to a t-test function). We are not sure why this note was not triggered
+with previous versions of the pkg.
