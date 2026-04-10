@@ -14,9 +14,14 @@
 #' @param model Optional fitted model object containing an interaction to probe
 #'   (e.g. `lm`, `glm`, `mgcv::gam`, `lm2`, or `estimatr::lm_robust`).
 #'   If provided, `x` and `z` must be provided as variable names (bare or quoted).
+#'   When you pass \code{data} (or vectors \code{x}, \code{z}, \code{y}) and want a linear
+#'   interaction instead of a GAM, use \code{model = "lm"}, \code{model = "linear"} (case-insensitive),
+#'   or \code{model = lm} (the \code{stats::lm} function as a sentinel). That fits \code{lm2(y ~ x * z)}
+#'   inside \code{interprobe()}; package \code{estimatr} is required (see \code{\link{lm2}}).
 #' @param data Optional data frame containing `x`, `z`, and `y`.
 #' @param moderator.on.x.axis Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.
-#' @param k Integer. Smoothness parameter passed to `mgcv::gam()` when `model` is not provided.
+#' @param k Integer. Smoothness parameter passed to `mgcv::gam()` when estimating with the default
+#'   GAM engine. Ignored when \code{model} is \code{"lm"}, \code{"linear"}, or \code{lm} (linear \code{lm2} fit).
 #' @param spotlights Numeric vector of length 3. Values at which curves are computed.
 #' @param spotlight.labels Character vector of length 3. Labels for the legend.
 #' @param histogram Logical. If TRUE (default), show sample size distribution under the plot.
@@ -86,6 +91,10 @@ interprobe <- function(
   xvar <- ip_clean_string(deparse(substitute(x)))
   zvar <- ip_clean_string(deparse(substitute(z)))
   yvar <- ip_clean_string(deparse(substitute(y)))
+
+  pm <- ip_interprobe_parse_model_arg(model)
+  model <- pm$model
+  estimate_linear <- pm$estimate_linear
 
   if (!is.null(data)) {
     if (is.null(x) | is.null(z) | is.null(y)) exit("interprobe says(): you must specify 'x', 'z' and 'y'")
@@ -171,7 +180,8 @@ interprobe <- function(
   if (focal != "continuous") xs <- ux
 
   if (v$input.model == FALSE) {
-    model <- ip_estimate_model(nux, data, k, xvar, zvar, yvar)
+    engine <- if (estimate_linear) "lm2" else "gam"
+    model <- ip_estimate_model(nux, data, k, xvar, zvar, yvar, engine = engine)
   }
 
   if (is.null(spotlights) & focal != "categorical") {

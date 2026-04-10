@@ -14,6 +14,29 @@ ip_model_frame <- function(model) {
   NULL
 }
 
+# Distinguish model = fitted object vs model = "lm"/"linear"/stats::lm (estimate with lm2 inside interprobe).
+ip_interprobe_parse_model_arg <- function(model) {
+  if (is.null(model)) {
+    return(list(model = NULL, estimate_linear = FALSE))
+  }
+  if (is.function(model) && identical(model, stats::lm)) {
+    return(list(model = NULL, estimate_linear = TRUE))
+  }
+  if (is.character(model) && length(model) == 1L) {
+    s <- trimws(model[[1L]])
+    if (nzchar(s) && tolower(s) %in% c("lm", "linear")) {
+      return(list(model = NULL, estimate_linear = TRUE))
+    }
+  }
+  if (inherits(model, "factor")) {
+    s <- trimws(as.character(model)[[1L]])
+    if (nzchar(s) && tolower(s) %in% c("lm", "linear")) {
+      return(list(model = NULL, estimate_linear = TRUE))
+    }
+  }
+  list(model = model, estimate_linear = FALSE)
+}
+
 ip_adjustcolor2 <- function(col, dark) {
   new_cols <- c()
   for (dj in dark) {
@@ -254,6 +277,7 @@ ip_validate_arguments <- function(
 
   if (is.null(model) & is.null(data)) {
     if (length(x) != length(z)) exit("interprobe says(): x and z must have the same length")
+    if (length(x) != length(y)) exit("interprobe says(): x and y must have the same length")
   }
 
   if (!is.null(model)) {
@@ -370,7 +394,17 @@ ip_validate_arguments <- function(
   }
 }
 
-ip_estimate_model <- function(nux, data, k, xvar, zvar, yvar) {
+ip_estimate_model <- function(nux, data, k, xvar, zvar, yvar, engine = c("gam", "lm2")) {
+  engine <- match.arg(engine)
+
+  if (engine == "lm2") {
+    if (nux <= 3) {
+      data[, xvar] <- factor(data[, xvar])
+    }
+    fo <- stats::as.formula(paste(yvar, "~", xvar, "*", zvar))
+    return(lm2(fo, data = data, notes = FALSE))
+  }
+
   k_if_specified <- ifelse(is.null(k), "", paste0(",k=", k))
 
   if (nux <= 3) {

@@ -49,13 +49,18 @@ is provided, or a numeric/factor vector when probing from vectors.}
 
 \item{model}{Optional fitted model object containing an interaction to probe
 (e.g. `lm`, `glm`, `mgcv::gam`, `lm2`, or `estimatr::lm_robust`).
-If provided, `x` and `z` must be provided as variable names (bare or quoted).}
+If provided, `x` and `z` must be provided as variable names (bare or quoted).
+When you pass \code{data} (or vectors \code{x}, \code{z}, \code{y}) and want a linear
+interaction instead of a GAM, use \code{model = "lm"}, \code{model = "linear"} (case-insensitive),
+or \code{model = lm} (the \code{stats::lm} function as a sentinel). That fits \code{lm2(y ~ x * z)}
+inside \code{interprobe()}; package \code{estimatr} is required (see \code{\link{lm2}}).}
 
 \item{data}{Optional data frame containing `x`, `z`, and `y`.}
 
 \item{moderator.on.x.axis}{Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.}
 
-\item{k}{Integer. Smoothness parameter passed to `mgcv::gam()` when `model` is not provided.}
+\item{k}{Integer. Smoothness parameter passed to `mgcv::gam()` when estimating with the default
+GAM engine. Ignored when \code{model} is \code{"lm"}, \code{"linear"}, or \code{lm} (linear \code{lm2} fit).}
 
 \item{spotlights}{Numeric vector of length 3. Values at which curves are computed.}
 
