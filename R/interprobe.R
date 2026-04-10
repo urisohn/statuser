@@ -94,6 +94,11 @@ interprobe <- function(
     y <- yvar
   }
 
+  # Run before ip_validate_arguments() so missing x/z with model=... hits the
+  # intended message instead of failing on focal variable ('NULL') not in model.
+  v <- ip_validate_input_combinations(data, model, x, y, z)
+  if (v$input.model == TRUE) yvar <- all.vars(terms(model))[1]
+
   ip_validate_arguments(
     x, z, y,
     model, data,
@@ -118,9 +123,6 @@ interprobe <- function(
     y <- yvar
   }
 
-  v <- ip_validate_input_combinations(data, model, x, y, z)
-  if (v$input.model == TRUE) yvar <- all.vars(terms(model))[1]
-
   if (quiet == FALSE) {
     cat(paste0("Probing the interaction of '", xvar, "' * '", zvar, "'\n"))
   }
@@ -130,7 +132,12 @@ interprobe <- function(
     data <- eval(parse(text = data.text), envir = parent.frame())
   }
 
-  if (v$input.model == TRUE) data <- model$model
+  if (v$input.model == TRUE) {
+    data <- ip_model_frame(model)
+    if (is.null(data)) {
+      exit("interprobe() says: could not recover the model frame from the fitted model (try stats::model.frame()).")
+    }
+  }
 
   ux <- sort(unique(data[, xvar]))
   uz <- sort(unique(data[, zvar]))

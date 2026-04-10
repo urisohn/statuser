@@ -1,6 +1,19 @@
 # Internal helpers for interprobe()
 # (Vendored from the deprecated `interacting` package, adapted for statuser.)
 
+# lm/glm store the model frame in $model; estimatr::lm_robust / lm2 does not — use model.frame()
+ip_model_frame <- function(model) {
+  mf <- tryCatch(stats::model.frame(model), error = function(e) NULL)
+  if (!is.null(mf) && is.data.frame(mf)) {
+    return(mf)
+  }
+  m <- model[["model"]]
+  if (!is.null(m) && is.data.frame(m)) {
+    return(m)
+  }
+  NULL
+}
+
 ip_adjustcolor2 <- function(col, dark) {
   new_cols <- c()
   for (dj in dark) {
@@ -299,7 +312,11 @@ ip_validate_arguments <- function(
   }
 
   if (!is.null(model)) {
-    x_model <- model$model[, xvar]
+    mf <- ip_model_frame(model)
+    if (is.null(mf)) {
+      exit("interprobe() says: could not recover the model frame from the fitted model (try stats::model.frame()).")
+    }
+    x_model <- mf[, xvar]
     nux <- length(unique(x_model))
     model_txt <- ip_clean_string(deparse(substitute(model)))
 
@@ -423,7 +440,7 @@ ip_compute_slopes_discrete <- function(ux, zs, model, xvar, zvar) {
   for (xj in ux) {
     ndj <- expand.grid(z = zs, x = xj)
     names(ndj) <- c(zvar, xvar)
-    data <- model$model
+    data <- ip_model_frame(model)
     ndj <- ip_add_covariates_at_mean(ndj, data)
     options(warn = -1)
     simple.slopes[[j]] <- marginaleffects::predictions(model, newdata = ndj, by = zvar)
@@ -475,7 +492,7 @@ ip_compute_jn_discrete <- function(ux, zs, model, xvar, zvar) {
   for (xj in ux[-1]) {
     ndj <- expand.grid(z = zs, x = c(as.character(ux[1]), xj))
     names(ndj)[1:2] <- c(zvar, xvar)
-    data <- model$model
+    data <- ip_model_frame(model)
     ndj <- ip_add_covariates_at_mean(ndj, data)
     options(warn = -1)
     floodlight[[j]] <- data.frame(marginaleffects::slopes(model = model, newdata = ndj, by = zvar))
