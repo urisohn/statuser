@@ -11,22 +11,14 @@
 #'   is provided, or a numeric/factor vector when probing from vectors.
 #' @param z The moderator. Same options as `x`.
 #' @param y The dependent variable. Same options as `x`. Not required when `model` is supplied.
-#' @param model Optional fitted model object containing an interaction to probe
-#'   (e.g. `lm`, `glm`, `mgcv::gam`, `lm2`, or `estimatr::lm_robust`).
-#'   If provided, `x` and `z` must be provided as variable names (bare or quoted).
-#'   When you pass \code{data} (or vectors \code{x}, \code{z}, \code{y}) and want a linear
-#'   interaction instead of a GAM, use \code{model = "lm"}, \code{model = "linear"} (case-insensitive),
-#'   \code{model = lm} (the \code{stats::lm} function), or bare \code{model = linear} / \code{model = lm}.
-#'   For \code{model = linear}: if an object \code{linear} exists in the calling environment and is a
-#'   fitted model (\code{lm}, \code{glm}, \code{gam}, \code{lm2}, \code{lm_robust}), it is used; otherwise
-#'   the name is treated as the linear keyword (same as \code{"linear"}). For \code{model = lm}, if
-#'   \code{get("lm")} is \code{stats::lm}, that is the keyword; if you store a fit in a variable named
-#'   \code{lm}, that fit is used. That keyword fits \code{lm2(y ~ x * z)} inside \code{interprobe()};
-#'   package \code{estimatr} is required (see \code{\link{lm2}}).
+#' @param model By default `interprobe` estimates a GAM model predicting `y` with `x` and `z`.
+#' You can instead probe a linear interaction by setting model=linear. You can also probe a 
+#' model of your choice by running it separately, saving the output, and submitting it as the model 
+#' argument to  interprobe. This is the way to include covariates for a probed interaction.
 #' @param data Optional data frame containing `x`, `z`, and `y`.
 #' @param moderator.on.x.axis Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.
 #' @param k Integer. Smoothness parameter passed to `mgcv::gam()` when estimating with the default
-#'   GAM engine. Ignored when \code{model} is \code{"lm"}, \code{"linear"}, or \code{lm} (linear \code{lm2} fit).
+#'   GAM engine. 
 #' @param spotlights Numeric vector of length 3. Values at which curves are computed.
 #' @param spotlight.labels Character vector of length 3. Labels for the legend.
 #' @param histogram Logical. If TRUE (default), show sample size distribution under the plot.
@@ -61,35 +53,19 @@
 #' }
 #'
 #' @export
-interprobe <- function(
-  x = NULL, z = NULL, y = NULL,
-  model = NULL,
-  data = NULL,
+interprobe <- function( x = NULL, z = NULL, y = NULL,
+  model = NULL,  data = NULL,
   moderator.on.x.axis = TRUE,
   k = NULL,
-  spotlights = NULL,
-  spotlight.labels = NULL,
-  histogram = TRUE,
-  max.unique = 11,
-  n.bin.continuous = 10,
-  n.max = 50,
-  xlab = "",
+  spotlights = NULL, spotlight.labels = NULL,
+  histogram = TRUE, max.unique = 11,n.bin.continuous = 10,n.max = 50,
+  xlab = "", ylab1 = "", ylab2 = "",
   cols = c("red4", "dodgerblue", "green4"),
-  ylab1 = "",
-  ylab2 = "",
-  main1 = "GAM Simple Slopes",
-  main2 = "GAM Johnson-Neyman",
-  legend.round = c(1, 4),
-  draw = "both",
+  main1 = "GAM Simple Slopes", main2 = "GAM Johnson-Neyman",
+  legend.round = c(1, 4), draw = "both",
   save.as = NULL,
-  xlim = NULL,
-  ylim1 = NULL,
-  ylim2 = NULL,
-  legend.simple.slopes = NULL,
-  legend.jn = NULL,
-  x.ticks = NULL,
-  y1.ticks = NULL,
-  y2.ticks = NULL,
+  xlim = NULL, ylim1 = NULL, ylim2 = NULL,x.ticks = NULL,   y1.ticks = NULL, y2.ticks = NULL, 
+  legend.simple.slopes = NULL, legend.jn = NULL,
   quiet = FALSE,
   probe.bins = 100
 ) {

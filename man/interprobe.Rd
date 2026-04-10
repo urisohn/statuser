@@ -19,9 +19,9 @@ interprobe(
   n.bin.continuous = 10,
   n.max = 50,
   xlab = "",
-  cols = c("red4", "dodgerblue", "green4"),
   ylab1 = "",
   ylab2 = "",
+  cols = c("red4", "dodgerblue", "green4"),
   main1 = "GAM Simple Slopes",
   main2 = "GAM Johnson-Neyman",
   legend.round = c(1, 4),
@@ -30,11 +30,11 @@ interprobe(
   xlim = NULL,
   ylim1 = NULL,
   ylim2 = NULL,
-  legend.simple.slopes = NULL,
-  legend.jn = NULL,
   x.ticks = NULL,
   y1.ticks = NULL,
   y2.ticks = NULL,
+  legend.simple.slopes = NULL,
+  legend.jn = NULL,
   quiet = FALSE,
   probe.bins = 100
 )
@@ -47,18 +47,10 @@ is provided, or a numeric/factor vector when probing from vectors.}
 
 \item{y}{The dependent variable. Same options as `x`. Not required when `model` is supplied.}
 
-\item{model}{Optional fitted model object containing an interaction to probe
-(e.g. `lm`, `glm`, `mgcv::gam`, `lm2`, or `estimatr::lm_robust`).
-If provided, `x` and `z` must be provided as variable names (bare or quoted).
-When you pass \code{data} (or vectors \code{x}, \code{z}, \code{y}) and want a linear
-interaction instead of a GAM, use \code{model = "lm"}, \code{model = "linear"} (case-insensitive),
-\code{model = lm} (the \code{stats::lm} function), or bare \code{model = linear} / \code{model = lm}.
-For \code{model = linear}: if an object \code{linear} exists in the calling environment and is a
-fitted model (\code{lm}, \code{glm}, \code{gam}, \code{lm2}, \code{lm_robust}), it is used; otherwise
-the name is treated as the linear keyword (same as \code{"linear"}). For \code{model = lm}, if
-\code{get("lm")} is \code{stats::lm}, that is the keyword; if you store a fit in a variable named
-\code{lm}, that fit is used. That keyword fits \code{lm2(y ~ x * z)} inside \code{interprobe()};
-package \code{estimatr} is required (see \code{\link{lm2}}).}
+\item{model}{By default `interprobe` estimates a GAM model predicting `y` with `x` and `z`.
+You can instead probe a linear interaction by setting model=linear. You can also probe a 
+model of your choice by running it separately, saving the output, and submitting it as the model 
+argument to  interprobe. This is the way to include covariates for a probed interaction.}
 
 \item{data}{Optional data frame containing `x`, `z`, and `y`.}
 
@@ -81,11 +73,11 @@ GAM engine. Ignored when \code{model} is \code{"lm"}, \code{"linear"}, or \code{
 
 \item{xlab}{Character. X-axis label.}
 
-\item{cols}{Character vector of length 3. Colors for the three curves.}
-
 \item{ylab1}{Character. Y-axis label for simple slopes panel.}
 
 \item{ylab2}{Character. Y-axis label for JN panel.}
+
+\item{cols}{Character vector of length 3. Colors for the three curves.}
 
 \item{main1}{Character. Title for simple slopes panel.}
 
@@ -103,15 +95,15 @@ GAM engine. Ignored when \code{model} is \code{"lm"}, \code{"linear"}, or \code{
 
 \item{ylim2}{Numeric vector length 2. Y-axis limits for JN.}
 
-\item{legend.simple.slopes}{Optional legend title for simple slopes.}
-
-\item{legend.jn}{Optional legend title for JN.}
-
 \item{x.ticks}{Optional custom x-axis ticks.}
 
 \item{y1.ticks}{Optional custom y-axis ticks for panel 1.}
 
 \item{y2.ticks}{Optional custom y-axis ticks for panel 2.}
+
+\item{legend.simple.slopes}{Optional legend title for simple slopes.}
+
+\item{legend.jn}{Optional legend title for JN.}
 
 \item{quiet}{Logical. If TRUE, reduces console output.}
 
