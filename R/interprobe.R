@@ -16,8 +16,13 @@
 #'   If provided, `x` and `z` must be provided as variable names (bare or quoted).
 #'   When you pass \code{data} (or vectors \code{x}, \code{z}, \code{y}) and want a linear
 #'   interaction instead of a GAM, use \code{model = "lm"}, \code{model = "linear"} (case-insensitive),
-#'   or \code{model = lm} (the \code{stats::lm} function as a sentinel). That fits \code{lm2(y ~ x * z)}
-#'   inside \code{interprobe()}; package \code{estimatr} is required (see \code{\link{lm2}}).
+#'   \code{model = lm} (the \code{stats::lm} function), or bare \code{model = linear} / \code{model = lm}.
+#'   For \code{model = linear}: if an object \code{linear} exists in the calling environment and is a
+#'   fitted model (\code{lm}, \code{glm}, \code{gam}, \code{lm2}, \code{lm_robust}), it is used; otherwise
+#'   the name is treated as the linear keyword (same as \code{"linear"}). For \code{model = lm}, if
+#'   \code{get("lm")} is \code{stats::lm}, that is the keyword; if you store a fit in a variable named
+#'   \code{lm}, that fit is used. That keyword fits \code{lm2(y ~ x * z)} inside \code{interprobe()};
+#'   package \code{estimatr} is required (see \code{\link{lm2}}).
 #' @param data Optional data frame containing `x`, `z`, and `y`.
 #' @param moderator.on.x.axis Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.
 #' @param k Integer. Smoothness parameter passed to `mgcv::gam()` when estimating with the default
@@ -92,9 +97,23 @@ interprobe <- function(
   zvar <- ip_clean_string(deparse(substitute(z)))
   yvar <- ip_clean_string(deparse(substitute(y)))
 
-  pm <- ip_interprobe_parse_model_arg(model)
-  model <- pm$model
-  estimate_linear <- pm$estimate_linear
+  mc <- match.call(expand.dots = FALSE)
+  model_label <- NULL
+  if ("model" %in% names(mc)) {
+    model_label <- paste0(deparse(mc[["model"]]), collapse = " ")
+  }
+  rs <- ip_interprobe_resolve_bare_model_symbol(mc, parent.frame(1))
+  if (isTRUE(rs$handled)) {
+    model <- rs$model
+    estimate_linear <- rs$estimate_linear
+  } else {
+    pm <- ip_interprobe_parse_model_arg(model)
+    model <- pm$model
+    estimate_linear <- pm$estimate_linear
+  }
+  if (!is.null(model) && !is.null(model_label)) {
+    attr(model, "interprobe_modelname") <- model_label
+  }
 
   if (!is.null(data)) {
     if (is.null(x) | is.null(z) | is.null(y)) exit("interprobe says(): you must specify 'x', 'z' and 'y'")
@@ -182,6 +201,9 @@ interprobe <- function(
   if (v$input.model == FALSE) {
     engine <- if (estimate_linear) "lm2" else "gam"
     model <- ip_estimate_model(nux, data, k, xvar, zvar, yvar, engine = engine)
+    if (!is.null(model) && !is.null(model_label)) {
+      attr(model, "interprobe_modelname") <- model_label
+    }
   }
 
   if (is.null(spotlights) & focal != "categorical") {

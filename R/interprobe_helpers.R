@@ -37,6 +37,50 @@ ip_interprobe_parse_model_arg <- function(model) {
   list(model = model, estimate_linear = FALSE)
 }
 
+# Bare model = linear / model = lm: resolve in caller env (fitted object vs lm2 keyword) without forcing promise.
+ip_interprobe_resolve_bare_model_symbol <- function(mc, env) {
+  default <- list(handled = FALSE, model = NULL, estimate_linear = FALSE)
+  if (!"model" %in% names(mc)) {
+    return(default)
+  }
+  ma <- mc[["model"]]
+  if (!is.name(ma)) {
+    return(default)
+  }
+  nm <- as.character(ma)
+  if (!nm %in% c("linear", "lm")) {
+    return(default)
+  }
+  fit_classes <- c("lm", "glm", "gam", "lm2", "lm_robust")
+  if (nm == "linear") {
+    if (!exists(nm, envir = env, inherits = TRUE)) {
+      return(list(handled = TRUE, model = NULL, estimate_linear = TRUE))
+    }
+    val <- tryCatch(get(nm, envir = env, inherits = TRUE), error = function(e) NULL)
+    if (is.null(val)) {
+      return(list(handled = TRUE, model = NULL, estimate_linear = TRUE))
+    }
+    if (inherits(val, fit_classes)) {
+      return(list(handled = TRUE, model = val, estimate_linear = FALSE))
+    }
+    return(list(handled = TRUE, model = NULL, estimate_linear = TRUE))
+  }
+  if (!exists(nm, envir = env, inherits = TRUE)) {
+    return(list(handled = TRUE, model = NULL, estimate_linear = TRUE))
+  }
+  val <- tryCatch(get(nm, envir = env, inherits = TRUE), error = function(e) NULL)
+  if (is.null(val)) {
+    return(list(handled = TRUE, model = NULL, estimate_linear = TRUE))
+  }
+  if (is.function(val) && identical(val, stats::lm)) {
+    return(list(handled = TRUE, model = NULL, estimate_linear = TRUE))
+  }
+  if (inherits(val, fit_classes)) {
+    return(list(handled = TRUE, model = val, estimate_linear = FALSE))
+  }
+  list(handled = TRUE, model = NULL, estimate_linear = TRUE)
+}
+
 ip_adjustcolor2 <- function(col, dark) {
   new_cols <- c()
   for (dj in dark) {
@@ -281,7 +325,10 @@ ip_validate_arguments <- function(
   }
 
   if (!is.null(model)) {
-    modelname <- deparse(substitute(model))
+    modelname <- attr(model, "interprobe_modelname")
+    if (is.null(modelname) || !is.character(modelname) || length(modelname) != 1) {
+      modelname <- deparse(substitute(model))
+    }
     if (!inherits(model, c("lm", "glm", "gam", "lm2", "lm_robust"))) {
       exit("interprobe() says you provided a model but it is not lm, glm, gam, lm2, or lm_robust")
     }

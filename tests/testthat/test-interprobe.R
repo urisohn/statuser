@@ -168,3 +168,119 @@ test_that("interprobe(x, z, y vectors) works with model = linear", {
   expect_true(nrow(res$johnson.neyman) > 0)
 })
 
+test_that("bare model = linear is keyword when linear not in calling env", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("estimatr")
+
+  # Child of .GlobalEnv: no `linear` binding here; interprobe's parent.frame() is this env.
+  res <- local(
+    {
+      set.seed(111)
+      n <- 200
+      x <- rnorm(n)
+      z <- rnorm(n)
+      y <- x * z + rnorm(n)
+      grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+      on.exit(grDevices::dev.off(), add = TRUE)
+      interprobe(
+        x, z, y,
+        model = linear,
+        quiet = TRUE,
+        draw = "jn",
+        histogram = FALSE,
+        spotlights = c(-1, 0, 1),
+        probe.bins = 30
+      )
+    },
+    envir = new.env(parent = globalenv())
+  )
+
+  expect_true(is.list(res))
+  expect_true(nrow(res$johnson.neyman) > 0)
+})
+
+test_that("bare model = linear uses fitted object when linear exists", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("estimatr")
+
+  res <- local(
+    {
+      set.seed(111)
+      n <- 200
+      x1 <- rnorm(n)
+      z1 <- rnorm(n)
+      y1 <- x1 * z1 + rnorm(n)
+      df <- data.frame(x1, z1, y1)
+      linear <- lm2(y1 ~ x1 * z1, data = df, notes = FALSE)
+      grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+      on.exit(grDevices::dev.off(), add = TRUE)
+      interprobe(
+        model = linear,
+        x = "x1",
+        z = "z1",
+        draw = "jn",
+        histogram = FALSE,
+        quiet = TRUE,
+        spotlights = c(-1, 0, 1),
+        probe.bins = 30
+      )
+    },
+    envir = new.env(parent = globalenv())
+  )
+
+  expect_true(is.list(res))
+  expect_true(nrow(res$johnson.neyman) > 0)
+})
+
+test_that("bare model = lm on vectors uses stats::lm as keyword", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("estimatr")
+
+  set.seed(111)
+  n <- 200
+  x <- rnorm(n)
+  z <- rnorm(n)
+  y <- x * z + rnorm(n)
+
+  grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  res <- interprobe(
+    x, z, y,
+    model = lm,
+    quiet = TRUE,
+    draw = "jn",
+    histogram = FALSE,
+    spotlights = c(-1, 0, 1),
+    probe.bins = 30
+  )
+
+  expect_true(is.list(res))
+  expect_true(nrow(res$johnson.neyman) > 0)
+})
+
+test_that("error message shows original model name (linear)", {
+  set.seed(123)
+  x <- rnorm(200)
+  z <- rnorm(200)
+  y <- x * z + rnorm(200)
+  x2 <- rnorm(200)
+
+  linear <- lm(y ~ x2 * z)
+
+  msgs <- character(0)
+  out <- withCallingHandlers(
+    withRestarts(
+      interprobe(x, z, y, model = linear, quiet = TRUE),
+      abort = function(...) "aborted"
+    ),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  expect_identical(out, "aborted")
+  expect_true(any(grepl("model 'linear'", msgs, fixed = TRUE)))
+})
+

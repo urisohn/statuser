@@ -52,8 +52,13 @@ is provided, or a numeric/factor vector when probing from vectors.}
 If provided, `x` and `z` must be provided as variable names (bare or quoted).
 When you pass \code{data} (or vectors \code{x}, \code{z}, \code{y}) and want a linear
 interaction instead of a GAM, use \code{model = "lm"}, \code{model = "linear"} (case-insensitive),
-or \code{model = lm} (the \code{stats::lm} function as a sentinel). That fits \code{lm2(y ~ x * z)}
-inside \code{interprobe()}; package \code{estimatr} is required (see \code{\link{lm2}}).}
+\code{model = lm} (the \code{stats::lm} function), or bare \code{model = linear} / \code{model = lm}.
+For \code{model = linear}: if an object \code{linear} exists in the calling environment and is a
+fitted model (\code{lm}, \code{glm}, \code{gam}, \code{lm2}, \code{lm_robust}), it is used; otherwise
+the name is treated as the linear keyword (same as \code{"linear"}). For \code{model = lm}, if
+\code{get("lm")} is \code{stats::lm}, that is the keyword; if you store a fit in a variable named
+\code{lm}, that fit is used. That keyword fits \code{lm2(y ~ x * z)} inside \code{interprobe()};
+package \code{estimatr} is required (see \code{\link{lm2}}).}
 
 \item{data}{Optional data frame containing `x`, `z`, and `y`.}
 
