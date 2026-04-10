@@ -51,6 +51,9 @@
 #'   \item \code{johnson.neyman}: data.frame of marginal effects and confidence intervals
 #'   \item \code{frequencies}: data.frame with bin frequencies used for shading/histogram
 #'   \item \code{gam_results}: the fitted GAM model when estimated inside \code{interprobe()}
+#'   \item \code{gam_results_testing}: when \code{interprobe()} estimates a GAM internally and \code{x}
+#'     has exactly 2 unique values, a separate GAM fit used for interaction testing (with a \code{ti()}
+#'     term and numeric coding of \code{x})
 #'   \item \code{lm2_results}: when \code{interprobe()} estimates a GAM internally, also returns the
 #'     corresponding linear fit \code{lm2(y ~ x * z)} (or \code{NULL} if package \code{estimatr}
 #'     is not installed)
@@ -178,16 +181,58 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   if (focal == "continuous") xs <- seq(min(data[, xvar]), max(data[, xvar]), length.out = probe.bins)
   if (focal != "continuous") xs <- ux
 
+  gam_results_testing <- NULL
+  lm2_results_override <- NULL
+
   if (v$input.model == FALSE) {
     engine <- if (estimate_linear) "lm2" else "gam"
     model <- ip_estimate_model(nux, data, k, xvar, zvar, yvar, engine = engine)
     if (!is.null(model) && !is.null(model_label)) {
       attr(model, "interprobe_modelname") <- model_label
     }
+    if (identical(engine, "gam") && nux == 2) {
+      # Separate GAM for interaction testing: keep x numeric (0/1) and use ti(x,z)
+      xF <- factor(data[[xvar]])
+      xNum <- as.numeric(xF == levels(xF)[2])
+      data_testing <- data
+      data_testing[[xvar]] <- xNum
+
+      kz <- if (is.null(k)) 10 else k
+      gam_testing_formula <- stats::as.formula(
+        paste0(
+          yvar, " ~ ", xvar,
+          " + s(", zvar, ",k=", kz, ")",
+          " + ti(", zvar, ",by=", xvar, ",k=", kz, ")"
+        )
+      )
+      gam_results_testing <- tryCatch(
+        mgcv::gam(gam_testing_formula, data = data_testing, method = "REML"),
+        error = function(e) NULL
+      )
+
+      if (requireNamespace("estimatr", quietly = TRUE)) {
+        lm2_formula <- stats::as.formula(paste(yvar, "~", xvar, "*", zvar))
+        lm2_results_override <- tryCatch(
+          {
+            fit_lm2 <- lm2(lm2_formula, data = data_testing, notes = FALSE)
+            attr(fit_lm2, "lm2_call") <- as.call(list(as.name("lm2"), lm2_formula))
+            fit_lm2
+          },
+          error = function(e) NULL
+        )
+      }
+    }
+
     if (quiet == FALSE && identical(engine, "gam")) {
       cat("p-value for the interaction:\n")
-      cat("  ", ip_get_linear_interaction_test_apa(data, xvar, zvar, yvar), "\n", sep = "")
-      cat("  ", ip_get_gam_interaction_test_apa(model, xvar, zvar), "\n\n", sep = "")
+      linear_txt <- if (!is.null(lm2_results_override)) {
+        ip_get_linear_interaction_test_apa_from_lm2(lm2_results_override, xvar, zvar)
+      } else {
+        ip_get_linear_interaction_test_apa(data, xvar, zvar, yvar)
+      }
+      cat("  ", linear_txt, "\n", sep = "")
+      gam_for_print <- if (!is.null(gam_results_testing)) gam_results_testing else model
+      cat("  ", ip_get_gam_interaction_test_apa(gam_for_print, xvar, zvar), "\n\n", sep = "")
     }
   }
 
@@ -235,17 +280,28 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   output <- list(simple.slopes = df1, johnson.neyman = df2, frequencies = frequencies)
   if (v$input.model == FALSE) {
     output$gam_results <- model
+    if (!is.null(gam_results_testing)) {
+      output$gam_results_testing <- gam_results_testing
+    }
     if (identical(engine, "gam")) {
-      output$lm2_results <- tryCatch(
-        {
-          if (!requireNamespace("estimatr", quietly = TRUE)) {
-            NULL
-          } else {
-            lm2(stats::as.formula(paste(yvar, "~", xvar, "*", zvar)), data = data, notes = FALSE)
-          }
-        },
-        error = function(e) NULL
-      )
+      output$lm2_results <- if (!is.null(lm2_results_override)) {
+        lm2_results_override
+      } else {
+        tryCatch(
+          {
+            if (!requireNamespace("estimatr", quietly = TRUE)) {
+              NULL
+            } else {
+              fo_lm2 <- stats::as.formula(paste(yvar, "~", xvar, "*", zvar))
+              fit_lm2 <- lm2(fo_lm2, data = data, notes = FALSE)
+              # Make printed Call reflect the actual interaction formula.
+              attr(fit_lm2, "lm2_call") <- as.call(list(as.name("lm2"), fo_lm2))
+              fit_lm2
+            }
+          },
+          error = function(e) NULL
+        )
+      }
     }
   }
 

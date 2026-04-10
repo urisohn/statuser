@@ -74,6 +74,39 @@ test_that("interprobe returns fitted model when estimating internally", {
   expect_s3_class(res$gam_results, "gam")
   expect_true("lm2_results" %in% names(res))
   expect_s3_class(res$lm2_results, "lm2")
+
+  cl <- attr(res$lm2_results, "lm2_call")
+  expect_true(!is.null(cl))
+  call_txt <- gsub("\\s+", " ", paste(deparse(cl), collapse = " "))
+  expect_equal(call_txt, "lm2(y ~ x * z)")
+})
+
+test_that("binary x returns gam_results_testing (ti-based testing GAM)", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("mgcv")
+  skip_if_not_installed("estimatr")
+
+  set.seed(555)
+  n <- 200
+  z <- rnorm(n)
+  x <- rep(c(0, 1), each = n / 2)
+  y <- x + z + rnorm(n, sd = 2)
+
+  grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  res <- interprobe(
+    x, z, y,
+    quiet = TRUE,
+    draw = "jn",
+    histogram = FALSE,
+    spotlights = c(-1, 0, 1),
+    probe.bins = 30
+  )
+
+  expect_true(is.list(res))
+  expect_true("gam_results_testing" %in% names(res))
+  expect_s3_class(res$gam_results_testing, "gam")
 })
 
 test_that("quiet=TRUE suppresses interaction APA printing", {

@@ -116,6 +116,9 @@ Invisibly returns a list with:
   \item \code{johnson.neyman}: data.frame of marginal effects and confidence intervals
   \item \code{frequencies}: data.frame with bin frequencies used for shading/histogram
   \item \code{gam_results}: the fitted GAM model when estimated inside \code{interprobe()}
+  \item \code{gam_results_testing}: when \code{interprobe()} estimates a GAM internally and \code{x}
+  has exactly 2 unique values, a separate GAM fit used for interaction testing (with a \code{ti()}
+  term and numeric coding of \code{x})
   \item \code{lm2_results}: when \code{interprobe()} estimates a GAM internally, also returns the
   corresponding linear fit \code{lm2(y ~ x * z)} (or \code{NULL} if package \code{estimatr}
   is not installed)

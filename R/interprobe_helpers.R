@@ -505,7 +505,25 @@ ip_get_linear_interaction_test_apa <- function(data, xvar, zvar, yvar) {
   paste0(
     "linear model: t(", formatC(df, format = "f", digits = 0), ") = ",
     formatC(tval, format = "f", digits = 2), ", ",
-    ip_format_p_apa(p)
+    ip_format_p_apa(p), " (robust errors: HC3)"
+  )
+}
+
+ip_get_linear_interaction_test_apa_from_lm2 <- function(fit, xvar, zvar) {
+  if (is.null(fit)) return("linear model: unavailable")
+  tbl <- attr(fit, "statuser_table")
+  if (is.null(tbl)) return("linear model: unavailable")
+  term <- paste0(xvar, ":", zvar)
+  idx <- which(tbl$term == term)
+  if (length(idx) != 1) return("linear model: unavailable")
+  tval <- as.numeric(tbl$t[idx])
+  df <- as.numeric(tbl$df[idx])
+  p <- as.numeric(tbl$p.value[idx])
+  if (!is.finite(tval) || !is.finite(df)) return("linear model: unavailable")
+  paste0(
+    "linear model: t(", formatC(df, format = "f", digits = 0), ") = ",
+    formatC(tval, format = "f", digits = 2), ", ",
+    ip_format_p_apa(p), " (robust errors: HC3)"
   )
 }
 
