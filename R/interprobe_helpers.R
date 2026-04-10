@@ -224,9 +224,9 @@ ip_validate_arguments <- function(
 
   if (
     any(class(model) %in% c("logical", "integer", "numeric", "data.frame", "factor")) |
-      any(class(x) %in% c("lm", "glm", "gam")) |
-      any(class(z) %in% c("lm", "glm", "gam")) |
-      any(class(y) %in% c("lm", "glm", "gam"))
+      any(class(x) %in% c("lm", "glm", "gam", "lm2", "lm_robust")) |
+      any(class(z) %in% c("lm", "glm", "gam", "lm2", "lm_robust")) |
+      any(class(y) %in% c("lm", "glm", "gam", "lm2", "lm_robust"))
   ) {
     exit(
       paste0(
@@ -245,7 +245,9 @@ ip_validate_arguments <- function(
 
   if (!is.null(model)) {
     modelname <- deparse(substitute(model))
-    if (!any(class(model) %in% c("lm", "glm", "gam"))) exit("interprobe() says you provided a model but it is not lm, glm, or gam")
+    if (!inherits(model, c("lm", "glm", "gam", "lm2", "lm_robust"))) {
+      exit("interprobe() says you provided a model but it is not lm, glm, gam, lm2, or lm_robust")
+    }
     vars <- all.vars(terms(model))[-1]
     if (!xvar %in% vars) exit(paste0("interprobe() says the focal variable x ('", xvar, "') is not in the model '", modelname, "'"))
     if (!zvar %in% vars) exit(paste0("interprobe() says the moderator variable z ('", zvar, "') is not in the model '", modelname, "'"))

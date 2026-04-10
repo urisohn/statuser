@@ -47,7 +47,8 @@ is provided, or a numeric/factor vector when probing from vectors.}
 
 \item{y}{The dependent variable. Same options as `x`. Not required when `model` is supplied.}
 
-\item{model}{Optional fitted model object containing an interaction to probe.
+\item{model}{Optional fitted model object containing an interaction to probe
+(e.g. `lm`, `glm`, `mgcv::gam`, `lm2`, or `estimatr::lm_robust`).
 If provided, `x` and `z` must be provided as variable names (bare or quoted).}
 
 \item{data}{Optional data frame containing `x`, `z`, and `y`.}
@@ -121,5 +122,5 @@ Probes an interaction by estimating (or accepting) a model and computing:
 }
 \details{
 Designed for GAM models but works with any model supported by `marginaleffects`
-(including `lm`, `glm`, and `mgcv::gam`).
+(including `lm`, `glm`, `mgcv::gam`, and `lm2` / `estimatr::lm_robust`).
 }

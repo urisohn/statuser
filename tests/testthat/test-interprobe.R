@@ -46,3 +46,42 @@ test_that("interprobe works with lm() model input and returns expected structure
   expect_equal(unname(eff_by_x[[2]]), unname(eff_by_x[[3]]), tolerance = 1e-8)
 })
 
+test_that("interprobe works with lm2() model input", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("estimatr")
+
+  set.seed(111)
+  n <- 600
+  x1 <- rnorm(n)
+  z1 <- rnorm(n, mean = 10, sd = 2)
+  y.raw <- x1 * z1
+  e <- rnorm(n, sd = sd(y.raw))
+  y1 <- y.raw + e
+
+  df <- data.frame(x1, y1, z1)
+  lm2_1 <- lm2(y1 ~ x1 * z1, data = df, notes = FALSE)
+
+  grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  res <- interprobe(
+    model = lm2_1,
+    x = "x1",
+    z = "z1",
+    draw = "jn",
+    histogram = FALSE,
+    quiet = TRUE,
+    spotlights = c(-1, 0, 1),
+    probe.bins = 30
+  )
+
+  expect_true(is.list(res))
+  expect_true(all(c("simple.slopes", "johnson.neyman", "frequencies") %in% names(res)))
+  expect_true(nrow(res$johnson.neyman) > 0)
+  jn <- res$johnson.neyman
+  eff_by_x <- split(jn$marginal.effect, jn$x1)
+  expect_true(length(eff_by_x) == 3)
+  expect_equal(unname(eff_by_x[[1]]), unname(eff_by_x[[2]]), tolerance = 1e-8)
+  expect_equal(unname(eff_by_x[[2]]), unname(eff_by_x[[3]]), tolerance = 1e-8)
+})
+

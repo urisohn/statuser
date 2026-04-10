@@ -5,13 +5,14 @@
 #' - Johnson-Neyman ("jn") curves using marginal effects
 #'
 #' Designed for GAM models but works with any model supported by `marginaleffects`
-#' (including `lm`, `glm`, and `mgcv::gam`).
+#' (including `lm`, `glm`, `mgcv::gam`, and `lm2` / `estimatr::lm_robust`).
 #'
 #' @param x The focal predictor. Can be a name (bare or quoted) when `data` or `model`
 #'   is provided, or a numeric/factor vector when probing from vectors.
 #' @param z The moderator. Same options as `x`.
 #' @param y The dependent variable. Same options as `x`. Not required when `model` is supplied.
-#' @param model Optional fitted model object containing an interaction to probe.
+#' @param model Optional fitted model object containing an interaction to probe
+#'   (e.g. `lm`, `glm`, `mgcv::gam`, `lm2`, or `estimatr::lm_robust`).
 #'   If provided, `x` and `z` must be provided as variable names (bare or quoted).
 #' @param data Optional data frame containing `x`, `z`, and `y`.
 #' @param moderator.on.x.axis Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.
