@@ -682,7 +682,7 @@ plot_means <- function(formula,
                   y_lab <- y_line + 0.025 * y_span
                   
                   # Shorter vertical connectors for interaction annotation
-                  y_line_from <- max(y_tops) + 0.045 * y_span
+                  y_line_from <- max(y_tops) + 0.05 * y_span
                   segments(x_mids[1], y_line_from, x_mids[1], y_line, col = pvalue.col)
                   segments(x_mids[2], y_line_from, x_mids[2], y_line, col = pvalue.col)
                   segments(x_mids[1], y_line, x_mids[2], y_line, col = pvalue.col)
