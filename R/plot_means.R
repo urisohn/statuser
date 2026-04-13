@@ -812,11 +812,28 @@ plot_means <- function(formula,
         }
       }
 
-    axis(1, at = block_centers, labels = block_labels, las = 1)
-
-    if (!is.null(x3_name) && nzchar(x3_name)) {
-      mtext(x3_section_labels, side = 3, at = x3_section_centers, line = 0.5, font = 2, cex = 0.9)
-    }
+    # X-axis labels: use mtext() for both variable names and values so they are
+    # vertically aligned (same 'line').
+      usr <- par("usr")
+      x_left <- usr[1] - 0.03 * (usr[2] - usr[1])
+      old_xpd <- par("xpd")
+      par(xpd = NA)
+      on.exit(par(xpd = old_xpd), add = TRUE)
+      
+      if (is.null(x2_name) || !nzchar(x2_name)) {
+        axis(1, at = block_centers, labels = block_labels, las = 1)
+      } else {
+        # Draw ticks only, then draw both name and values with mtext() on line 0
+          axis(1, at = block_centers, labels = FALSE, las = 1)
+          mtext(x2_name, side = 1, at = x_left, adj = 0, line = 1, font = 2, cex = 1.17)
+          mtext(block_labels, side = 1, at = block_centers, line = 1, cex = 1.17)
+          
+          if (!is.null(x3_name) && nzchar(x3_name)) {
+            # Second row for x3 (name + values) on line 1
+              mtext(x3_name, side = 1, at = x_left, adj = 0, line = 2.5, font = 2, cex = 1.17)
+              mtext(x3_section_labels, side = 1, at = x3_section_centers, line = 2.5, font = 2, cex = 1.17)
+          }
+      }
 
     if (k > 1) {
       legend_args <- list(
