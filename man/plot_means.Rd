@@ -70,7 +70,7 @@ unique \code{x1} values.}
 \code{ylim}, \code{ylab}).}
 }
 \value{
-No return value. Called for side effects (plotting and optional saving).
+Returns a minimal list (invisibly) with the computed means table and plot inputs.
 }
 \description{
 Plots group means as a barplot and returns the summary table used.
