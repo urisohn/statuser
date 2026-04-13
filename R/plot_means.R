@@ -13,12 +13,16 @@
 #'   with the desired order.
 #' @param add Logical. Reserved for future plotting (currently unused).
 #' @param legend.title Character string. Title for the legend. If \code{NULL},
-#'   defaults to \code{x1} variable name.
+#'   no title is shown.
 #' @param col Color(s) for \code{x1} bars. If \code{NULL}, colors are chosen
 #'   automatically using \code{get.colors(k)} where \code{k} is the number of
 #'   unique \code{x1} values.
 #' @param col.text Reserved for future plotting (currently unused). Default \code{NULL}.
 #' @param cluster Reserved for future clustering support (currently unused). Default \code{NULL}.
+#' @param buffer.top Either \code{"auto"} (default) or a numeric value. Extra
+#'   vertical headroom (as a fraction of the data y-range) added above the
+#'   maximum y value to make room for annotations. When \code{"auto"}, uses 0.3
+#'   when an interaction p-value is shown (scenario 2) and 0.2 otherwise.
 #' @param ... Additional arguments passed to \code{plot()} (e.g., \code{main},
 #'   \code{ylim}, \code{ylab}).
 #'
@@ -47,6 +51,10 @@ plot_means <- function(formula,
                        values.cex = 1,
                        values.pos = "top",
                        values.round = 1,
+                       tests = "auto",
+                       pvalue.cex = 0.9,
+                       pvalue.col = "gray50",
+                       buffer.top = "auto",
                        ...) {
   #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
     mc <- match.call()
@@ -87,6 +95,14 @@ plot_means <- function(formula,
     x1_name <- x_names[1]
     x2_name <- if (length(x_names) >= 2) x_names[2] else NULL
     x3_name <- if (length(x_names) >= 3) x_names[3] else NULL
+
+  #3a. Normalize desc_var output for single grouping variable
+    # desc_var(y ~ x1) returns a column named 'group' (not the grouping variable name).
+    # For plotting logic we standardize by adding a column with the actual x1 name.
+      result_plot <- result
+      if (length(x_names) == 1 && "group" %in% names(result_plot) && !(x1_name %in% names(result_plot))) {
+        result_plot[[x1_name]] <- as.character(result_plot$group)
+      }
     
   #3c. Validate label sizing argument
     if (!is.numeric(values.cex) || length(values.cex) != 1 || is.na(values.cex) || values.cex <= 0) {
@@ -101,6 +117,26 @@ plot_means <- function(formula,
       stop("plot_means(): 'values.round' must be a single non-negative number", call. = FALSE)
     }
     values.round <- as.integer(values.round)
+    
+  #3f. Validate tests argument
+    tests <- match.arg(tests, c("auto", "none"))
+    
+  #3g. Validate p-value styling arguments
+    if (!is.numeric(pvalue.cex) || length(pvalue.cex) != 1 || is.na(pvalue.cex) || pvalue.cex <= 0) {
+      stop("plot_means(): 'pvalue.cex' must be a single positive number", call. = FALSE)
+    }
+    if (!is.character(pvalue.col) || length(pvalue.col) != 1 || is.na(pvalue.col) || !nzchar(pvalue.col)) {
+      stop("plot_means(): 'pvalue.col' must be a single color name", call. = FALSE)
+    }
+    
+  #3h. Validate buffer.top argument
+    if (is.character(buffer.top) && length(buffer.top) == 1 && identical(buffer.top, "auto")) {
+      buffer.top <- "auto"
+    } else {
+      if (!is.numeric(buffer.top) || length(buffer.top) != 1 || is.na(buffer.top) || buffer.top < 0) {
+        stop("plot_means(): 'buffer.top' must be 'auto' or a single non-negative number (e.g., 0.3)", call. = FALSE)
+      }
+    }
 
   #3b. CI settings (always computed)
     ci_level <- 0.95
@@ -119,9 +155,9 @@ plot_means <- function(formula,
       sort(unique(vals_chr))
     }
 
-    x1_levels <- get_levels(x1_name, if (x1_name %in% names(result)) result[[x1_name]] else NULL)
-    x2_levels <- if (is.null(x2_name)) "All" else get_levels(x2_name, if (x2_name %in% names(result)) result[[x2_name]] else NULL)
-    x3_levels <- if (is.null(x3_name)) "All" else get_levels(x3_name, if (x3_name %in% names(result)) result[[x3_name]] else NULL)
+    x1_levels <- get_levels(x1_name, if (x1_name %in% names(result_plot)) result_plot[[x1_name]] else NULL)
+    x2_levels <- if (is.null(x2_name)) "All" else get_levels(x2_name, if (x2_name %in% names(result_plot)) result_plot[[x2_name]] else NULL)
+    x3_levels <- if (is.null(x3_name)) "All" else get_levels(x3_name, if (x3_name %in% names(result_plot)) result_plot[[x3_name]] else NULL)
 
   #5. Apply ordering to x1 only (controls bar order/colors)
     if (!is.null(order)) {
@@ -148,11 +184,20 @@ plot_means <- function(formula,
     }
 
   #5b. If there is a single grouping variable, reorder the returned table too
-    if (length(x_names) == 1 && x1_name %in% names(result)) {
-      x1_in_result <- as.character(result[[x1_name]])
+    if (length(x_names) == 1) {
+      x1_in_result <- if (x1_name %in% names(result)) {
+        as.character(result[[x1_name]])
+      } else if ("group" %in% names(result)) {
+        as.character(result$group)
+      } else {
+        NULL
+      }
+      
+      if (!is.null(x1_in_result)) {
       row_idx <- match(x1_levels, x1_in_result)
       if (all(!is.na(row_idx))) {
         result <- result[row_idx, , drop = FALSE]
+      }
       }
     }
 
@@ -169,7 +214,7 @@ plot_means <- function(formula,
     }
 
   #7. Build complete grid of combinations, keeping empty slots
-    result_key <- result
+    result_key <- result_plot
     if (x1_name %in% names(result_key)) result_key[[x1_name]] <- as.character(result_key[[x1_name]])
     if (!is.null(x2_name) && x2_name %in% names(result_key)) result_key[[x2_name]] <- as.character(result_key[[x2_name]])
     if (!is.null(x3_name) && x3_name %in% names(result_key)) result_key[[x3_name]] <- as.character(result_key[[x3_name]])
@@ -259,6 +304,20 @@ plot_means <- function(formula,
     gap_x3 <- 2
     bar_width <- 1
     bar_step <- 1
+  
+  #8a. Resolve buffer.top when set to 'auto'
+    show_interaction <- identical(tests, "auto") &&
+      length(x_names) == 2 &&
+      length(x1_levels) == 2 &&
+      !is.null(x2_name) &&
+      length(x2_levels) == 2 &&
+      is.null(x3_name)
+    
+    buffer_top_effective <- if (identical(buffer.top, "auto")) {
+      if (show_interaction) 0.3 else 0.2
+    } else {
+      buffer.top
+    }
     
     # Decide when to prefix labels (disambiguate overlaps across x1/x2/x3)
     # Default: show just the value label. If a label appears in more than one
@@ -374,7 +433,13 @@ plot_means <- function(formula,
     if (!"xlab" %in% names(dots)) dots$xlab <- ""
     if (!"ylab" %in% names(dots)) dots$ylab <- "Mean"
     if (!"main" %in% names(dots)) dots$main <- paste0("Means of ", y_name)
-    if (!"ylim" %in% names(dots)) dots$ylim <- c(y_min, y_max * 1.25)
+    # Add headroom for annotations, but keep y-axis ticks based on the
+    # unbuffered data range (so extra space doesn't add extra tick marks).
+      y_span_data <- (y_max - y_min)
+      if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- abs(y_max)
+      if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- 1
+      ylim_top <- y_max + buffer_top_effective * y_span_data
+      if (!"ylim" %in% names(dots)) dots$ylim <- c(y_min, ylim_top)
     if (!"xlim" %in% names(dots)) dots$xlim <- c(0, x_pos)
     if (!"las" %in% names(dots)) dots$las <- 1
     if (!"font.lab" %in% names(dots)) dots$font.lab <- 2
@@ -383,9 +448,19 @@ plot_means <- function(formula,
 
     dots$type <- "n"
     dots$xaxt <- "n"
+    
+    user_provided_yaxt <- "yaxt" %in% names(dots)
+    if (!user_provided_yaxt) dots$yaxt <- "n"
 
     plot_args <- c(list(x = 0, y = 0), dots)
     do.call(plot, plot_args)
+    
+    # Draw y-axis ticks without including the extra headroom
+      if (!user_provided_yaxt && (is.null(dots$axes) || isTRUE(dots$axes))) {
+        y_ticks <- pretty(c(y_min, y_max), n = 5)
+        y_ticks <- y_ticks[y_ticks >= y_min & y_ticks <= y_max + 1e-9]
+        axis(2, at = y_ticks, las = 1)
+      }
 
     if (length(heights)) {
       rect(x_lefts, 0, x_rights, heights, col = cols, border = cols)
@@ -419,6 +494,213 @@ plot_means <- function(formula,
             segments(x_ok - cap, lwr, x_ok + cap, lwr, col = eb_col)
             segments(x_ok - cap, upr, x_ok + cap, upr, col = eb_col)
           }
+        }
+      }
+
+    # Automatic tests and p-value annotations (limited scenarios)
+      if (identical(tests, "auto")) {
+        format_p_expr <- function(p, digits = 3) {
+          if (!is.finite(p)) return(NULL)
+          min_threshold <- 10^(-digits)
+          max_threshold <- 1 - 10^(-digits)
+          # NOTE: plotmath numeric literals cannot start with '.' (e.g., '.005' is invalid).
+          # So we keep the leading zero for expressions.
+          min_str <- format(min_threshold, nsmall = digits, scientific = FALSE)
+          max_str <- format(max_threshold, nsmall = digits, scientific = FALSE)
+          
+          if (p < min_threshold) {
+            return(as.expression(parse(text = paste0("italic(p) < ", min_str))))
+          }
+          if (p > max_threshold) {
+            return(as.expression(parse(text = paste0("italic(p) > ", max_str))))
+          }
+          
+          p_clean <- round(p, digits)
+          p_str <- format(p_clean, nsmall = digits, scientific = FALSE)
+          as.expression(parse(text = paste0("italic(p) == ", p_str)))
+        }
+        
+        get_p_for_term <- function(fit, var_a, var_b = NULL, want_interaction = FALSE) {
+          tab <- attr(fit, "statuser_table")
+          if (is.null(tab) || !is.data.frame(tab) || !"term" %in% names(tab) || !"p.value" %in% names(tab)) {
+            return(NA_real_)
+          }
+          terms <- as.character(tab$term)
+          if (want_interaction) {
+            idx <- which(grepl(":", terms) & grepl(var_a, terms) & grepl(var_b, terms))
+          } else {
+            idx <- which(grepl(paste0("^", var_a), terms))
+          }
+          if (!length(idx)) return(NA_real_)
+          as.numeric(tab$p.value[idx[1]])
+        }
+        
+        # Helper to compute a robust lm2 p-value for y ~ x1 (optionally clustered)
+          p_lm2_x1 <- function(df_sub) {
+            if (nrow(df_sub) == 0) return(NA_real_)
+            fit <- if (is.null(cluster)) {
+              lm2(.__y ~ .__x1, data = df_sub)
+            } else {
+              lm2(.__y ~ .__x1, data = df_sub, clusters = cluster)
+            }
+            get_p_for_term(fit, ".__x1")
+          }
+        
+        # Determine scenario based on number of grouping vars and binary checks
+          x1_is_binary <- length(x1_levels) == 2
+          x2_is_binary <- !is.null(x2_name) && length(x2_levels) == 2
+          x3_is_null <- is.null(x3_name)
+        
+        # Prepare model frame for tests (aligned with original formula vars)
+          mf_tests <- tryCatch(model.frame(formula, data = data, na.action = na.omit), error = function(e) NULL)
+        
+        if (!is.null(mf_tests) && is.data.frame(mf_tests) && nrow(mf_tests) > 0) {
+          names(mf_tests)[1] <- ".__y"
+          mf_tests$.__x1 <- as.factor(mf_tests[[x1_name]])
+          if (!is.null(x2_name)) mf_tests$.__x2 <- as.factor(mf_tests[[x2_name]])
+          
+          # Scenario 1: x1 only, binary
+            if (length(x_names) == 1 && x1_is_binary) {
+              p1 <- p_lm2_x1(mf_tests[, c(".__y", ".__x1"), drop = FALSE])
+              p1_txt <- format_p_expr(p1, digits = 3)
+              
+              k1 <- paste0(x1_levels[1], "|All|All")
+              k2 <- paste0(x1_levels[2], "|All|All")
+              i1 <- match(k1, cell_keys_drawn)
+              i2 <- match(k2, cell_keys_drawn)
+              if (is.finite(i1) && is.finite(i2)) {
+                xA <- x_centers_drawn[i1]
+                xB <- x_centers_drawn[i2]
+                x_mid <- mean(c(xA, xB))
+                
+                # y position based on CI uppers (if available)
+                  y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
+                  if (!is.null(ci_map) && nrow(ci_map) > 0) {
+                    mi <- match(c(k1, k2), ci_map$cell_key)
+                    if (all(!is.na(mi))) {
+                      y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
+                    }
+                  }
+                  y_span <- diff(par("usr")[3:4])
+                  y <- y_base + 0.06 * y_span
+                  tick <- 0.015 * y_span
+                
+                segments(xA, y, xB, y, col = pvalue.col)
+                segments(xA, y - tick, xA, y, col = pvalue.col)
+                segments(xB, y - tick, xB, y, col = pvalue.col)
+                if (!is.null(p1_txt)) text2(x_mid, y + 0.03 * y_span, p1_txt, bg = "white", cex = pvalue.cex, col = pvalue.col)
+              }
+            }
+          
+          # Scenario 2: x1 and x2, both binary, no x3
+            if (length(x_names) == 2 && x1_is_binary && x2_is_binary && x3_is_null) {
+              # Pairwise p-values by x2 level
+                p_by_x2 <- sapply(x2_levels, function(x2v) {
+                  df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
+                  p_lm2_x1(df_sub)
+                })
+                p_txt <- lapply(p_by_x2, format_p_expr, digits = 3)
+              
+              # Interaction p-value from y ~ x1 * x2
+                fit_int <- if (is.null(cluster)) {
+                  lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE])
+                } else {
+                  lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE], clusters = cluster)
+                }
+                p_int <- get_p_for_term(fit_int, ".__x1", ".__x2", want_interaction = TRUE)
+                p_int_txt <- format_p_expr(p_int, digits = 3)
+              
+              # Draw brackets for each x2 pair
+                y_span <- diff(par("usr")[3:4])
+                tick <- 0.015 * y_span
+                y_tops <- numeric(length(x2_levels))
+                x_mids <- numeric(length(x2_levels))
+                
+                for (j in seq_along(x2_levels)) {
+                  x2v <- x2_levels[j]
+                  k1 <- paste0(x1_levels[1], "|", x2v, "|All")
+                  k2 <- paste0(x1_levels[2], "|", x2v, "|All")
+                  i1 <- match(k1, cell_keys_drawn)
+                  i2 <- match(k2, cell_keys_drawn)
+                  if (!is.finite(i1) || !is.finite(i2)) next
+                  
+                  xA <- x_centers_drawn[i1]
+                  xB <- x_centers_drawn[i2]
+                  x_mids[j] <- mean(c(xA, xB))
+                  
+                  y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
+                  if (!is.null(ci_map) && nrow(ci_map) > 0) {
+                    mi <- match(c(k1, k2), ci_map$cell_key)
+                    if (all(!is.na(mi))) {
+                      y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
+                    }
+                  }
+                  
+                  y <- y_base + 0.06 * y_span
+                  y_tops[j] <- y
+                  
+                  segments(xA, y, xB, y, col = pvalue.col)
+                  segments(xA, y - tick, xA, y, col = pvalue.col)
+                  segments(xB, y - tick, xB, y, col = pvalue.col)
+                  if (!is.null(p_txt[[j]])) text2(x_mids[j], y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col)
+                }
+              
+              # Interaction annotation: connect midpoints + label above
+                if (all(is.finite(x_mids)) && all(is.finite(y_tops)) && !is.null(p_int_txt)) {
+                  x_int <- mean(x_mids)
+                  y_line <- max(y_tops) + 0.09 * y_span
+                  y_lab <- y_line + 0.04 * y_span
+                  
+                  # Shorter vertical connectors for interaction annotation
+                  y_line_from <- max(y_tops) + 0.06 * y_span
+                  segments(x_mids[1], y_line_from, x_mids[1], y_line, col = pvalue.col)
+                  segments(x_mids[2], y_line_from, x_mids[2], y_line, col = pvalue.col)
+                  segments(x_mids[1], y_line, x_mids[2], y_line, col = pvalue.col)
+                  text2(x_int, y_lab, p_int_txt, bg = "white", cex = pvalue.cex, col = pvalue.col)
+                }
+            }
+          
+          # Scenario 3: x1 binary, x2 has >2 levels, no x3 (simple effects only)
+            if (length(x_names) == 2 && x1_is_binary && !is.null(x2_name) && length(x2_levels) > 2 && x3_is_null) {
+              # Pairwise p-values by x2 level (compare x1 within each x2)
+                p_by_x2 <- sapply(x2_levels, function(x2v) {
+                  df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
+                  p_lm2_x1(df_sub)
+                })
+                p_txt <- lapply(p_by_x2, format_p_expr, digits = 3)
+              
+              # Draw brackets for each x2 level; no interaction annotation
+                y_span <- diff(par("usr")[3:4])
+                tick <- 0.015 * y_span
+                
+                for (j in seq_along(x2_levels)) {
+                  x2v <- x2_levels[j]
+                  k1 <- paste0(x1_levels[1], "|", x2v, "|All")
+                  k2 <- paste0(x1_levels[2], "|", x2v, "|All")
+                  i1 <- match(k1, cell_keys_drawn)
+                  i2 <- match(k2, cell_keys_drawn)
+                  if (!is.finite(i1) || !is.finite(i2)) next
+                  
+                  xA <- x_centers_drawn[i1]
+                  xB <- x_centers_drawn[i2]
+                  x_mid <- mean(c(xA, xB))
+                  
+                  y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
+                  if (!is.null(ci_map) && nrow(ci_map) > 0) {
+                    mi <- match(c(k1, k2), ci_map$cell_key)
+                    if (all(!is.na(mi))) {
+                      y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
+                    }
+                  }
+                  
+                  y <- y_base + 0.06 * y_span
+                  
+                  segments(xA, y, xB, y, col = pvalue.col)
+                  segments(xA, y - tick, xA, y, col = pvalue.col)
+                  segments(xB, y - tick, xB, y, col = pvalue.col)
+                  if (!is.null(p_txt[[j]])) text2(x_mid, y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col)
+                }
+            }
         }
       }
     
@@ -521,8 +803,10 @@ plot_means <- function(formula,
         cex = 1.1,
         horiz = TRUE
       )
-      legend_args$title <- if (!is.null(legend.title)) legend.title else x1_name
-      legend_args$title.font <- 2
+      if (!is.null(legend.title)) {
+        legend_args$title <- legend.title
+        legend_args$title.font <- 2
+      }
       do.call(legend, legend_args)
     }
 

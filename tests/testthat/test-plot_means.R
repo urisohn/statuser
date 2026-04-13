@@ -57,3 +57,29 @@ test_that("plot_means works with three grouping variables and missing combinatio
   expect_true(all(c("x1", "x2", "x3", "mean") %in% names(result)))
 })
 
+test_that("plot_means tests=auto works for scenario 1 (binary x1 only)", {
+  df <- data.frame(y = rnorm(60), x1 = rep(c("A", "B"), each = 30))
+  expect_error(plot_means(y ~ x1, data = df, tests = "auto"), NA)
+})
+
+test_that("plot_means tests=auto works for scenario 2 (binary x1 and x2)", {
+  df <- data.frame(
+    y = rnorm(120),
+    x1 = rep(c("A", "B"), 60),
+    x2 = rep(rep(c("X", "Y"), each = 30), 2)
+  )
+  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto"), NA)
+})
+
+test_that("plot_means tests=auto works for scenario 3 (binary x1, x2 has >2 levels)", {
+  df <- expand.grid(
+    x1 = c("A", "B"),
+    x2 = c("X", "Y", "Z"),
+    rep = seq_len(30),
+    stringsAsFactors = FALSE
+  )
+  df$y <- rnorm(nrow(df))
+  
+  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto"), NA)
+})
+

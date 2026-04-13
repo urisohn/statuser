@@ -16,6 +16,10 @@ plot_means(
   values.cex = 1,
   values.pos = "top",
   values.round = 1,
+  tests = "auto",
+  pvalue.cex = 0.9,
+  pvalue.col = "gray50",
+  buffer.top = "auto",
   ...
 )
 }
@@ -50,6 +54,14 @@ unique \code{x1} values.}
 \item{values.pos}{Character. Position for the mean value labels: \code{"top"} (default) draws labels inside the bar near the top; \code{"middle"} draws them in the middle of the bar; \code{"bottom"} draws them just above the \code{n=} label and prefixes the mean with \code{M=}; \code{"none"} suppresses them.}
 
 \item{values.round}{Numeric. Number of decimal places for mean value labels (default 1).}
+
+\item{tests}{Character. If \code{"auto"} (default), compute and annotate p-values for supported scenarios (currently: binary x1; binary x1 and x2). If \code{"none"}, suppress tests/annotations.}
+
+\item{pvalue.cex}{Numeric. Size of p-value labels (default 0.9). Also used for the interaction p-value label.}
+
+\item{pvalue.col}{Color for p-value labels and significance lines (default \code{"gray50"}).}
+
+\item{buffer.top}{Either \code{"auto"} (default) or a numeric value. Extra vertical headroom (as a fraction of the data y-range) added above the maximum y value to make room for annotations. When \code{"auto"}, uses 0.3 when an interaction p-value is shown (scenario 2) and 0.2 otherwise.}
 
 \item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
 \code{ylim}, \code{ylab}).}
