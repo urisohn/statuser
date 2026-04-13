@@ -45,6 +45,8 @@ plot_means <- function(formula,
                        col.text = NULL,
                        cluster = NULL,
                        values.cex = 1,
+                       values.pos = "top",
+                       values.round = 1,
                        ...) {
   #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
     mc <- match.call()
@@ -90,6 +92,15 @@ plot_means <- function(formula,
     if (!is.numeric(values.cex) || length(values.cex) != 1 || is.na(values.cex) || values.cex <= 0) {
       stop("plot_means(): 'values.cex' must be a single positive number", call. = FALSE)
     }
+  
+  #3d. Validate value label position
+    values.pos <- match.arg(values.pos, c("top", "none"))
+  
+  #3e. Validate rounding argument for mean labels
+    if (!is.numeric(values.round) || length(values.round) != 1 || is.na(values.round) || values.round < 0) {
+      stop("plot_means(): 'values.round' must be a single non-negative number", call. = FALSE)
+    }
+    values.round <- as.integer(values.round)
 
   #3b. CI settings (always computed)
     ci_level <- 0.95
@@ -379,6 +390,13 @@ plot_means <- function(formula,
     if (length(heights)) {
       rect(x_lefts, 0, x_rights, heights, col = cols, border = cols)
     }
+
+    # Compute label colors based on bar fill (shared by n= and mean labels)
+      lum <- function(col_one) {
+        rgb <- grDevices::col2rgb(col_one)
+        as.numeric((0.299 * rgb[1, ] + 0.587 * rgb[2, ] + 0.114 * rgb[3, ]) / 255)
+      }
+      text_cols <- ifelse(sapply(cols, lum) < 0.5, "white", "black")
     
     # Error bars
       if (!is.null(ci_map) && nrow(ci_map) > 0 && length(x_centers_drawn) == length(cell_keys_drawn)) {
@@ -404,16 +422,10 @@ plot_means <- function(formula,
         }
       }
     
-    # n / m labels under each bar
+    # n labels inside each bar (bottom)
       if (length(x_centers_drawn) > 0 && length(n_total_drawn) == length(x_centers_drawn)) {
         usr <- par("usr")
         pad <- 0.02 * (usr[4] - usr[3])
-        
-        # Helper to set text color based on bar fill
-          lum <- function(col_one) {
-            rgb <- grDevices::col2rgb(col_one)
-            as.numeric((0.299 * rgb[1, ] + 0.587 * rgb[2, ] + 0.114 * rgb[3, ]) / 255)
-          }
         
         labels <- character(length(x_centers_drawn))
         y_labs <- numeric(length(x_centers_drawn))
@@ -434,7 +446,6 @@ plot_means <- function(formula,
           }
         }
         
-        text_cols <- ifelse(sapply(cols, lum) < 0.5, "white", "black")
         for (i in seq_along(x_centers_drawn)) {
           graphics::text(
             x = x_centers_drawn[i],
@@ -443,6 +454,35 @@ plot_means <- function(formula,
             col = text_cols[i],
             cex = values.cex,
             adj = adjs[[i]]
+          )
+        }
+      }
+    
+    # Mean value labels (top, inside bar) using text2() with bar-colored background
+      if (identical(values.pos, "top") && length(x_centers_drawn) > 0) {
+        usr <- par("usr")
+        pad_top <- 0.02 * (usr[4] - usr[3])
+        
+        mean_labels <- character(length(x_centers_drawn))
+        y_mean <- numeric(length(x_centers_drawn))
+        for (i in seq_along(x_centers_drawn)) {
+          mean_labels[i] <- formatC(heights[i], format = "f", digits = values.round)
+          if (is.finite(heights[i]) && heights[i] < 0) {
+            # Negative bar: "top" is near 0
+            y_mean[i] <- 0 - pad_top
+          } else {
+            y_mean[i] <- heights[i] - pad_top
+          }
+        }
+        
+        for (i in seq_along(x_centers_drawn)) {
+          text2(
+            x = x_centers_drawn[i],
+            y = y_mean[i],
+            labels = mean_labels[i],
+            bg = cols[i],
+            cex = values.cex,
+            col = text_cols[i]
           )
         }
       }

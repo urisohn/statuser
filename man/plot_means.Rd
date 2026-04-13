@@ -14,6 +14,8 @@ plot_means(
   col.text = NULL,
   cluster = NULL,
   values.cex = 1,
+  values.pos = "top",
+  values.round = 1,
   ...
 )
 }
@@ -44,6 +46,10 @@ unique \code{x1} values.}
 \item{cluster}{Reserved for future clustering support (currently unused). Default \code{NULL}.}
 
 \item{values.cex}{Numeric. Size of the value labels drawn inside bars (default 1).}
+
+\item{values.pos}{Character. Position for the mean value labels: \code{"top"} (default) draws mean labels inside the bar near the top; \code{"none"} suppresses them.}
+
+\item{values.round}{Numeric. Number of decimal places for mean value labels (default 1).}
 
 \item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
 \code{ylim}, \code{ylab}).}
