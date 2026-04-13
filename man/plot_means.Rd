@@ -13,6 +13,7 @@ plot_means(
   col = NULL,
   col.text = NULL,
   cluster = NULL,
+  values.cex = 1,
   ...
 )
 }
@@ -41,6 +42,8 @@ unique \code{x1} values.}
 \item{col.text}{Reserved for future plotting (currently unused). Default \code{NULL}.}
 
 \item{cluster}{Reserved for future clustering support (currently unused). Default \code{NULL}.}
+
+\item{values.cex}{Numeric. Size of the value labels drawn inside bars (default 1).}
 
 \item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
 \code{ylim}, \code{ylab}).}

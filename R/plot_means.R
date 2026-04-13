@@ -44,6 +44,7 @@ plot_means <- function(formula,
                        col = NULL,
                        col.text = NULL,
                        cluster = NULL,
+                       values.cex = 1,
                        ...) {
   #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
     mc <- match.call()
@@ -84,6 +85,14 @@ plot_means <- function(formula,
     x1_name <- x_names[1]
     x2_name <- if (length(x_names) >= 2) x_names[2] else NULL
     x3_name <- if (length(x_names) >= 3) x_names[3] else NULL
+    
+  #3c. Validate label sizing argument
+    if (!is.numeric(values.cex) || length(values.cex) != 1 || is.na(values.cex) || values.cex <= 0) {
+      stop("plot_means(): 'values.cex' must be a single positive number", call. = FALSE)
+    }
+
+  #3b. CI settings (always computed)
+    ci_level <- 0.95
 
   #4. Determine levels for x1/x2/x3 (respect factor levels when possible)
     get_levels <- function(var_name, fallback_values) {
@@ -173,6 +182,67 @@ plot_means <- function(formula,
     }
     merged <- merge(grid_df, result_key, by = merge_by, all.x = TRUE, sort = FALSE)
 
+  #7b. Compute confidence intervals via dummy-coded lm2() (always)
+    ci_map <- NULL
+    mf <- tryCatch(
+      model.frame(formula, data = data, na.action = na.pass),
+      error = function(e) NULL
+    )
+    if (is.null(mf) || !is.data.frame(mf) || nrow(mf) == 0) {
+      ci_map <- NULL
+    } else {
+      # Build a stable cell key per observation matching the plotting grid
+        df_m <- mf
+        names(df_m)[1] <- ".__y"
+        df_m[[x1_name]] <- as.character(df_m[[x1_name]])
+        if (is.null(x2_name)) {
+          df_m$.x2 <- "All"
+        } else {
+          df_m[[x2_name]] <- as.character(df_m[[x2_name]])
+        }
+        if (is.null(x3_name)) {
+          df_m$.x3 <- "All"
+        } else {
+          df_m[[x3_name]] <- as.character(df_m[[x3_name]])
+        }
+        
+        x2_col <- if (is.null(x2_name)) ".x2" else x2_name
+        x3_col <- if (is.null(x3_name)) ".x3" else x3_name
+        
+        complete_mask <- !is.na(df_m$.__y) &
+          !is.na(df_m[[x1_name]]) &
+          !is.na(df_m[[x2_col]]) &
+          !is.na(df_m[[x3_col]])
+        df_m <- df_m[complete_mask, , drop = FALSE]
+        
+        if (nrow(df_m) > 0) {
+          df_m$cell_key <- paste(df_m[[x1_name]], df_m[[x2_col]], df_m[[x3_col]], sep = "|")
+          df_m$cell_factor <- factor(df_m$cell_key)
+          
+          fit <- if (is.null(cluster)) {
+            lm2(.__y ~ 0 + cell_factor, data = df_m)
+          } else {
+            lm2(.__y ~ 0 + cell_factor, data = df_m, clusters = cluster)
+          }
+          
+          newdata <- data.frame(cell_factor = levels(df_m$cell_factor))
+          pred <- predict(fit, newdata = newdata, interval = "confidence", level = ci_level)
+          pred_mat <- pred
+          if (is.list(pred) && "fit" %in% names(pred)) {
+            pred_mat <- pred$fit
+          }
+          
+          if (is.matrix(pred_mat) && all(c("fit", "lwr", "upr") %in% colnames(pred_mat))) {
+            ci_map <- data.frame(
+              cell_key = levels(df_m$cell_factor),
+              lwr = pred_mat[, "lwr"],
+              upr = pred_mat[, "upr"],
+              stringsAsFactors = FALSE
+            )
+          }
+        }
+    }
+
   #8. Prepare bar heights (x1 within each (x2,x3) block)
     gap_x2 <- 1
     gap_x3 <- 2
@@ -210,6 +280,10 @@ plot_means <- function(formula,
 
     x_lefts <- numeric(0)
     x_rights <- numeric(0)
+    x_centers_drawn <- numeric(0)
+    cell_keys_drawn <- character(0)
+    n_total_drawn <- numeric(0)
+    n_missing_drawn <- numeric(0)
     heights <- numeric(0)
     cols <- character(0)
 
@@ -232,11 +306,17 @@ plot_means <- function(formula,
             drop = FALSE
           ]
           mean_val <- if (nrow(row_sel) >= 1) row_sel$mean[1] else NA_real_
+          n_total <- if (nrow(row_sel) >= 1 && "n.total" %in% names(row_sel)) row_sel$n.total[1] else NA_real_
+          n_missing <- if (nrow(row_sel) >= 1 && "n.missing" %in% names(row_sel)) row_sel$n.missing[1] else NA_real_
 
           x_center <- x_pos + (i - 1) * bar_step
           centers_block[i] <- x_center
 
           if (!is.na(mean_val)) {
+            cell_keys_drawn <- c(cell_keys_drawn, paste0(as.character(x1_val), "|", as.character(x2_val), "|", as.character(x3_val)))
+            x_centers_drawn <- c(x_centers_drawn, x_center)
+            n_total_drawn <- c(n_total_drawn, n_total)
+            n_missing_drawn <- c(n_missing_drawn, n_missing)
             x_lefts <- c(x_lefts, x_center - bar_width / 2)
             x_rights <- c(x_rights, x_center + bar_width / 2)
             heights <- c(heights, mean_val)
@@ -269,11 +349,21 @@ plot_means <- function(formula,
     dots <- list(...)
     y_max <- max(heights, na.rm = TRUE)
     if (!is.finite(y_max)) y_max <- 1
+    y_min <- min(0, min(heights, na.rm = TRUE))
+    if (!is.finite(y_min)) y_min <- 0
+    
+    # Expand range to include CI whiskers when available
+      if (!is.null(ci_map) && nrow(ci_map) > 0) {
+        y_min_ci <- suppressWarnings(min(ci_map$lwr, na.rm = TRUE))
+        y_max_ci <- suppressWarnings(max(ci_map$upr, na.rm = TRUE))
+        if (is.finite(y_min_ci)) y_min <- min(y_min, y_min_ci)
+        if (is.finite(y_max_ci)) y_max <- max(y_max, y_max_ci)
+      }
 
     if (!"xlab" %in% names(dots)) dots$xlab <- ""
     if (!"ylab" %in% names(dots)) dots$ylab <- "Mean"
     if (!"main" %in% names(dots)) dots$main <- paste0("Means of ", y_name)
-    if (!"ylim" %in% names(dots)) dots$ylim <- c(0, y_max * 1.25)
+    if (!"ylim" %in% names(dots)) dots$ylim <- c(y_min, y_max * 1.25)
     if (!"xlim" %in% names(dots)) dots$xlim <- c(0, x_pos)
     if (!"las" %in% names(dots)) dots$las <- 1
     if (!"font.lab" %in% names(dots)) dots$font.lab <- 2
@@ -289,6 +379,73 @@ plot_means <- function(formula,
     if (length(heights)) {
       rect(x_lefts, 0, x_rights, heights, col = cols, border = cols)
     }
+    
+    # Error bars
+      if (!is.null(ci_map) && nrow(ci_map) > 0 && length(x_centers_drawn) == length(cell_keys_drawn)) {
+        eb_col <- if (!is.null(col.text)) col.text else "gray20"
+        cap <- bar_width * 0.08
+        match_idx <- match(cell_keys_drawn, ci_map$cell_key)
+        ok <- !is.na(match_idx)
+        if (any(ok)) {
+          lwr <- ci_map$lwr[match_idx[ok]]
+          upr <- ci_map$upr[match_idx[ok]]
+          x_ok <- x_centers_drawn[ok]
+          
+          ok2 <- is.finite(lwr) & is.finite(upr)
+          if (any(ok2)) {
+            x_ok <- x_ok[ok2]
+            lwr <- lwr[ok2]
+            upr <- upr[ok2]
+            
+            segments(x_ok, lwr, x_ok, upr, col = eb_col)
+            segments(x_ok - cap, lwr, x_ok + cap, lwr, col = eb_col)
+            segments(x_ok - cap, upr, x_ok + cap, upr, col = eb_col)
+          }
+        }
+      }
+    
+    # n / m labels under each bar
+      if (length(x_centers_drawn) > 0 && length(n_total_drawn) == length(x_centers_drawn)) {
+        usr <- par("usr")
+        pad <- 0.02 * (usr[4] - usr[3])
+        
+        # Helper to set text color based on bar fill
+          lum <- function(col_one) {
+            rgb <- grDevices::col2rgb(col_one)
+            as.numeric((0.299 * rgb[1, ] + 0.587 * rgb[2, ] + 0.114 * rgb[3, ]) / 255)
+          }
+        
+        labels <- character(length(x_centers_drawn))
+        y_labs <- numeric(length(x_centers_drawn))
+        adjs <- vector("list", length(x_centers_drawn))
+        for (i in seq_along(x_centers_drawn)) {
+          n_i <- n_total_drawn[i]
+          if (!is.finite(n_i)) n_i <- NA
+          
+          labels[i] <- paste0("n=", n_i)
+          
+          # Place inside the bar at the bottom (near the baseline)
+          if (is.finite(heights[i]) && heights[i] < 0) {
+            y_labs[i] <- 0 - pad
+            adjs[[i]] <- c(0.5, 1)
+          } else {
+            y_labs[i] <- 0 + pad
+            adjs[[i]] <- c(0.5, 0)
+          }
+        }
+        
+        text_cols <- ifelse(sapply(cols, lum) < 0.5, "white", "black")
+        for (i in seq_along(x_centers_drawn)) {
+          graphics::text(
+            x = x_centers_drawn[i],
+            y = y_labs[i],
+            labels = labels[i],
+            col = text_cols[i],
+            cex = values.cex,
+            adj = adjs[[i]]
+          )
+        }
+      }
 
     axis(1, at = block_centers, labels = block_labels, las = 1)
 
