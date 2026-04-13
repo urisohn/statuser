@@ -20,6 +20,7 @@ plot_means(
   pvalue.cex = 0.9,
   pvalue.col = "gray50",
   buffer.top = "auto",
+  save.as = "plot_means.svg",
   ...
 )
 }
@@ -61,7 +62,9 @@ unique \code{x1} values.}
 
 \item{pvalue.col}{Color for p-value labels and significance lines (default \code{"gray50"}).}
 
-\item{buffer.top}{Either \code{"auto"} (default) or a numeric value. Extra vertical headroom (as a fraction of the data y-range) added above the maximum y value to make room for annotations. When \code{"auto"}, uses 0.3 when an interaction p-value is shown (scenario 2) and 0.2 otherwise.}
+\item{buffer.top}{Either \code{"auto"} (default) or a numeric value. Extra vertical headroom (as a fraction of the data y-range) added above the maximum y value to make room for annotations. When \code{"auto"}, uses 0.35 when an interaction p-value is shown (scenario 2) and 0.25 otherwise.}
+
+\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default is \code{"plot_means.svg"}. If no folder is provided, the file is saved in \code{tempdir()}.}
 
 \item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
 \code{ylim}, \code{ylab}).}

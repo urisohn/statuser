@@ -1,7 +1,7 @@
 test_that("plot_means runs with formula + data and returns desc_var object", {
   df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 
-  result <- plot_means(y ~ group, data = df)
+  result <- plot_means(y ~ group, data = df, save.as = NULL)
 
   expect_true(is.data.frame(result))
   expect_true(inherits(result, "desc_var"))
@@ -16,7 +16,7 @@ test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
     x2 = rep(c("X", "Y"), each = 100)
   )
 
-  result <- plot_means(y ~ x1 + x2, data = df)
+  result <- plot_means(y ~ x1 + x2, data = df, save.as = NULL)
 
   expect_true(is.data.frame(result))
   expect_true(inherits(result, "desc_var"))
@@ -29,13 +29,13 @@ test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
 test_that("plot_means order reorders groups for single grouping variable", {
   df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 
-  result_default <- plot_means(y ~ group, data = df)
+  result_default <- plot_means(y ~ group, data = df, save.as = NULL)
   expect_equal(as.character(result_default$group), c("A", "B"))
 
-  result_reversed <- plot_means(y ~ group, data = df, order = -1)
+  result_reversed <- plot_means(y ~ group, data = df, order = -1, save.as = NULL)
   expect_equal(as.character(result_reversed$group), c("B", "A"))
 
-  result_custom <- plot_means(y ~ group, data = df, order = c("B", "A"))
+  result_custom <- plot_means(y ~ group, data = df, order = c("B", "A"), save.as = NULL)
   expect_equal(as.character(result_custom$group), c("B", "A"))
 })
 
@@ -51,7 +51,7 @@ test_that("plot_means works with three grouping variables and missing combinatio
   # Remove one x1 level from one (x2,x3) block to create a missing combination
   df <- df[!(df$x1 == "B" & df$x2 == "Y" & df$x3 == "N"), , drop = FALSE]
 
-  result <- plot_means(y ~ x1 + x2 + x3, data = df)
+  result <- plot_means(y ~ x1 + x2 + x3, data = df, save.as = NULL)
   expect_true(is.data.frame(result))
   expect_true(inherits(result, "desc_var"))
   expect_true(all(c("x1", "x2", "x3", "mean") %in% names(result)))
@@ -59,7 +59,7 @@ test_that("plot_means works with three grouping variables and missing combinatio
 
 test_that("plot_means tests=auto works for scenario 1 (binary x1 only)", {
   df <- data.frame(y = rnorm(60), x1 = rep(c("A", "B"), each = 30))
-  expect_error(plot_means(y ~ x1, data = df, tests = "auto"), NA)
+  expect_error(plot_means(y ~ x1, data = df, tests = "auto", save.as = NULL), NA)
 })
 
 test_that("plot_means tests=auto works for scenario 2 (binary x1 and x2)", {
@@ -68,7 +68,7 @@ test_that("plot_means tests=auto works for scenario 2 (binary x1 and x2)", {
     x1 = rep(c("A", "B"), 60),
     x2 = rep(rep(c("X", "Y"), each = 30), 2)
   )
-  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto"), NA)
+  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto", save.as = NULL), NA)
 })
 
 test_that("plot_means tests=auto works for scenario 3 (binary x1, x2 has >2 levels)", {
@@ -80,6 +80,16 @@ test_that("plot_means tests=auto works for scenario 3 (binary x1, x2 has >2 leve
   )
   df$y <- rnorm(nrow(df))
   
-  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto"), NA)
+  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto", save.as = NULL), NA)
+})
+
+test_that("plot_means save.as saves png", {
+  df <- data.frame(y = rnorm(80), x1 = rep(c("A", "B"), each = 40))
+  out <- tempfile(fileext = ".png")
+  on.exit(unlink(out), add = TRUE)
+  
+  expect_error(plot_means(y ~ x1, data = df, save.as = out), NA)
+  expect_true(file.exists(out))
+  expect_gt(file.info(out)$size, 0)
 })
 

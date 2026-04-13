@@ -21,8 +21,11 @@
 #' @param cluster Reserved for future clustering support (currently unused). Default \code{NULL}.
 #' @param buffer.top Either \code{"auto"} (default) or a numeric value. Extra
 #'   vertical headroom (as a fraction of the data y-range) added above the
-#'   maximum y value to make room for annotations. When \code{"auto"}, uses 0.3
-#'   when an interaction p-value is shown (scenario 2) and 0.2 otherwise.
+#'   maximum y value to make room for annotations. When \code{"auto"}, uses 0.35
+#'   when an interaction p-value is shown (scenario 2) and 0.25 otherwise.
+#' @param save.as File path to save plot (\code{.png} or \code{.svg}). Default
+#'   is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
+#'   \code{tempdir()}.
 #' @param ... Additional arguments passed to \code{plot()} (e.g., \code{main},
 #'   \code{ylim}, \code{ylab}).
 #'
@@ -55,6 +58,7 @@ plot_means <- function(formula,
                        pvalue.cex = 0.9,
                        pvalue.col = "gray50",
                        buffer.top = "auto",
+                       save.as = "plot_means.svg",
                        ...) {
   #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
     mc <- match.call()
@@ -135,6 +139,23 @@ plot_means <- function(formula,
     } else {
       if (!is.numeric(buffer.top) || length(buffer.top) != 1 || is.na(buffer.top) || buffer.top < 0) {
         stop("plot_means(): 'buffer.top' must be 'auto' or a single non-negative number (e.g., 0.3)", call. = FALSE)
+      }
+    }
+  
+  #3i. Validate save.as argument
+    if (!is.null(save.as)) {
+      if (!is.character(save.as) || length(save.as) != 1 || is.na(save.as) || !nzchar(save.as)) {
+        stop("plot_means(): 'save.as' must be a single file path ('.png' or '.svg')", call. = FALSE)
+      }
+      
+      # If user provided only a filename (no folder), write into tempdir()
+        if (identical(dirname(save.as), ".")) {
+          save.as <- file.path(tempdir(), save.as)
+        }
+      
+      extension <- tools::file_ext(save.as)
+      if (!extension %in% c("svg", "png")) {
+        stop("plot_means(): 'save.as' must be either a .png or .svg format.", call. = FALSE)
       }
     }
 
@@ -314,7 +335,7 @@ plot_means <- function(formula,
       is.null(x3_name)
     
     buffer_top_effective <- if (identical(buffer.top, "auto")) {
-      if (show_interaction) 0.3 else 0.2
+      if (show_interaction) 0.35 else 0.25
     } else {
       buffer.top
     }
@@ -416,6 +437,15 @@ plot_means <- function(formula,
     }
 
   #9. Draw plot
+    opened_device <- FALSE
+    if (!is.null(save.as)) {
+      extension <- tools::file_ext(save.as)
+      if (extension == "svg") grDevices::svg(save.as, width = 7, height = 7)
+      if (extension == "png") grDevices::png(save.as, width = 7000, height = 7000, res = 1000)
+      opened_device <- TRUE
+      on.exit(dev.off(), add = TRUE)
+    }
+    
     dots <- list(...)
     y_max <- max(heights, na.rm = TRUE)
     if (!is.finite(y_max)) y_max <- 1
@@ -588,7 +618,7 @@ plot_means <- function(formula,
                 segments(xA, y, xB, y, col = pvalue.col)
                 segments(xA, y - tick, xA, y, col = pvalue.col)
                 segments(xB, y - tick, xB, y, col = pvalue.col)
-                if (!is.null(p1_txt)) text2(x_mid, y + 0.03 * y_span, p1_txt, bg = "white", cex = pvalue.cex, col = pvalue.col)
+                if (!is.null(p1_txt)) text2(x_mid, y + 0.03 * y_span, p1_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
               }
             }
           
@@ -642,21 +672,21 @@ plot_means <- function(formula,
                   segments(xA, y, xB, y, col = pvalue.col)
                   segments(xA, y - tick, xA, y, col = pvalue.col)
                   segments(xB, y - tick, xB, y, col = pvalue.col)
-                  if (!is.null(p_txt[[j]])) text2(x_mids[j], y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col)
+                  if (!is.null(p_txt[[j]])) text2(x_mids[j], y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
                 }
               
               # Interaction annotation: connect midpoints + label above
                 if (all(is.finite(x_mids)) && all(is.finite(y_tops)) && !is.null(p_int_txt)) {
                   x_int <- mean(x_mids)
-                  y_line <- max(y_tops) + 0.09 * y_span
-                  y_lab <- y_line + 0.04 * y_span
+                  y_line <- max(y_tops) + 0.06 * y_span
+                  y_lab <- y_line + 0.025 * y_span
                   
                   # Shorter vertical connectors for interaction annotation
-                  y_line_from <- max(y_tops) + 0.06 * y_span
+                  y_line_from <- max(y_tops) + 0.045 * y_span
                   segments(x_mids[1], y_line_from, x_mids[1], y_line, col = pvalue.col)
                   segments(x_mids[2], y_line_from, x_mids[2], y_line, col = pvalue.col)
                   segments(x_mids[1], y_line, x_mids[2], y_line, col = pvalue.col)
-                  text2(x_int, y_lab, p_int_txt, bg = "white", cex = pvalue.cex, col = pvalue.col)
+                  text2(x_int, y_lab, p_int_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
                 }
             }
           
@@ -698,7 +728,7 @@ plot_means <- function(formula,
                   segments(xA, y, xB, y, col = pvalue.col)
                   segments(xA, y - tick, xA, y, col = pvalue.col)
                   segments(xB, y - tick, xB, y, col = pvalue.col)
-                  if (!is.null(p_txt[[j]])) text2(x_mid, y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col)
+                  if (!is.null(p_txt[[j]])) text2(x_mid, y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
                 }
             }
         }
@@ -743,7 +773,7 @@ plot_means <- function(formula,
     # Mean value labels using text2() with bar-colored background
       if (!identical(values.pos, "none") && length(x_centers_drawn) > 0) {
         usr <- par("usr")
-        pad_top <- 0.02 * (usr[4] - usr[3])
+        pad_top <- 0.03 * (usr[4] - usr[3])
         pad_bot <- 0.06 * (usr[4] - usr[3])
         
         mean_labels <- character(length(x_centers_drawn))
@@ -782,7 +812,9 @@ plot_means <- function(formula,
             labels = mean_labels[i],
             bg = cols[i],
             cex = values.cex,
-            col = text_cols[i]
+            col = text_cols[i],
+            pad = 0,
+            pad_v = 0
           )
         }
       }
@@ -811,6 +843,13 @@ plot_means <- function(formula,
     }
 
   #10. Return (visible) result table
+    if (opened_device) {
+      save_as_print <- save.as
+      save_as_print <- tryCatch(normalizePath(save_as_print, winslash = "/", mustWork = FALSE), error = function(e) save_as_print)
+      save_as_print <- gsub("\\\\", "/", save_as_print)
+      message2(paste0(
+        "plot_means() says: figure saved to `", save_as_print, "`\n(set `save.as` to choose different location)"), col = "gray")
+    }
     result
 }
 
