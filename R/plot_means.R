@@ -336,8 +336,15 @@ plot_means <- function(formula,
       length(x2_levels) == 2 &&
       is.null(x3_name)
     
+    # Legend layout (used for auto buffer sizing too)
+      max_legend_chars <- suppressWarnings(max(nchar(as.character(x1_levels))))
+      if (!is.finite(max_legend_chars)) max_legend_chars <- 0
+      legend_horiz <- isTRUE(max_legend_chars <= 10)
+
     buffer_top_effective <- if (identical(buffer.top, "auto")) {
-      if (show_interaction) 0.35 else 0.25
+      base <- if (show_interaction) 0.4 else 0.2
+      if (!legend_horiz) base <- base + 0.05
+      base
     } else {
       buffer.top
     }
@@ -836,15 +843,30 @@ plot_means <- function(formula,
       }
 
     if (k > 1) {
+      # Add extra spacing so larger markers don't overlap text
+        tw <- suppressWarnings(max(strwidth(x1_levels, cex = 1.3), na.rm = TRUE))
+        if (!is.finite(tw)) tw <- 0
+        gap_w <- suppressWarnings(strwidth("      ", cex = 1.3))
+        if (!is.finite(gap_w)) gap_w <- 0
       legend_args <- list(
         "top",
         legend = x1_levels,
-        fill = col,
+        pch = 15,
+        col = col,
         bty = "n",
-        inset = 0.02,
-        cex = 1.1,
-        horiz = TRUE
+        inset = 0.01,
+        cex = 1.15,
+        pt.cex = 2,
+        x.intersp = 1.2,
+        # text.width controls the per-entry width in horizontal legends
+        # so this increases the gap between label blocks (A vs B).
+        text.width = tw + gap_w,
+        horiz = legend_horiz
       )
+      if (!legend_horiz) {
+        legend_args$text.width <- NULL
+        legend_args$x.intersp <- 1.2
+      }
       if (!is.null(legend.title)) {
         legend_args$title <- legend.title
         legend_args$title.font <- 2
