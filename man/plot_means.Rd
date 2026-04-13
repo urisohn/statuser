@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_means.R
 \name{plot_means}
 \alias{plot_means}
-\title{Plot means (skeleton)}
+\title{Plot means (barplot)}
 \usage{
 plot_means(
   formula,
@@ -17,37 +17,39 @@ plot_means(
 )
 }
 \arguments{
-\item{formula}{A formula like \code{y ~ x} or \code{y ~ x1 + x2}. The left-hand
-side (y) must be numeric. The right-hand side contains one or more grouping
-variables. (Formula-only for now.)}
+\item{formula}{A formula like \code{y ~ x1}, \code{y ~ x1 + x2}, or
+\code{y ~ x1 + x2 + x3}. The left-hand side (y) must be numeric. Up to three
+grouping variables are supported. Bars for different \code{x1} values are
+shown side-by-side within each \code{(x2, x3)} block, with larger gaps
+separating \code{x2} and \code{x3} blocks.}
 
 \item{data}{An optional data frame containing the variables in the formula.}
 
-\item{order}{Controls the order of groups in the returned table when a single
-grouping variable is used. Use \code{-1} to reverse the default order, or
-provide a character vector with the desired order. Ignored when multiple
-grouping variables are used (i.e., when \code{desc_var()} returns separate
-grouping columns rather than a single \code{group} column).}
+\item{order}{Controls the order of \code{x1} groups (bar order and colors).
+Use \code{-1} to reverse the default order, or provide a character vector
+with the desired order.}
 
 \item{add}{Logical. Reserved for future plotting (currently unused).}
 
-\item{legend.title}{Character. Reserved for future plotting (currently unused).}
+\item{legend.title}{Character string. Title for the legend. If \code{NULL},
+defaults to \code{x1} variable name.}
 
-\item{col}{Reserved for future plotting (currently unused). Default \code{NULL}.}
+\item{col}{Color(s) for \code{x1} bars. If \code{NULL}, colors are chosen
+automatically using \code{get.colors(k)} where \code{k} is the number of
+unique \code{x1} values.}
 
 \item{col.text}{Reserved for future plotting (currently unused). Default \code{NULL}.}
 
 \item{cluster}{Reserved for future clustering support (currently unused). Default \code{NULL}.}
 
-\item{...}{Reserved for future plotting parameters (currently unused).}
+\item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
+\code{ylim}, \code{ylab}).}
 }
 \value{
 A \code{desc_var} object (a data frame with attributes), returned visibly.
 }
 \description{
-Computes the means (and related descriptives) that will be used for a future
-barplot of group means. For now, this function simply returns the output of
-\code{\link{desc_var}} for the supplied formula.
+Plots group means as a barplot and returns the summary table used.
 }
 \examples{
 df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))

@@ -39,3 +39,21 @@ test_that("plot_means order reorders groups for single grouping variable", {
   expect_equal(as.character(result_custom$group), c("B", "A"))
 })
 
+test_that("plot_means works with three grouping variables and missing combinations", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(96),
+    x1 = rep(c("A", "B"), 48),
+    x2 = rep(rep(c("X", "Y"), each = 24), 2),
+    x3 = rep(c("M", "N"), each = 48)
+  )
+
+  # Remove one x1 level from one (x2,x3) block to create a missing combination
+  df <- df[!(df$x1 == "B" & df$x2 == "Y" & df$x3 == "N"), , drop = FALSE]
+
+  result <- plot_means(y ~ x1 + x2 + x3, data = df)
+  expect_true(is.data.frame(result))
+  expect_true(inherits(result, "desc_var"))
+  expect_true(all(c("x1", "x2", "x3", "mean") %in% names(result)))
+})
+
