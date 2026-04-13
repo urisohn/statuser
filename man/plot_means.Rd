@@ -47,7 +47,7 @@ unique \code{x1} values.}
 
 \item{values.cex}{Numeric. Size of the value labels drawn inside bars (default 1).}
 
-\item{values.pos}{Character. Position for the mean value labels: \code{"top"} (default) draws mean labels inside the bar near the top; \code{"none"} suppresses them.}
+\item{values.pos}{Character. Position for the mean value labels: \code{"top"} (default) draws labels inside the bar near the top; \code{"middle"} draws them in the middle of the bar; \code{"bottom"} draws them just above the \code{n=} label and prefixes the mean with \code{M=}; \code{"none"} suppresses them.}
 
 \item{values.round}{Numeric. Number of decimal places for mean value labels (default 1).}
 

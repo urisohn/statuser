@@ -94,7 +94,7 @@ plot_means <- function(formula,
     }
   
   #3d. Validate value label position
-    values.pos <- match.arg(values.pos, c("top", "none"))
+    values.pos <- match.arg(values.pos, c("top", "middle", "bottom", "none"))
   
   #3e. Validate rounding argument for mean labels
     if (!is.numeric(values.round) || length(values.round) != 1 || is.na(values.round) || values.round < 0) {
@@ -458,20 +458,38 @@ plot_means <- function(formula,
         }
       }
     
-    # Mean value labels (top, inside bar) using text2() with bar-colored background
-      if (identical(values.pos, "top") && length(x_centers_drawn) > 0) {
+    # Mean value labels using text2() with bar-colored background
+      if (!identical(values.pos, "none") && length(x_centers_drawn) > 0) {
         usr <- par("usr")
         pad_top <- 0.02 * (usr[4] - usr[3])
+        pad_bot <- 0.06 * (usr[4] - usr[3])
         
         mean_labels <- character(length(x_centers_drawn))
         y_mean <- numeric(length(x_centers_drawn))
         for (i in seq_along(x_centers_drawn)) {
-          mean_labels[i] <- formatC(heights[i], format = "f", digits = values.round)
-          if (is.finite(heights[i]) && heights[i] < 0) {
-            # Negative bar: "top" is near 0
-            y_mean[i] <- 0 - pad_top
+          if (identical(values.pos, "bottom")) {
+            mean_labels[i] <- paste0("M=", formatC(heights[i], format = "f", digits = values.round))
           } else {
-            y_mean[i] <- heights[i] - pad_top
+            mean_labels[i] <- formatC(heights[i], format = "f", digits = values.round)
+          }
+          
+          if (identical(values.pos, "top")) {
+            if (is.finite(heights[i]) && heights[i] < 0) {
+              # Negative bar: top is near 0
+              y_mean[i] <- 0 - pad_top
+            } else {
+              y_mean[i] <- heights[i] - pad_top
+            }
+          } else if (identical(values.pos, "middle")) {
+            # Middle of the bar (halfway between 0 and mean)
+            y_mean[i] <- heights[i] / 2
+          } else if (identical(values.pos, "bottom")) {
+            # Just above the n= label inside the bar
+            if (is.finite(heights[i]) && heights[i] < 0) {
+              y_mean[i] <- 0 - pad_top
+            } else {
+              y_mean[i] <- 0 + pad_bot
+            }
           }
         }
         
