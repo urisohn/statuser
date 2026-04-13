@@ -143,10 +143,12 @@ plot_means <- function(formula,
     }
   
   #3i. Validate save.as argument
+    save_as_is_default <- FALSE
     if (!is.null(save.as)) {
       if (!is.character(save.as) || length(save.as) != 1 || is.na(save.as) || !nzchar(save.as)) {
         stop("plot_means(): 'save.as' must be a single file path ('.png' or '.svg')", call. = FALSE)
       }
+      save_as_is_default <- identical(save.as, "plot_means.svg")
       
       # If user provided only a filename (no folder), write into tempdir()
         if (identical(dirname(save.as), ".")) {
@@ -437,15 +439,6 @@ plot_means <- function(formula,
     }
 
   #9. Draw plot
-    opened_device <- FALSE
-    if (!is.null(save.as)) {
-      extension <- tools::file_ext(save.as)
-      if (extension == "svg") grDevices::svg(save.as, width = 7, height = 7)
-      if (extension == "png") grDevices::png(save.as, width = 7000, height = 7000, res = 1000)
-      opened_device <- TRUE
-      on.exit(dev.off(), add = TRUE)
-    }
-    
     dots <- list(...)
     y_max <- max(heights, na.rm = TRUE)
     if (!is.finite(y_max)) y_max <- 1
@@ -843,13 +836,50 @@ plot_means <- function(formula,
     }
 
   #10. Return (visible) result table
-    if (opened_device) {
-      save_as_print <- save.as
-      save_as_print <- tryCatch(normalizePath(save_as_print, winslash = "/", mustWork = FALSE), error = function(e) save_as_print)
-      save_as_print <- gsub("\\\\", "/", save_as_print)
-      message2(paste0(
-        "plot_means() says: figure saved to `", save_as_print, "`\n(set `save.as` to choose different location)"), col = "gray")
+    if (!is.null(save.as)) {
+      headless_dev <- (grDevices::dev.cur() == 1L)
+      tmp_dev_file <- NULL
+      if (headless_dev) {
+        tmp_dev_file <- tempfile(fileext = ".png")
+        grDevices::png(tmp_dev_file, width = 1200, height = 800, res = 120)
+        on.exit({
+          grDevices::dev.off()
+          unlink(tmp_dev_file)
+        }, add = TRUE)
+      }
+      
+      p <- tryCatch(recordPlot(), error = function(e) NULL)
+      if (!is.null(p)) {
+        extension <- tools::file_ext(save.as)
+        
+        # Export sizing: base 6x6 for up to 4 bars; add 1 inch of width
+        # per additional pair of bars.
+          bars <- length(x_centers_drawn)
+          extra_pairs <- ceiling(max(bars - 4, 0) / 2)
+          w_in <- 6 + 1 * extra_pairs
+          h_in <- 6
+          w_px <- as.integer(round(w_in * 1000))
+          h_px <- as.integer(round(h_in * 1000))
+        if (extension == "svg") grDevices::svg(save.as, width = w_in, height = h_in)
+        if (extension == "png") grDevices::png(save.as, width = w_px, height = h_px, res = 1000)
+        on.exit(grDevices::dev.off(), add = TRUE)
+        replayPlot(p)
+        
+        save_as_print <- save.as
+        save_as_print <- tryCatch(normalizePath(save_as_print, winslash = "/", mustWork = FALSE), error = function(e) save_as_print)
+        save_as_print <- gsub("\\\\", "/", save_as_print)
+        if (isTRUE(save_as_is_default)) {
+          msg <- paste0(
+            "plot_means() says: The figure was saved with pre-set dimensions to \n",
+            save_as_print, " (set `save.as` to change default location)"
+          )
+          message2(msg, col = "gray")
+        }
+        if (!isTRUE(save_as_is_default)) {
+          message2("plot_means() says: The figure was saved to `", save_as_print,"`" ,col = "gray")
+        }
+      }
     }
-    result
+    invisible(NULL)
 }
 

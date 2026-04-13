@@ -64,13 +64,13 @@ unique \code{x1} values.}
 
 \item{buffer.top}{Either \code{"auto"} (default) or a numeric value. Extra vertical headroom (as a fraction of the data y-range) added above the maximum y value to make room for annotations. When \code{"auto"}, uses 0.35 when an interaction p-value is shown (scenario 2) and 0.25 otherwise.}
 
-\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default is \code{"plot_means.svg"}. If no folder is provided, the file is saved in \code{tempdir()}.}
+\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default is \code{"plot_means.svg"}. If no folder is provided, the file is saved in \code{tempdir()}. When set, the plot is still drawn on screen and also saved to the file using fixed device dimensions. The export size is 6x6 inches for up to 4 bars, and increases the width by 1 inch for each additional pair of bars.}
 
 \item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
 \code{ylim}, \code{ylab}).}
 }
 \value{
-A \code{desc_var} object (a data frame with attributes), returned visibly.
+No return value. Called for side effects (plotting and optional saving).
 }
 \description{
 Plots group means as a barplot and returns the summary table used.

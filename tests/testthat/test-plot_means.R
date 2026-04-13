@@ -3,10 +3,7 @@ test_that("plot_means runs with formula + data and returns desc_var object", {
 
   result <- plot_means(y ~ group, data = df, save.as = NULL)
 
-  expect_true(is.data.frame(result))
-  expect_true(inherits(result, "desc_var"))
-  expect_true("mean" %in% names(result))
-  expect_true("group" %in% names(result))
+  expect_null(result)
 })
 
 test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
@@ -18,25 +15,20 @@ test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
 
   result <- plot_means(y ~ x1 + x2, data = df, save.as = NULL)
 
-  expect_true(is.data.frame(result))
-  expect_true(inherits(result, "desc_var"))
-  expect_true("mean" %in% names(result))
-  expect_true("x1" %in% names(result))
-  expect_true("x2" %in% names(result))
-  expect_false("group" %in% names(result))
+  expect_null(result)
 })
 
 test_that("plot_means order reorders groups for single grouping variable", {
   df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 
   result_default <- plot_means(y ~ group, data = df, save.as = NULL)
-  expect_equal(as.character(result_default$group), c("A", "B"))
+  expect_null(result_default)
 
   result_reversed <- plot_means(y ~ group, data = df, order = -1, save.as = NULL)
-  expect_equal(as.character(result_reversed$group), c("B", "A"))
+  expect_null(result_reversed)
 
   result_custom <- plot_means(y ~ group, data = df, order = c("B", "A"), save.as = NULL)
-  expect_equal(as.character(result_custom$group), c("B", "A"))
+  expect_null(result_custom)
 })
 
 test_that("plot_means works with three grouping variables and missing combinations", {
@@ -52,9 +44,7 @@ test_that("plot_means works with three grouping variables and missing combinatio
   df <- df[!(df$x1 == "B" & df$x2 == "Y" & df$x3 == "N"), , drop = FALSE]
 
   result <- plot_means(y ~ x1 + x2 + x3, data = df, save.as = NULL)
-  expect_true(is.data.frame(result))
-  expect_true(inherits(result, "desc_var"))
-  expect_true(all(c("x1", "x2", "x3", "mean") %in% names(result)))
+  expect_null(result)
 })
 
 test_that("plot_means tests=auto works for scenario 1 (binary x1 only)", {
@@ -88,7 +78,12 @@ test_that("plot_means save.as saves png", {
   out <- tempfile(fileext = ".png")
   on.exit(unlink(out), add = TRUE)
   
-  expect_error(plot_means(y ~ x1, data = df, save.as = out), NA)
+  grDevices::png(tempfile(fileext = ".png"), width = 800, height = 500, res = 100)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  
+  result <- plot_means(y ~ x1, data = df, save.as = out)
+  expect_null(result)
+  
   expect_true(file.exists(out))
   expect_gt(file.info(out)$size, 0)
 })
