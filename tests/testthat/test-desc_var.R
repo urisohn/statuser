@@ -124,9 +124,9 @@ test_that("desc_var sorts results by grouping variables", {
   )
   
   result <- desc_var(y ~ x1 + x2, data = df)
-  # Results should be sorted by x1 then x2
-  expect_equal(as.character(result$x1), c("A", "A", "B", "B"))
-  expect_equal(as.character(result$x2), c("X", "Y", "X", "Y"))
+  # Results should be sorted by x2 then x1 (right-to-left in formula)
+  expect_equal(as.character(result$x1), c("A", "B", "A", "B"))
+  expect_equal(as.character(result$x2), c("X", "X", "Y", "Y"))
 })
 
 test_that("desc_var detects missing group combinations", {

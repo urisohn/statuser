@@ -504,8 +504,9 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
     
     # Sort by grouping variables
       if (use_separate_group_cols && !is.null(group_list)) {
-        # Sort by all grouping variables in order
-        sort_cols <- names(group_list)
+        # Sort by grouping variables from right to left in formula
+        # y ~ x1 + x2 + x3  => sort by x3, then x2, then x1
+        sort_cols <- rev(names(group_list))
         result_df <- result_df[do.call(order, result_df[sort_cols]), , drop = FALSE]
       } else if (!is.null(group)) {
         # Sort by single group column
