@@ -561,6 +561,29 @@ plot_means_params <- function(v, result, result_plot) {
   )
 }
 
+# Internal helpers used by multiple plot_means_* functions ----
+plot_means_model_frame <- function(formula_eval, data, na.action, context = "model.frame") {
+  mf <- tryCatch(
+    model.frame(formula_eval, data = data, na.action = na.action),
+    error = function(e) e
+  )
+  if (inherits(mf, "error")) {
+    stop("plot_means(): failed to build model frame for ", context, ": ", conditionMessage(mf), call. = FALSE)
+  }
+  mf
+}
+
+plot_means_align_cluster <- function(v, mf) {
+  if (is.null(v$cluster_vec)) return(NULL)
+  if (length(v$cluster_vec) == nrow(mf)) return(v$cluster_vec)
+  if (!is.null(v$data) && is.data.frame(v$data) && length(v$cluster_vec) == nrow(v$data)) {
+    idx <- as.integer(rownames(mf))
+    if (anyNA(idx)) idx <- seq_len(nrow(mf))
+    return(v$cluster_vec[idx])
+  }
+  stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
+}
+
 # plot_means_compute: expand to a full x1/x2/x3 grid, compute CIs, and build bar/layout vectors ----
 plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   x1_name <- v$x1_name
@@ -599,28 +622,16 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   # Confidence intervals via dummy-coded lm2() (always)
   #   Intent: a single model fit over cell indicators yields consistent CI computation (and supports clustering).
     ci_map <- NULL
-    mf <- tryCatch(
-      model.frame(v$formula_eval, data = v$data, na.action = na.pass),
-      error = function(e) NULL
-    )
-    if (!is.null(mf) && is.data.frame(mf) && nrow(mf) > 0) {
+    mf <- plot_means_model_frame(v$formula_eval, data = v$data, na.action = na.pass, context = "confidence intervals")
+    if (nrow(mf) > 0) {
       df_m <- mf
       names(df_m)[1] <- ".__y"
       df_m[[x1_name]] <- as.character(df_m[[x1_name]])
       if (is.null(x2_name)) df_m$.x2 <- "All" else df_m[[x2_name]] <- as.character(df_m[[x2_name]])
       if (is.null(x3_name)) df_m$.x3 <- "All" else df_m[[x3_name]] <- as.character(df_m[[x3_name]])
       
-      if (!is.null(v$cluster_vec)) {
-        if (!is.null(v$data) && is.data.frame(v$data) && length(v$cluster_vec) == nrow(v$data)) {
-          idx <- suppressWarnings(as.integer(rownames(df_m)))
-          if (anyNA(idx)) idx <- seq_len(nrow(df_m))
-          df_m$.__cluster <- v$cluster_vec[idx]
-        } else if (length(v$cluster_vec) == nrow(df_m)) {
-          df_m$.__cluster <- v$cluster_vec
-        } else {
-          stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
-        }
-      }
+      cluster_mf <- plot_means_align_cluster(v, df_m)
+      if (!is.null(cluster_mf)) df_m$.__cluster <- cluster_mf
       
       x2_col <- if (is.null(x2_name)) ".x2" else x2_name
       x3_col <- if (is.null(x3_name)) ".x3" else x3_name
@@ -990,22 +1001,13 @@ plot_means_draw <- function(v,
     }
     
     x1_is_binary <- length(x1_levels) == 2
-    mf_tests <- tryCatch(model.frame(v$formula_eval, data = v$data, na.action = na.omit), error = function(e) NULL)
-    if (!is.null(mf_tests) && is.data.frame(mf_tests) && nrow(mf_tests) > 0) {
+    mf_tests <- plot_means_model_frame(v$formula_eval, data = v$data, na.action = na.omit, context = "p-values (auto)")
+    if (nrow(mf_tests) > 0) {
       names(mf_tests)[1] <- ".__y"
       mf_tests$.__x1 <- as.factor(mf_tests[[x1_name]])
       if (!is.null(v$x2_name)) mf_tests$.__x2 <- as.factor(mf_tests[[v$x2_name]])
-      if (!is.null(v$cluster_vec)) {
-        if (!is.null(v$data) && is.data.frame(v$data) && length(v$cluster_vec) == nrow(v$data)) {
-          idx <- suppressWarnings(as.integer(rownames(mf_tests)))
-          if (anyNA(idx)) idx <- seq_len(nrow(mf_tests))
-          mf_tests$.__cluster <- v$cluster_vec[idx]
-        } else if (length(v$cluster_vec) == nrow(mf_tests)) {
-          mf_tests$.__cluster <- v$cluster_vec
-        } else {
-          stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
-        }
-      }
+      cluster_mf <- plot_means_align_cluster(v, mf_tests)
+      if (!is.null(cluster_mf)) mf_tests$.__cluster <- cluster_mf
       
       if (length(v$x_names) == 1 && x1_is_binary) {
         p1 <- p_lm2_x1(mf_tests[, c(".__y", ".__x1"), drop = FALSE])
@@ -1311,23 +1313,14 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
   
   # Build the model frame once, applying the same NA filtering policy as the tests.
   #   This keeps p-values consistent with the data actually available for inference.
-  mf_tests <- tryCatch(model.frame(v$formula_eval, data = v$data, na.action = na.omit), error = function(e) NULL)
-  if (is.null(mf_tests) || !is.data.frame(mf_tests) || nrow(mf_tests) == 0) return(NULL)
+  mf_tests <- plot_means_model_frame(v$formula_eval, data = v$data, na.action = na.omit, context = "plot_means_compute_pvalues()")
+  if (nrow(mf_tests) == 0) return(NULL)
   
   names(mf_tests)[1] <- ".__y"
   mf_tests$.__x1 <- as.factor(mf_tests[[v$x1_name]])
   if (!is.null(v$x2_name)) mf_tests$.__x2 <- as.factor(mf_tests[[v$x2_name]])
-  if (!is.null(v$cluster_vec)) {
-    if (!is.null(v$data) && is.data.frame(v$data) && length(v$cluster_vec) == nrow(v$data)) {
-      idx <- suppressWarnings(as.integer(rownames(mf_tests)))
-      if (anyNA(idx)) idx <- seq_len(nrow(mf_tests))
-      mf_tests$.__cluster <- v$cluster_vec[idx]
-    } else if (length(v$cluster_vec) == nrow(mf_tests)) {
-      mf_tests$.__cluster <- v$cluster_vec
-    } else {
-      stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
-    }
-  }
+  cluster_mf <- plot_means_align_cluster(v, mf_tests)
+  if (!is.null(cluster_mf)) mf_tests$.__cluster <- cluster_mf
   
   # Fit helper that keeps the clustered and non-clustered paths in one place.
   #   Returns the fitted model (or NA) so callers can extract the term row they need.
