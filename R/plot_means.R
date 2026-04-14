@@ -1,4 +1,4 @@
-#' Plot means (barplot)
+﻿#' Plot means (barplot)
 #'
 #' Plots group means as a barplot and returns the summary table used.
 #'
@@ -649,69 +649,100 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
     bar_width <- 1
     bar_step <- 1
     
-    block_centers <- numeric(0)
-    block_labels <- character(0)
-    x3_section_centers <- numeric(0)
-    x3_section_labels <- character(0)
+    x2_col <- if (is.null(x2_name)) ".x2" else x2_name
+    x3_col <- if (is.null(x3_name)) ".x3" else x3_name
     
-    x_lefts <- numeric(0)
-    x_rights <- numeric(0)
-    x_centers_drawn <- numeric(0)
-    cell_keys_drawn <- character(0)
-    n_total_drawn <- numeric(0)
-    n_missing_drawn <- numeric(0)
-    heights <- numeric(0)
-    cols <- character(0)
+    # Pre-key merged once by "x1|x2|x3" for O(1) lookups inside the loop
+    merged$cell_key <- paste(
+      as.character(merged[[x1_name]]),
+      as.character(merged[[x2_col]]),
+      as.character(merged[[x3_col]]),
+      sep = "|"
+    )
+    rownames(merged) <- merged$cell_key
     
-    x_pos <- 1
+    n_x2 <- length(x2_levels)
+    n_x3 <- length(x3_levels)
+    n_blocks <- n_x2 * n_x3
+    n_cells  <- k * n_blocks
     
-    for (x3_val in x3_levels) {
+    block_centers <- numeric(n_blocks)
+    block_labels  <- character(n_blocks)
+    x3_section_centers <- numeric(n_x3)
+    x3_section_labels  <- character(n_x3)
+    
+    # Pre-allocate per-bar vectors to max possible size; trim after
+    x_lefts        <- numeric(n_cells)
+    x_rights       <- numeric(n_cells)
+    x_centers_drawn <- numeric(n_cells)
+    cell_keys_drawn <- character(n_cells)
+    n_total_drawn   <- numeric(n_cells)
+    n_missing_drawn <- numeric(n_cells)
+    heights         <- numeric(n_cells)
+    cols            <- character(n_cells)
+    drawn_idx       <- 0L
+    
+    x_pos    <- 1
+    blk_idx  <- 0L
+    
+    for (x3_idx in seq_along(x3_levels)) {
+      x3_val   <- x3_levels[x3_idx]
       x3_start <- x_pos
-      for (x2_val in x2_levels) {
+      
+      for (x2_idx in seq_along(x2_levels)) {
+        x2_val      <- x2_levels[x2_idx]
+        blk_idx     <- blk_idx + 1L
         centers_block <- numeric(k)
         
         for (i in seq_len(k)) {
-          x1_val <- x1_levels[i]
-          row_sel <- merged[
-            as.character(merged[[x1_name]]) == as.character(x1_val) &
-              as.character(merged[[if (is.null(x2_name)) ".x2" else x2_name]]) == as.character(x2_val) &
-              as.character(merged[[if (is.null(x3_name)) ".x3" else x3_name]]) == as.character(x3_val),
-            ,
-            drop = FALSE
-          ]
-          mean_val <- if (nrow(row_sel) >= 1) row_sel$mean[1] else NA_real_
-          n_total <- if (nrow(row_sel) >= 1 && "n.total" %in% names(row_sel)) row_sel$n.total[1] else NA_real_
-          n_missing <- if (nrow(row_sel) >= 1 && "n.missing" %in% names(row_sel)) row_sel$n.missing[1] else NA_real_
+          x1_val  <- x1_levels[i]
+          key     <- paste(as.character(x1_val), as.character(x2_val), as.character(x3_val), sep = "|")
+          row_sel <- merged[key, , drop = FALSE]
           
-          x_center <- x_pos + (i - 1) * bar_step
+          mean_val  <- if (!is.na(row_sel$mean[1])) row_sel$mean[1] else NA_real_
+          n_total   <- if ("n.total"   %in% names(row_sel)) row_sel$n.total[1]   else NA_real_
+          n_missing <- if ("n.missing" %in% names(row_sel)) row_sel$n.missing[1] else NA_real_
+          
+          x_center        <- x_pos + (i - 1L) * bar_step
           centers_block[i] <- x_center
           
           if (!is.na(mean_val)) {
-            cell_keys_drawn <- c(cell_keys_drawn, paste0(as.character(x1_val), "|", as.character(x2_val), "|", as.character(x3_val)))
-            x_centers_drawn <- c(x_centers_drawn, x_center)
-            n_total_drawn <- c(n_total_drawn, n_total)
-            n_missing_drawn <- c(n_missing_drawn, n_missing)
-            x_lefts <- c(x_lefts, x_center - bar_width / 2)
-            x_rights <- c(x_rights, x_center + bar_width / 2)
-            heights <- c(heights, mean_val)
-            cols <- c(cols, col[i])
+            drawn_idx <- drawn_idx + 1L
+            cell_keys_drawn[drawn_idx] <- key
+            x_centers_drawn[drawn_idx] <- x_center
+            n_total_drawn[drawn_idx]   <- n_total
+            n_missing_drawn[drawn_idx] <- n_missing
+            x_lefts[drawn_idx]         <- x_center - bar_width / 2
+            x_rights[drawn_idx]        <- x_center + bar_width / 2
+            heights[drawn_idx]         <- mean_val
+            cols[drawn_idx]            <- col[i]
           }
         }
         
-        block_centers <- c(block_centers, mean(centers_block))
-        if (is.null(x2_name)) {
-          block_labels <- c(block_labels, "")
-        } else {
-          block_labels <- c(block_labels, format_level_label(x2_name, x2_val))
-        }
+        block_centers[blk_idx] <- mean(centers_block)
+        block_labels[blk_idx]  <- if (is.null(x2_name)) "" else format_level_label(x2_name, x2_val)
         
         x_pos <- x_pos + k * bar_step
-        if (x2_val != tail(x2_levels, 1)) x_pos <- x_pos + gap_x2
+        if (x2_idx < n_x2) x_pos <- x_pos + gap_x2
       }
+      
       x3_end <- x_pos - bar_step
-      x3_section_centers <- c(x3_section_centers, (x3_start + x3_end) / 2)
-      x3_section_labels <- c(x3_section_labels, if (is.null(x3_name)) "" else format_level_label(x3_name, x3_val))
-      if (x3_val != tail(x3_levels, 1)) x_pos <- x_pos + gap_x3
+      x3_section_centers[x3_idx] <- (x3_start + x3_end) / 2
+      x3_section_labels[x3_idx]  <- if (is.null(x3_name)) "" else format_level_label(x3_name, x3_val)
+      if (x3_idx < n_x3) x_pos <- x_pos + gap_x3
+    }
+    
+    # Trim pre-allocated vectors to actually drawn bars
+    if (drawn_idx < n_cells) {
+      keep <- seq_len(drawn_idx)
+      cell_keys_drawn <- cell_keys_drawn[keep]
+      x_centers_drawn <- x_centers_drawn[keep]
+      n_total_drawn   <- n_total_drawn[keep]
+      n_missing_drawn <- n_missing_drawn[keep]
+      x_lefts         <- x_lefts[keep]
+      x_rights        <- x_rights[keep]
+      heights         <- heights[keep]
+      cols            <- cols[keep]
     }
   
   list2(
@@ -1050,34 +1081,14 @@ plot_means_draw <- function(v,
     usr <- par("usr")
     pad <- 0.02 * (usr[4] - usr[3])
     
-    labels <- character(length(x_centers_drawn))
-    y_labs <- numeric(length(x_centers_drawn))
-    adjs <- vector("list", length(x_centers_drawn))
-    for (i in seq_along(x_centers_drawn)) {
-      n_i <- n_total_drawn[i]
-      if (!is.finite(n_i)) n_i <- NA
-      
-      labels[i] <- paste0("n=", n_i)
-      
-      if (is.finite(heights[i]) && heights[i] < 0) {
-        y_labs[i] <- 0 - pad
-        adjs[[i]] <- c(0.5, 1)
-      } else {
-        y_labs[i] <- 0 + pad
-        adjs[[i]] <- c(0.5, 0)
-      }
-    }
+    n_vals <- ifelse(is.finite(n_total_drawn), n_total_drawn, NA)
+    labels <- paste0("n=", n_vals)
+    neg    <- is.finite(heights) & heights < 0
+    y_labs <- ifelse(neg, 0 - pad, 0 + pad)
     
-    for (i in seq_along(x_centers_drawn)) {
-      graphics::text(
-        x = x_centers_drawn[i],
-        y = y_labs[i],
-        labels = labels[i],
-        col = text_cols[i],
-        cex = values.cex,
-        adj = adjs[[i]]
-      )
-    }
+    # Split into two calls because adj y-component differs by sign of height
+    if (any(!neg)) graphics::text(x_centers_drawn[!neg], y_labs[!neg], labels[!neg], col = text_cols[!neg], cex = values.cex, adj = c(0.5, 0))
+    if (any(neg))  graphics::text(x_centers_drawn[neg],  y_labs[neg],  labels[neg],  col = text_cols[neg],  cex = values.cex, adj = c(0.5, 1))
   }
   
   if (!identical(values.pos, "none") && length(x_centers_drawn) > 0) {
@@ -1085,44 +1096,30 @@ plot_means_draw <- function(v,
     pad_top <- 0.03 * (usr[4] - usr[3])
     pad_bot <- 0.06 * (usr[4] - usr[3])
     
-    mean_labels <- character(length(x_centers_drawn))
-    y_mean <- numeric(length(x_centers_drawn))
-    for (i in seq_along(x_centers_drawn)) {
-      if (identical(values.pos, "bottom")) {
-        mean_labels[i] <- paste0("M=", formatC(heights[i], format = "f", digits = values.round))
-      } else {
-        mean_labels[i] <- formatC(heights[i], format = "f", digits = values.round)
-      }
-      
-      if (identical(values.pos, "top")) {
-        if (is.finite(heights[i]) && heights[i] < 0) {
-          y_mean[i] <- 0 - pad_top
-        } else {
-          y_mean[i] <- heights[i] - pad_top
-        }
-      } else if (identical(values.pos, "middle")) {
-        y_mean[i] <- heights[i] / 2
-      } else if (identical(values.pos, "bottom")) {
-        if (is.finite(heights[i]) && heights[i] < 0) {
-          y_mean[i] <- 0 - pad_top
-        } else {
-          y_mean[i] <- 0 + pad_bot
-        }
-      }
+    fmt <- formatC(heights, format = "f", digits = values.round)
+    mean_labels <- if (identical(values.pos, "bottom")) paste0("M=", fmt) else fmt
+    
+    neg <- is.finite(heights) & heights < 0
+    y_mean <- if (identical(values.pos, "top")) {
+      ifelse(neg, 0 - pad_top, heights - pad_top)
+    } else if (identical(values.pos, "middle")) {
+      heights / 2
+    } else if (identical(values.pos, "bottom")) {
+      ifelse(neg, 0 - pad_top, 0 + pad_bot)
+    } else {
+      rep(0, length(heights))
     }
     
-    for (i in seq_along(x_centers_drawn)) {
-      text2(
-        x = x_centers_drawn[i],
-        y = y_mean[i],
-        labels = mean_labels[i],
-        bg = cols[i],
-        cex = values.cex,
-        col = text_cols[i],
-        pad = 0,
-        pad_v = 0
-      )
-    }
+    text2(
+      x      = x_centers_drawn,
+      y      = y_mean,
+      labels = mean_labels,
+      bg     = cols,
+      cex    = values.cex,
+      col    = text_cols,
+      pad    = 0,
+      pad_v  = 0
+    )
   }
   
   usr <- par("usr")
