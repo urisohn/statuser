@@ -153,38 +153,13 @@ plot_means <- function(formula,
     bar_width <- comp$bar_width
     bar_step <- comp$bar_step
 
-  # 6. Draw plot
-    plot_means_draw(
-      v = v,
-      params = params,
-      comp = comp,
-      y_name = y_name,
-      x1_levels = x1_levels,
-      x2_name = x2_name,
-      x3_name = x3_name,
-      x1_name = x1_name,
-      col = col,
-      legend.title = legend.title,
-      col.text = col.text,
-      values.cex = values.cex,
-      values.pos = values.pos,
-      values.round = values.round,
-      tests = tests,
-      pvalue.cex = pvalue.cex,
-      pvalue.col = pvalue.col,
-      buffer_top_effective = buffer_top_effective,
-      ...
-    )
-
-
-  # 7. Prepare minimal output (returned invisibly)
+  # 6. Prepare comparison table used for p-value drawing
     # Build one output table aligned with the plotting grid (keeps missing combos)
       means <- merged
       means$ciL <- NA_real_
       means$ciH <- NA_real_
-      if (!is.null(ci_map) && is.data.frame(ci_map) && nrow(ci_map) > 0) {
-
-        # 7.1 Join CIs onto the grid via the same stable cell key used in CI model
+      if (nrow(ci_map) > 0) {
+        # Join CIs onto the grid via the same stable cell key used in CI model
         x2_col <- if (is.null(x2_name)) ".x2" else x2_name
         x3_col <- if (is.null(x3_name)) ".x3" else x3_name
         
@@ -216,17 +191,40 @@ plot_means <- function(formula,
       keep_cols <- keep_cols[keep_cols %in% names(means)]
       means <- means[, keep_cols, drop = FALSE]
     
-  # 7.2 Compute mean comparisons to report (matches what is drawn)
     means_comparisons <- plot_means_compute_pvalues(v = v, params = params, mean_results = means)
-    
 
-    #what is returned by plot_means()
+  # 7. Draw plot
+    plot_means_draw(
+      v = v,
+      params = params,
+      comp = comp,
+      y_name = y_name,
+      x1_levels = x1_levels,
+      x2_name = x2_name,
+      x3_name = x3_name,
+      x1_name = x1_name,
+      col = col,
+      legend.title = legend.title,
+      col.text = col.text,
+      values.cex = values.cex,
+      values.pos = values.pos,
+      values.round = values.round,
+      tests = tests,
+      means_comparisons = means_comparisons,
+      pvalue.cex = pvalue.cex,
+      pvalue.col = pvalue.col,
+      buffer_top_effective = buffer_top_effective,
+      ...
+    )
+
+
+  # 8. Prepare minimal output (returned invisibly)
     out <- list2(
       means,
       means_comparisons
     )
   
-  # 7.3 Optional export (plot is still shown on screen)
+  # 8.1 Optional export (plot is still shown on screen)
     if (!is.null(save.as)) {
       headless_dev <- (grDevices::dev.cur() == 1L)
       tmp_dev_file <- NULL
@@ -239,8 +237,12 @@ plot_means <- function(formula,
         }, add = TRUE)
       }
       
-      p <- tryCatch(recordPlot(), error = function(e) NULL)
-      if (!is.null(p)) {
+      p <- NULL
+      p_err <- NULL
+      p <- tryCatch(recordPlot(), error = function(e) { p_err <<- e; NULL })
+      if (is.null(p)) {
+        message2("plot_means() says: could not record plot for export (skipping save): ", conditionMessage(p_err), col = "gray")
+      } else {
         extension <- tools::file_ext(save.as)
         
         # Export sizing: base 6x6 for up to 4 bars; add 1 inch of width
@@ -430,8 +432,9 @@ plot_means_params <- function(v, result, result_plot) {
     vals <- fallback_values
     if (is.null(vals) || !length(vals)) return(character(0))
     vals_chr <- as.character(vals)
-    if (suppressWarnings(all(!is.na(as.numeric(vals_chr))))) {
-      return(as.character(sort(unique(as.numeric(vals_chr)))))
+    is_numeric_like <- grepl("^\\s*-?\\d+(\\.\\d+)?\\s*$", vals_chr)
+    if (all(is_numeric_like)) {
+      return(as.character(sort(unique(as.numeric(trimws(vals_chr))))))
     }
     sort(unique(vals_chr))
   }
@@ -501,7 +504,7 @@ plot_means_params <- function(v, result, result_plot) {
     }
   
   # Legend layout (used for auto buffer sizing too)
-    max_legend_chars <- suppressWarnings(max(nchar(as.character(x1_levels))))
+    max_legend_chars <- max(nchar(as.character(x1_levels)))
     if (!is.finite(max_legend_chars)) max_legend_chars <- 0
     legend_horiz <- isTRUE(max_legend_chars <= 10)
   
@@ -584,6 +587,13 @@ plot_means_align_cluster <- function(v, mf) {
   stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
 }
 
+plot_means_span <- function(y_min, y_max) {
+  span <- (y_max - y_min)
+  if (!is.finite(span) || span <= 0) span <- abs(y_max)
+  if (!is.finite(span) || span <= 0) span <- 1
+  span
+}
+
 # plot_means_compute: expand to a full x1/x2/x3 grid, compute CIs, and build bar/layout vectors ----
 plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   x1_name <- v$x1_name
@@ -621,7 +631,12 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   
   # Confidence intervals via dummy-coded lm2() (always)
   #   Intent: a single model fit over cell indicators yields consistent CI computation (and supports clustering).
-    ci_map <- NULL
+    ci_map <- data.frame(
+      cell_key = character(0),
+      lwr = numeric(0),
+      upr = numeric(0),
+      stringsAsFactors = FALSE
+    )
     mf <- plot_means_model_frame(v$formula_eval, data = v$data, na.action = na.pass, context = "confidence intervals")
     if (nrow(mf) > 0) {
       df_m <- mf
@@ -809,6 +824,7 @@ plot_means_draw <- function(v,
                             values.pos,
                             values.round,
                             tests,
+                            means_comparisons = NULL,
                             pvalue.cex,
                             pvalue.col,
                             buffer_top_effective,
@@ -838,11 +854,11 @@ plot_means_draw <- function(v,
   y_min <- min(0, min(heights, na.rm = TRUE))
   if (!is.finite(y_min)) y_min <- 0
   
-  if (!is.null(ci_map) && nrow(ci_map) > 0) {
-    y_min_ci <- suppressWarnings(min(ci_map$lwr, na.rm = TRUE))
-    y_max_ci <- suppressWarnings(max(ci_map$upr, na.rm = TRUE))
-    if (is.finite(y_min_ci)) y_min <- min(y_min, y_min_ci)
-    if (is.finite(y_max_ci)) y_max <- max(y_max, y_max_ci, 0)
+  if (nrow(ci_map) > 0) {
+    lwr_f <- ci_map$lwr[is.finite(ci_map$lwr)]
+    upr_f <- ci_map$upr[is.finite(ci_map$upr)]
+    if (length(lwr_f)) y_min <- min(y_min, min(lwr_f))
+    if (length(upr_f)) y_max <- max(y_max, max(upr_f), 0)
   }
   
   if (!"xlab" %in% names(dots)) dots$xlab <- ""
@@ -854,9 +870,7 @@ plot_means_draw <- function(v,
   if (!"ylab" %in% names(dots)) dots$ylab <- "Mean"
   if (!"main" %in% names(dots)) dots$main <- paste0("Means of ", y_name)
   
-  y_span_data <- (y_max - y_min)
-  if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- abs(y_max)
-  if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- 1
+  y_span_data <- plot_means_span(y_min, y_max)
 
   # If everything is below 0, p-value brackets should be drawn "from below".
   #   Reserve extra bottom space so brackets/labels don't overlap bars (and so the
@@ -870,8 +884,7 @@ plot_means_draw <- function(v,
       is.null(v$x3_name)
     extra_bottom <- if (isTRUE(is_interaction_scenario)) 0.28 else 0.18
     y_min <- y_min - extra_bottom * y_span_data
-    y_span_data <- (y_max - y_min)
-    if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- 1
+    y_span_data <- plot_means_span(y_min, y_max)
   }
 
   ylim_top <- y_max + buffer_top_effective * y_span_data
@@ -907,7 +920,7 @@ plot_means_draw <- function(v,
   }
   text_cols <- ifelse(sapply(cols, lum) < 0.5, "white", "black")
   
-  if (!is.null(ci_map) && nrow(ci_map) > 0 && length(x_centers_drawn) == length(cell_keys_drawn)) {
+  if (nrow(ci_map) > 0 && length(x_centers_drawn) == length(cell_keys_drawn)) {
     eb_col <- if (!is.null(col.text)) col.text else "gray20"
     cap <- bar_width * 0.08
     match_idx <- match(cell_keys_drawn, ci_map$cell_key)
@@ -930,7 +943,7 @@ plot_means_draw <- function(v,
     }
   }
   
-  if (identical(tests, "auto")) {
+  if (identical(tests, "auto") && !is.null(means_comparisons) && is.data.frame(means_comparisons) && nrow(means_comparisons) > 0) {
     pvalue_line <- function(x0, x1, y, p, from_below = FALSE) {
       n <- max(length(x0), length(x1), length(y), length(p))
       x0 <- rep_len(x0, n)
@@ -977,210 +990,110 @@ plot_means_draw <- function(v,
       as.expression(parse(text = paste0("italic(p) == ", p_str)))
     }
     
-    get_p_for_term <- function(fit, var_a, var_b = NULL, want_interaction = FALSE) {
-      tab <- attr(fit, "statuser_table")
-      if (is.null(tab) || !is.data.frame(tab) || !"term" %in% names(tab) || !"p.value" %in% names(tab)) return(NA_real_)
-      terms <- as.character(tab$term)
-      if (want_interaction) {
-        idx <- which(grepl(":", terms) & grepl(var_a, terms) & grepl(var_b, terms))
-      } else {
-        idx <- which(grepl(paste0("^", var_a), terms))
-      }
-      if (!length(idx)) return(NA_real_)
-      as.numeric(tab$p.value[idx[1]])
+    # Map drawn bars to group labels used by plot_means_compute_pvalues().
+    group_label <- function(x1, x2 = NULL, x3 = NULL) {
+      parts <- character(0)
+      if (!is.null(x3) && nzchar(x3)) parts <- c(parts, x3)
+      if (!is.null(x2) && nzchar(x2)) parts <- c(parts, x2)
+      parts <- c(parts, x1)
+      paste(parts, collapse = "_")
     }
     
-    p_lm2_x1 <- function(df_sub) {
-      if (nrow(df_sub) == 0) return(NA_real_)
-      fit <- if (is.null(v$cluster_vec)) {
-        lm2(.__y ~ .__x1, data = df_sub)
-      } else {
-        lm2(.__y ~ .__x1, data = df_sub, clusters = df_sub$.__cluster)
-      }
-      get_p_for_term(fit, ".__x1")
-    }
+    if (!length(cell_keys_drawn)) return(invisible(NULL))
+    key_parts <- strsplit(cell_keys_drawn, "\\|")
+    x1_vals <- vapply(key_parts, function(z) z[1], character(1))
+    x2_vals <- vapply(key_parts, function(z) z[2], character(1))
+    x3_vals <- vapply(key_parts, function(z) z[3], character(1))
+    x2_use <- if (is.null(v$x2_name)) rep(list(NULL), length(x1_vals)) else as.list(x2_vals)
+    x3_use <- if (is.null(v$x3_name)) rep(list(NULL), length(x1_vals)) else as.list(x3_vals)
+    bar_labels <- mapply(group_label, x1 = x1_vals, x2 = x2_use, x3 = x3_use, USE.NAMES = FALSE)
+    idx_by_label <- seq_along(bar_labels)
+    names(idx_by_label) <- bar_labels
     
-    x1_is_binary <- length(x1_levels) == 2
-    mf_tests <- plot_means_model_frame(v$formula_eval, data = v$data, na.action = na.omit, context = "p-values (auto)")
-    if (nrow(mf_tests) > 0) {
-      names(mf_tests)[1] <- ".__y"
-      mf_tests$.__x1 <- as.factor(mf_tests[[x1_name]])
-      if (!is.null(v$x2_name)) mf_tests$.__x2 <- as.factor(mf_tests[[v$x2_name]])
-      cluster_mf <- plot_means_align_cluster(v, mf_tests)
-      if (!is.null(cluster_mf)) mf_tests$.__cluster <- cluster_mf
-      
-      if (length(v$x_names) == 1 && x1_is_binary) {
-        p1 <- p_lm2_x1(mf_tests[, c(".__y", ".__x1"), drop = FALSE])
-        
-        k1 <- paste0(x1_levels[1], "|All|All")
-        k2 <- paste0(x1_levels[2], "|All|All")
-        i1 <- match(k1, cell_keys_drawn)
-        i2 <- match(k2, cell_keys_drawn)
-        if (is.finite(i1) && is.finite(i2)) {
-          xA <- x_centers_drawn[i1]
-          xB <- x_centers_drawn[i2]
-          
-          y_span <- diff(par("usr")[3:4])
-          from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
-          
-          # Simple-effect brackets share a single y-position, based on the most extreme CI
-          # of the compared bars (2% further out than that extreme).
-          y_extreme <- if (isTRUE(from_below)) {
-            min(heights[c(i1, i2)], na.rm = TRUE)
-          } else {
-            max(heights[c(i1, i2)], na.rm = TRUE)
-          }
-          if (!is.null(ci_map) && nrow(ci_map) > 0) {
-            mi <- match(c(k1, k2), ci_map$cell_key)
-            if (all(!is.na(mi))) {
-              if (isTRUE(from_below)) {
-                y_extreme <- min(y_extreme, ci_map$lwr[mi], na.rm = TRUE)
-              } else {
-                y_extreme <- max(y_extreme, ci_map$upr[mi], na.rm = TRUE)
-              }
+    from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
+    y_span <- diff(par("usr")[3:4])
+    
+    # Simple-effect comparisons: rows with a non-empty group2 and non-missing p.value
+    simple_rows <- means_comparisons[is.character(means_comparisons$group2) & nzchar(means_comparisons$group2), , drop = FALSE]
+    simple_rows <- simple_rows[is.finite(simple_rows$p.value), , drop = FALSE]
+    if (nrow(simple_rows) > 0) {
+      # Shared y-position: 2% beyond the most extreme CI among all involved bars
+      involved <- unique(c(as.character(simple_rows$group1), as.character(simple_rows$group2)))
+      idx_all <- idx_by_label[involved]
+      idx_all <- idx_all[is.finite(idx_all)]
+      y_simple <- NA_real_
+      if (length(idx_all)) {
+        y_extreme <- if (isTRUE(from_below)) min(heights[idx_all], na.rm = TRUE) else max(heights[idx_all], na.rm = TRUE)
+        if (nrow(ci_map) > 0) {
+          k_all <- cell_keys_drawn[idx_all]
+          mi_all <- match(k_all, ci_map$cell_key)
+          mi_all <- mi_all[!is.na(mi_all)]
+          if (length(mi_all)) {
+            if (isTRUE(from_below)) {
+              y_extreme <- min(y_extreme, ci_map$lwr[mi_all], na.rm = TRUE)
+            } else {
+              y_extreme <- max(y_extreme, ci_map$upr[mi_all], na.rm = TRUE)
             }
           }
-          y <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
-          
-          pvalue_line(x0 = xA, x1 = xB, y = y, p = p1, from_below = from_below)
         }
+        y_simple <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
       }
       
-      x2_is_binary <- !is.null(v$x2_name) && length(params$x2_levels) == 2
-      x3_is_null <- is.null(v$x3_name)
-      
-      if (length(v$x_names) == 2 && x1_is_binary && x2_is_binary && x3_is_null) {
-        x2_levels <- params$x2_levels
-        p_by_x2 <- sapply(x2_levels, function(x2v) {
-          df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
-          p_lm2_x1(df_sub)
-        })
-        
-        fit_int <- if (is.null(v$cluster_vec)) {
-          lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE])
-        } else {
-          lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2", ".__cluster"), drop = FALSE], clusters = mf_tests$.__cluster)
-        }
-        p_int <- get_p_for_term(fit_int, ".__x1", ".__x2", want_interaction = TRUE)
-        p_int_txt <- format_p_expr(p_int, digits = 3)
-        
-        y_span <- diff(par("usr")[3:4])
-        from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
-        y_simple <- NA_real_
-        x_mids <- rep(NA_real_, length(x2_levels))
-        
-        # One shared y-position for all simple-effect brackets in this scenario:
-        # 2% beyond the most extreme CI among the involved bars.
-        k_all <- c(
-          paste0(x1_levels[1], "|", x2_levels[1], "|All"),
-          paste0(x1_levels[2], "|", x2_levels[1], "|All"),
-          paste0(x1_levels[1], "|", x2_levels[2], "|All"),
-          paste0(x1_levels[2], "|", x2_levels[2], "|All")
-        )
-        idx_all <- match(k_all, cell_keys_drawn)
-        idx_all <- idx_all[is.finite(idx_all)]
-        if (length(idx_all)) {
-          y_extreme <- if (isTRUE(from_below)) min(heights[idx_all], na.rm = TRUE) else max(heights[idx_all], na.rm = TRUE)
-          if (!is.null(ci_map) && nrow(ci_map) > 0) {
-            mi_all <- match(k_all, ci_map$cell_key)
-            mi_all <- mi_all[!is.na(mi_all)]
-            if (length(mi_all)) {
-              if (isTRUE(from_below)) {
-                y_extreme <- min(y_extreme, ci_map$lwr[mi_all], na.rm = TRUE)
-              } else {
-                y_extreme <- max(y_extreme, ci_map$upr[mi_all], na.rm = TRUE)
-              }
-            }
-          }
-          y_simple <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
-        }
-        
-        for (j in seq_along(x2_levels)) {
-          x2v <- x2_levels[j]
-          k1 <- paste0(x1_levels[1], "|", x2v, "|All")
-          k2 <- paste0(x1_levels[2], "|", x2v, "|All")
-          i1 <- match(k1, cell_keys_drawn)
-          i2 <- match(k2, cell_keys_drawn)
+      if (is.finite(y_simple)) {
+        for (r in seq_len(nrow(simple_rows))) {
+          i1 <- idx_by_label[as.character(simple_rows$group1[r])]
+          i2 <- idx_by_label[as.character(simple_rows$group2[r])]
           if (!is.finite(i1) || !is.finite(i2)) next
-          
-          xA <- x_centers_drawn[i1]
-          xB <- x_centers_drawn[i2]
-          x_mids[j] <- mean(c(xA, xB))
-          if (is.finite(y_simple)) {
-            pvalue_line(x0 = xA, x1 = xB, y = y_simple, p = p_by_x2[[j]], from_below = from_below)
-          }
+          pvalue_line(x0 = x_centers_drawn[i1], x1 = x_centers_drawn[i2], y = y_simple, p = simple_rows$p.value[r], from_below = from_below)
         }
-        
-        if (all(is.finite(x_mids)) && is.finite(y_simple) && !is.null(p_int_txt)) {
-          x_int <- mean(x_mids)
+      }
+    }
+    
+    # Interaction comparison: a single row labeled interaction(x1:x2)
+    int_rows <- means_comparisons[is.character(means_comparisons$group1) & grepl("^interaction\\(", means_comparisons$group1), , drop = FALSE]
+    int_rows <- int_rows[is.finite(int_rows$p.value), , drop = FALSE]
+    if (nrow(int_rows) > 0 && !is.null(v$x2_name) && length(params$x2_levels) == 2 && length(x1_levels) == 2) {
+      p_int_txt <- format_p_expr(int_rows$p.value[1], digits = 3)
+      if (!is.null(p_int_txt)) {
+        x2_levels <- params$x2_levels
+        x_mids <- rep(NA_real_, length(x2_levels))
+        for (j in seq_along(x2_levels)) {
+          g1 <- group_label(x1_levels[1], x2 = x2_levels[j])
+          g2 <- group_label(x1_levels[2], x2 = x2_levels[j])
+          i1 <- idx_by_label[g1]
+          i2 <- idx_by_label[g2]
+          if (!is.finite(i1) || !is.finite(i2)) next
+          x_mids[j] <- mean(c(x_centers_drawn[i1], x_centers_drawn[i2]))
+        }
+        if (all(is.finite(x_mids))) {
+          # Place interaction bracket offset from the simple-effect line, if present; otherwise anchor on CI extreme
+          y_anchor <- if (exists("y_simple", inherits = FALSE) && is.finite(y_simple)) y_simple else {
+            if (nrow(ci_map) > 0) {
+              y_extreme <- if (isTRUE(from_below)) min(ci_map$lwr, na.rm = TRUE) else max(ci_map$upr, na.rm = TRUE)
+              if (is.finite(y_extreme)) {
+                if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
+              } else {
+                0
+              }
+            } else {
+              0
+            }
+          }
           if (isTRUE(from_below)) {
-            y_line <- y_simple - 0.06 * y_span
+            y_line <- y_anchor - 0.06 * y_span
             y_lab <- y_line - 0.025 * y_span
-            
-            y_line_from <- y_simple - 0.045 * y_span
+            y_line_from <- y_anchor - 0.045 * y_span
             segments(x_mids[1], y_line, x_mids[1], y_line_from, col = pvalue.col)
             segments(x_mids[2], y_line, x_mids[2], y_line_from, col = pvalue.col)
           } else {
-            y_line <- y_simple + 0.06 * y_span
+            y_line <- y_anchor + 0.06 * y_span
             y_lab <- y_line + 0.025 * y_span
-            
-            y_line_from <- y_simple + 0.045 * y_span
+            y_line_from <- y_anchor + 0.045 * y_span
             segments(x_mids[1], y_line_from, x_mids[1], y_line, col = pvalue.col)
             segments(x_mids[2], y_line_from, x_mids[2], y_line, col = pvalue.col)
           }
           segments(x_mids[1], y_line, x_mids[2], y_line, col = pvalue.col)
-          text2(x_int, y_lab, p_int_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
-        }
-      }
-      
-      if (length(v$x_names) == 2 && x1_is_binary && !is.null(v$x2_name) && length(params$x2_levels) > 2 && x3_is_null) {
-        x2_levels <- params$x2_levels
-        p_by_x2 <- sapply(x2_levels, function(x2v) {
-          df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
-          p_lm2_x1(df_sub)
-        })
-        
-        y_span <- diff(par("usr")[3:4])
-        from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
-        y_simple <- NA_real_
-        
-        # One shared y-position for all simple-effect brackets: 2% beyond the most extreme CI
-        # across all involved bars (both x1 levels across all x2 levels).
-        k_all <- as.vector(rbind(
-          paste0(x1_levels[1], "|", x2_levels, "|All"),
-          paste0(x1_levels[2], "|", x2_levels, "|All")
-        ))
-        idx_all <- match(k_all, cell_keys_drawn)
-        idx_all <- idx_all[is.finite(idx_all)]
-        if (length(idx_all)) {
-          y_extreme <- if (isTRUE(from_below)) min(heights[idx_all], na.rm = TRUE) else max(heights[idx_all], na.rm = TRUE)
-          if (!is.null(ci_map) && nrow(ci_map) > 0) {
-            mi_all <- match(k_all, ci_map$cell_key)
-            mi_all <- mi_all[!is.na(mi_all)]
-            if (length(mi_all)) {
-              if (isTRUE(from_below)) {
-                y_extreme <- min(y_extreme, ci_map$lwr[mi_all], na.rm = TRUE)
-              } else {
-                y_extreme <- max(y_extreme, ci_map$upr[mi_all], na.rm = TRUE)
-              }
-            }
-          }
-          y_simple <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
-        }
-        
-        for (j in seq_along(x2_levels)) {
-          x2v <- x2_levels[j]
-          k1 <- paste0(x1_levels[1], "|", x2v, "|All")
-          k2 <- paste0(x1_levels[2], "|", x2v, "|All")
-          i1 <- match(k1, cell_keys_drawn)
-          i2 <- match(k2, cell_keys_drawn)
-          if (!is.finite(i1) || !is.finite(i2)) next
-          
-          xA <- x_centers_drawn[i1]
-          xB <- x_centers_drawn[i2]
-          if (is.finite(y_simple)) {
-            pvalue_line(x0 = xA, x1 = xB, y = y_simple, p = p_by_x2[[j]], from_below = from_below)
-          }
+          text2(mean(x_mids), y_lab, p_int_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
         }
       }
     }
@@ -1257,9 +1170,10 @@ plot_means_draw <- function(v,
   }
   
   if (params$k > 1) {
-    tw <- suppressWarnings(max(strwidth(x1_levels, cex = 1.3), na.rm = TRUE))
-    if (!is.finite(tw)) tw <- 0
-    gap_w <- suppressWarnings(strwidth("      ", cex = 1.3))
+    w <- strwidth(x1_levels, cex = 1.3)
+    w <- w[is.finite(w)]
+    tw <- if (length(w)) max(w) else 0
+    gap_w <- strwidth("      ", cex = 1.3)
     if (!is.finite(gap_w)) gap_w <- 0
     
     legend_args <- list(
