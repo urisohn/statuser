@@ -819,8 +819,11 @@ plot_means_draw <- function(v,
   legend_horiz <- params$legend_horiz
   
   dots <- list(...)
-  y_max <- max(heights, na.rm = TRUE)
-  if (!is.finite(y_max)) y_max <- 1
+  # Establish plotting range.
+  #   Bars are drawn from y=0 to `heights`, so we always include 0 in the y-limits.
+  y_max_raw <- max(heights, na.rm = TRUE)
+  if (!is.finite(y_max_raw)) y_max_raw <- 1
+  y_max <- max(0, y_max_raw)
   y_min <- min(0, min(heights, na.rm = TRUE))
   if (!is.finite(y_min)) y_min <- 0
   
@@ -828,7 +831,7 @@ plot_means_draw <- function(v,
     y_min_ci <- suppressWarnings(min(ci_map$lwr, na.rm = TRUE))
     y_max_ci <- suppressWarnings(max(ci_map$upr, na.rm = TRUE))
     if (is.finite(y_min_ci)) y_min <- min(y_min, y_min_ci)
-    if (is.finite(y_max_ci)) y_max <- max(y_max, y_max_ci)
+    if (is.finite(y_max_ci)) y_max <- max(y_max, y_max_ci, 0)
   }
   
   if (!"xlab" %in% names(dots)) dots$xlab <- ""
@@ -843,6 +846,23 @@ plot_means_draw <- function(v,
   y_span_data <- (y_max - y_min)
   if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- abs(y_max)
   if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- 1
+
+  # If everything is below 0, p-value brackets should be drawn "from below".
+  #   Reserve extra bottom space so brackets/labels don't overlap bars (and so the
+  #   interaction bracket, when present, isn't clipped at the bottom).
+  all_below_zero <- (is.finite(y_max_raw) && y_max_raw <= 0)
+  if (isTRUE(all_below_zero) && identical(tests, "auto") && !"ylim" %in% names(dots)) {
+    is_interaction_scenario <- length(v$x_names) == 2 &&
+      length(params$x1_levels) == 2 &&
+      !is.null(v$x2_name) &&
+      length(params$x2_levels) == 2 &&
+      is.null(v$x3_name)
+    extra_bottom <- if (isTRUE(is_interaction_scenario)) 0.28 else 0.18
+    y_min <- y_min - extra_bottom * y_span_data
+    y_span_data <- (y_max - y_min)
+    if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- 1
+  }
+
   ylim_top <- y_max + buffer_top_effective * y_span_data
   if (!"ylim" %in% names(dots)) dots$ylim <- c(y_min, ylim_top)
   if (!"xlim" %in% names(dots)) dots$xlim <- c(0, x_pos)
@@ -859,6 +879,8 @@ plot_means_draw <- function(v,
   
   plot_args <- c(list(x = 0, y = 0), dots)
   do.call(plot, plot_args)
+
+  abline(h = 0, col = "gray80")
   
   if (!user_provided_yaxt && (is.null(dots$axes) || isTRUE(dots$axes))) {
     y_ticks <- pretty(c(y_min, y_max), n = 5)
@@ -890,15 +912,15 @@ plot_means_draw <- function(v,
         lwr <- lwr[ok2]
         upr <- upr[ok2]
         
-        segments(x_ok, lwr, x_ok, upr, col = eb_col)
-        segments(x_ok - cap, lwr, x_ok + cap, lwr, col = eb_col)
-        segments(x_ok - cap, upr, x_ok + cap, upr, col = eb_col)
+        segments(x_ok, lwr, x_ok, upr, col = eb_col, lwd = 2)
+        segments(x_ok - cap, lwr, x_ok + cap, lwr, col = eb_col, lwd = 2)
+        segments(x_ok - cap, upr, x_ok + cap, upr, col = eb_col, lwd = 2)
       }
     }
   }
   
   if (identical(tests, "auto")) {
-    pvalue_line <- function(x0, x1, y, p) {
+    pvalue_line <- function(x0, x1, y, p, from_below = FALSE) {
       n <- max(length(x0), length(x1), length(y), length(p))
       x0 <- rep_len(x0, n)
       x1 <- rep_len(x1, n)
@@ -909,14 +931,20 @@ plot_means_draw <- function(v,
       tick <- 0.015 * y_span
       
       segments(x0, y, x1, y, col = pvalue.col)
-      segments(x0, y - tick, x0, y, col = pvalue.col)
-      segments(x1, y - tick, x1, y, col = pvalue.col)
+      if (isTRUE(from_below)) {
+        segments(x0, y, x0, y + tick, col = pvalue.col)
+        segments(x1, y, x1, y + tick, col = pvalue.col)
+      } else {
+        segments(x0, y - tick, x0, y, col = pvalue.col)
+        segments(x1, y - tick, x1, y, col = pvalue.col)
+      }
       
       x_mid <- (x0 + x1) / 2
       for (i in seq_len(n)) {
         p_txt <- format_p_expr(p[i], digits = 3)
         if (!is.null(p_txt)) {
-          text2(x_mid[i], y[i] + 0.03 * y_span, p_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
+          y_txt <- if (isTRUE(from_below)) y[i] - 0.03 * y_span else y[i] + 0.03 * y_span
+          text2(x_mid[i], y_txt, p_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
         }
       }
       
@@ -990,15 +1018,29 @@ plot_means_draw <- function(v,
           xA <- x_centers_drawn[i1]
           xB <- x_centers_drawn[i2]
           
-          y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
+          y_span <- diff(par("usr")[3:4])
+          from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
+          
+          # Simple-effect brackets share a single y-position, based on the most extreme CI
+          # of the compared bars (2% further out than that extreme).
+          y_extreme <- if (isTRUE(from_below)) {
+            min(heights[c(i1, i2)], na.rm = TRUE)
+          } else {
+            max(heights[c(i1, i2)], na.rm = TRUE)
+          }
           if (!is.null(ci_map) && nrow(ci_map) > 0) {
             mi <- match(c(k1, k2), ci_map$cell_key)
-            if (all(!is.na(mi))) y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
+            if (all(!is.na(mi))) {
+              if (isTRUE(from_below)) {
+                y_extreme <- min(y_extreme, ci_map$lwr[mi], na.rm = TRUE)
+              } else {
+                y_extreme <- max(y_extreme, ci_map$upr[mi], na.rm = TRUE)
+              }
+            }
           }
-          y_span <- diff(par("usr")[3:4])
-          y <- y_base + 0.06 * y_span
+          y <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
           
-          pvalue_line(x0 = xA, x1 = xB, y = y, p = p1)
+          pvalue_line(x0 = xA, x1 = xB, y = y, p = p1, from_below = from_below)
         }
       }
       
@@ -1021,8 +1063,35 @@ plot_means_draw <- function(v,
         p_int_txt <- format_p_expr(p_int, digits = 3)
         
         y_span <- diff(par("usr")[3:4])
-        y_tops <- rep(NA_real_, length(x2_levels))
+        from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
+        y_simple <- NA_real_
         x_mids <- rep(NA_real_, length(x2_levels))
+        
+        # One shared y-position for all simple-effect brackets in this scenario:
+        # 2% beyond the most extreme CI among the involved bars.
+        k_all <- c(
+          paste0(x1_levels[1], "|", x2_levels[1], "|All"),
+          paste0(x1_levels[2], "|", x2_levels[1], "|All"),
+          paste0(x1_levels[1], "|", x2_levels[2], "|All"),
+          paste0(x1_levels[2], "|", x2_levels[2], "|All")
+        )
+        idx_all <- match(k_all, cell_keys_drawn)
+        idx_all <- idx_all[is.finite(idx_all)]
+        if (length(idx_all)) {
+          y_extreme <- if (isTRUE(from_below)) min(heights[idx_all], na.rm = TRUE) else max(heights[idx_all], na.rm = TRUE)
+          if (!is.null(ci_map) && nrow(ci_map) > 0) {
+            mi_all <- match(k_all, ci_map$cell_key)
+            mi_all <- mi_all[!is.na(mi_all)]
+            if (length(mi_all)) {
+              if (isTRUE(from_below)) {
+                y_extreme <- min(y_extreme, ci_map$lwr[mi_all], na.rm = TRUE)
+              } else {
+                y_extreme <- max(y_extreme, ci_map$upr[mi_all], na.rm = TRUE)
+              }
+            }
+          }
+          y_simple <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
+        }
         
         for (j in seq_along(x2_levels)) {
           x2v <- x2_levels[j]
@@ -1035,26 +1104,28 @@ plot_means_draw <- function(v,
           xA <- x_centers_drawn[i1]
           xB <- x_centers_drawn[i2]
           x_mids[j] <- mean(c(xA, xB))
-          
-          y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
-          if (!is.null(ci_map) && nrow(ci_map) > 0) {
-            mi <- match(c(k1, k2), ci_map$cell_key)
-            if (all(!is.na(mi))) y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
+          if (is.finite(y_simple)) {
+            pvalue_line(x0 = xA, x1 = xB, y = y_simple, p = p_by_x2[[j]], from_below = from_below)
           }
-          
-          y <- y_base + 0.06 * y_span
-          y_tops[j] <- y
-          pvalue_line(x0 = xA, x1 = xB, y = y, p = p_by_x2[[j]])
         }
         
-        if (all(is.finite(x_mids)) && all(is.finite(y_tops)) && !is.null(p_int_txt)) {
+        if (all(is.finite(x_mids)) && is.finite(y_simple) && !is.null(p_int_txt)) {
           x_int <- mean(x_mids)
-          y_line <- max(y_tops) + 0.06 * y_span
-          y_lab <- y_line + 0.025 * y_span
-          
-          y_line_from <- max(y_tops) + 0.045 * y_span
-          segments(x_mids[1], y_line_from, x_mids[1], y_line, col = pvalue.col)
-          segments(x_mids[2], y_line_from, x_mids[2], y_line, col = pvalue.col)
+          if (isTRUE(from_below)) {
+            y_line <- y_simple - 0.06 * y_span
+            y_lab <- y_line - 0.025 * y_span
+            
+            y_line_from <- y_simple - 0.045 * y_span
+            segments(x_mids[1], y_line, x_mids[1], y_line_from, col = pvalue.col)
+            segments(x_mids[2], y_line, x_mids[2], y_line_from, col = pvalue.col)
+          } else {
+            y_line <- y_simple + 0.06 * y_span
+            y_lab <- y_line + 0.025 * y_span
+            
+            y_line_from <- y_simple + 0.045 * y_span
+            segments(x_mids[1], y_line_from, x_mids[1], y_line, col = pvalue.col)
+            segments(x_mids[2], y_line_from, x_mids[2], y_line, col = pvalue.col)
+          }
           segments(x_mids[1], y_line, x_mids[2], y_line, col = pvalue.col)
           text2(x_int, y_lab, p_int_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
         }
@@ -1068,6 +1139,32 @@ plot_means_draw <- function(v,
         })
         
         y_span <- diff(par("usr")[3:4])
+        from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
+        y_simple <- NA_real_
+        
+        # One shared y-position for all simple-effect brackets: 2% beyond the most extreme CI
+        # across all involved bars (both x1 levels across all x2 levels).
+        k_all <- as.vector(rbind(
+          paste0(x1_levels[1], "|", x2_levels, "|All"),
+          paste0(x1_levels[2], "|", x2_levels, "|All")
+        ))
+        idx_all <- match(k_all, cell_keys_drawn)
+        idx_all <- idx_all[is.finite(idx_all)]
+        if (length(idx_all)) {
+          y_extreme <- if (isTRUE(from_below)) min(heights[idx_all], na.rm = TRUE) else max(heights[idx_all], na.rm = TRUE)
+          if (!is.null(ci_map) && nrow(ci_map) > 0) {
+            mi_all <- match(k_all, ci_map$cell_key)
+            mi_all <- mi_all[!is.na(mi_all)]
+            if (length(mi_all)) {
+              if (isTRUE(from_below)) {
+                y_extreme <- min(y_extreme, ci_map$lwr[mi_all], na.rm = TRUE)
+              } else {
+                y_extreme <- max(y_extreme, ci_map$upr[mi_all], na.rm = TRUE)
+              }
+            }
+          }
+          y_simple <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
+        }
         
         for (j in seq_along(x2_levels)) {
           x2v <- x2_levels[j]
@@ -1079,15 +1176,9 @@ plot_means_draw <- function(v,
           
           xA <- x_centers_drawn[i1]
           xB <- x_centers_drawn[i2]
-          
-          y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
-          if (!is.null(ci_map) && nrow(ci_map) > 0) {
-            mi <- match(c(k1, k2), ci_map$cell_key)
-            if (all(!is.na(mi))) y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
+          if (is.finite(y_simple)) {
+            pvalue_line(x0 = xA, x1 = xB, y = y_simple, p = p_by_x2[[j]], from_below = from_below)
           }
-          
-          y <- y_base + 0.06 * y_span
-          pvalue_line(x0 = xA, x1 = xB, y = y, p = p_by_x2[[j]])
         }
       }
     }
@@ -1117,11 +1208,15 @@ plot_means_draw <- function(v,
     
     neg <- is.finite(heights) & heights < 0
     y_mean <- if (identical(values.pos, "top")) {
-      ifelse(neg, 0 - pad_top, heights - pad_top)
+      # Place labels near the mean endpoint of each bar (not near the baseline at 0).
+      # Positive bars end at `heights` above 0; negative bars end at `heights` below 0.
+      ifelse(neg, heights + pad_top, heights - pad_top)
     } else if (identical(values.pos, "middle")) {
       heights / 2
     } else if (identical(values.pos, "bottom")) {
-      ifelse(neg, 0 - pad_top, 0 + pad_bot)
+      # "bottom" still means the label is pulled toward the bar body, but anchored
+      # near the mean endpoint rather than near 0 for negative bars.
+      ifelse(neg, heights + pad_bot, heights - pad_bot)
     } else {
       rep(0, length(heights))
     }
