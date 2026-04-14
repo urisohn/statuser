@@ -1,4 +1,4 @@
-# Package initialization
+﻿# Package initialization
 # This file is executed when the package is loaded
 
 .onLoad <- function(libname, pkgname) {
@@ -17,7 +17,7 @@
       #While developing:
         packageStartupMessage(
           "#######################################################\n",
-                              "This Version 2026 04 10 - 03.07PM\n" )
+                              "This Version 2026 04 14 - 01.23PM\n" )
         
 
 

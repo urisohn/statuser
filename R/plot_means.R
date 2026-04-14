@@ -4,9 +4,13 @@
 #'
 #' @param formula A formula like \code{y ~ x1}, \code{y ~ x1 + x2}, or
 #'   \code{y ~ x1 + x2 + x3}. The left-hand side (y) must be numeric. Up to three
-#'   grouping variables are supported. Bars for different \code{x1} values are
-#'   shown side-by-side within each \code{(x2, x3)} block, with larger gaps
-#'   separating \code{x2} and \code{x3} blocks.
+#'   grouping variables are supported. Here \code{x1} is the primary grouping
+#'   variable (the side-by-side bars, e.g. control vs treatment), while \code{x2}
+#'   and \code{x3} are optional secondary grouping variables that define blocks
+#'   along the x-axis (e.g. low vs high moderator; online vs lab sample). Bars
+#'   for different \code{x1} values are shown side-by-side within each
+#'   \code{(x2, x3)} block, with larger gaps separating \code{x2} and \code{x3}
+#'   blocks.
 #' @param data An optional data frame containing the variables in the formula.
 #' @param order Controls the order of \code{x1} groups (bar order and colors).
 #'   Use \code{-1} to reverse the default order, or provide a character vector
@@ -14,10 +18,26 @@
 #' @param legend.title Character string. Title for the legend. If \code{NULL},
 #'   no title is shown.
 #' @param col Color(s) for \code{x1} bars. If \code{NULL}, colors are chosen
-#'   automatically using \code{get.colors(k)} where \code{k} is the number of
-#'   unique \code{x1} values.
-#' @param col.text Reserved for future plotting (currently unused). Default \code{NULL}.
-#' @param cluster Reserved for future clustering support (currently unused). Default \code{NULL}.
+#'   automatically.
+#' @param col.text Color for confidence intervals and other non-bar annotations.
+#'   If \code{NULL}, defaults to a dark gray.
+#' @param cluster Optional clustering variable for cluster-robust inference via
+#'   \code{lm2(..., clusters=)}. May be a vector (same length as \code{nrow(data)})
+#'   or a column name in \code{data}. When provided, confidence intervals and any
+#'   regression-based p-values use clustered standard errors.
+#'   When \code{NULL}, simple-effect p-values (difference in means) are computed
+#'   using Welch \code{t.test()}.
+#'   For convenience, \code{clusters=} is accepted as an alias for \code{cluster=}.
+#' @param values.cex Numeric scalar controlling text size for mean value labels
+#'   (and related annotations).
+#' @param values.pos Where to draw mean value labels: \code{"top"}, \code{"middle"},
+#'   \code{"bottom"}, or \code{"none"}.
+#' @param values.round Non-negative integer. Number of decimal places for mean
+#'   value labels.
+#' @param tests Either \code{"auto"} (default) to compute and annotate p-values for
+#'   supported scenarios, or \code{"none"}.
+#' @param pvalue.cex Numeric scalar controlling p-value label size.
+#' @param pvalue.col Color for p-value brackets/labels.
 #' @param buffer.top Either \code{"auto"} (default) or a numeric value. Extra
 #'   vertical headroom (as a fraction of the data y-range) added above the
 #'   maximum y value to make room for annotations. When \code{"auto"}, uses 0.35
@@ -28,8 +48,13 @@
 #' @param ... Additional arguments passed to \code{plot()} (e.g., \code{main},
 #'   \code{ylim}, \code{ylab}).
 #'
-#' @return A minimal list returned invisibly (see Details). The main table is
-#'   \code{mean_results}.
+#' @return A minimal list returned invisibly with two elements:
+#' \describe{
+#'   \item{\code{means}}{A data frame of means (and, when available, confidence intervals)
+#'     aligned to the plotting grid.}
+#'   \item{\code{means_comparisons}}{A data frame of comparisons used for p-value
+#'     annotation (or \code{NULL} if not applicable).}
+#' }
 #'
 #' @examples
 #' df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
@@ -42,6 +67,14 @@
 #' )
 #' plot_means(y ~ x1 + x2, data = df2)
 #'
+#' df3 <- data.frame(
+#'   y = rnorm(600),
+#'   x1 = rep(c("control", "treatment"), times = 300),
+#'   x2 = rep(rep(c("low", "high"), each = 150), times = 2),
+#'   x3 = rep(c("online", "lab"), each = 300)
+#' )
+#' plot_means(y ~ x1 + x2 + x3, data = df3)
+#'
 #' @export
 #'
 #: 1 plot_means: validate -> descriptives -> params -> compute -> draw -> output/export
@@ -51,6 +84,8 @@
 #: 5 plot_means_draw: render the plot in base graphics (bars, CIs, labels, legend, p-values)
 #: 6 plot_means_compute_pvalues: compute and format p-values shown on the plot (scenario-specific)
 
+
+#----------------------------------
 # plot_means (exported) ----
 plot_means <- function(formula,
                        data = NULL,
@@ -73,7 +108,10 @@ plot_means <- function(formula,
     mc <- match.call()
     calling_env <- parent.frame()
 
-  # 2.1 Validate and normalize inputs
+  # 1. Validate and normalize inputs
+  # Convert user-facing arguments into a single normalized list (`v`) used throughout.
+  #   This is where we resolve NSE inputs (formula/data/cluster), validate types and
+  #   lengths, and set defaults so downstream helpers can assume consistent fields.
     v <- plot_means_validate(
       mc = mc,
       data = data,
@@ -109,19 +147,19 @@ plot_means <- function(formula,
     save.as <- v$save.as
     save_as_is_default <- v$save_as_is_default
 
-  # 3. Compute descriptives (means) using desc_var()
+  # 2. Compute descriptives (means) using statuser::desc_var()
     result <- eval(call("desc_var", v$mc$formula, data = v$data), envir = v$calling_env)
 
-  # 3.1 Normalize desc_var output for single grouping variable
+  # 2.1 Normalize desc_var output for single grouping variable
     result_plot <- result
     if (length(x_names) == 1 && "group" %in% names(result_plot) && !(x1_name %in% names(result_plot))) {
       result_plot[[x1_name]] <- as.character(result_plot$group)
     }
 
-  # 3.2 CI settings (always computed)
+  # 2.2 CI settings (always computed)
     ci_level <- 0.95
 
-  # 4. Levels/order/colors/buffer/legend layout (derived from data + args)
+  # 3. Levels/order/colors/buffer/legend layout (derived from data + args)
     params <- plot_means_params(v, result = result, result_plot = result_plot)
     result <- params$result
     x1_levels <- params$x1_levels
@@ -133,7 +171,7 @@ plot_means <- function(formula,
     buffer_top_effective <- params$buffer_top_effective
     format_level_label <- params$format_level_label
 
-  # 5. Grid/CI computation and bar layout
+  # 4. Results table with CI computation and bar layout
     comp <- plot_means_compute(v, params = params, result_plot = result_plot, ci_level = ci_level)
     merged <- comp$merged
     ci_map <- comp$ci_map
@@ -153,7 +191,7 @@ plot_means <- function(formula,
     bar_width <- comp$bar_width
     bar_step <- comp$bar_step
 
-  # 6. Prepare comparison table used for p-value drawing
+  # 5. Prepare comparison table used for p-value drawing
     # Build one output table aligned with the plotting grid (keeps missing combos)
       means <- merged
       means$ciL <- NA_real_
@@ -193,7 +231,7 @@ plot_means <- function(formula,
     
     means_comparisons <- plot_means_compute_pvalues(v = v, params = params, mean_results = means)
 
-  # 7. Draw plot
+  # 6. Draw plot
     plot_means_draw(
       v = v,
       params = params,
@@ -218,13 +256,13 @@ plot_means <- function(formula,
     )
 
 
-  # 8. Prepare minimal output (returned invisibly)
+  # 7. Prepare minimal output (returned invisibly)
     out <- list2(
       means,
       means_comparisons
     )
   
-  # 8.1 Optional export (plot is still shown on screen)
+  # 7.1 Optional export (plot is still shown on screen)
     if (!is.null(save.as)) {
       headless_dev <- (grDevices::dev.cur() == 1L)
       tmp_dev_file <- NULL
@@ -236,7 +274,8 @@ plot_means <- function(formula,
           unlink(tmp_dev_file)
         }, add = TRUE)
       }
-      
+    # 7.1.1 Capture the current plot for replay on a file device.
+    #   recordPlot() can fail on some devices; in that case we skip saving and keep the on-screen plot.
       p <- NULL
       p_err <- NULL
       p <- tryCatch(recordPlot(), error = function(e) { p_err <<- e; NULL })
@@ -258,6 +297,7 @@ plot_means <- function(formula,
         on.exit(grDevices::dev.off(), add = TRUE)
         replayPlot(p)
         
+      # 7.1.2 Normalize path for user-facing message (platform-independent separators).
         save_as_print <- save.as
         save_as_print <- tryCatch(normalizePath(save_as_print, winslash = "/", mustWork = FALSE), error = function(e) save_as_print)
         save_as_print <- gsub("\\\\", "/", save_as_print)
@@ -276,6 +316,9 @@ plot_means <- function(formula,
     invisible(out)
 }
 
+
+
+#----------------------------------
 # plot_means_validate: evaluate NSE inputs, validate args, and normalize to a single list `v` ----
 plot_means_validate <- function(mc,
                                 data,
@@ -293,7 +336,9 @@ plot_means_validate <- function(mc,
                                 buffer.top,
                                 save.as,
                                 calling_env) {
-  # Resolve and validate formula input (NSE-safe)
+  # 1. Resolve and validate formula input (NSE-safe)
+  #   \"Resolve\" here means: take what the user typed for `formula` (which may be a name in the
+  #   calling environment) and evaluate it into an actual `formula` object we can inspect and use.
     formula_resolved <- evaluate_variable_arguments(
       arg_expr = mc$formula,
       arg_name = "formula",
@@ -309,7 +354,7 @@ plot_means_validate <- function(mc,
       stop("plot_means(): First argument must be a formula like y ~ x1 + x2", call. = FALSE)
     }
   
-  # Determine grouping variables (up to 3)
+  # 2. Determine grouping variables (up to 3)
     vars <- all.vars(formula_eval)
     if (length(vars) < 2) {
       stop("plot_means(): Formula must have at least one grouping variable: y ~ x1", call. = FALSE)
@@ -323,24 +368,25 @@ plot_means_validate <- function(mc,
     x2_name <- if (length(x_names) >= 2) x_names[2] else NULL
     x3_name <- if (length(x_names) >= 3) x_names[3] else NULL
   
-  # Validate label sizing argument
+  # 3. Validate display and testing options
+  # 3.1 Validate label sizing argument
     if (!is.numeric(values.cex) || length(values.cex) != 1 || is.na(values.cex) || values.cex <= 0) {
       stop("plot_means(): 'values.cex' must be a single positive number", call. = FALSE)
     }
   
-  # Validate value label position
+  # 3.2 Validate value label position
     values.pos <- match.arg(values.pos, c("top", "middle", "bottom", "none"))
   
-  # Validate rounding argument for mean labels
+  # 3.3 Validate rounding argument for mean labels
     if (!is.numeric(values.round) || length(values.round) != 1 || is.na(values.round) || values.round < 0) {
       stop("plot_means(): 'values.round' must be a single non-negative number", call. = FALSE)
     }
     values.round <- as.integer(values.round)
   
-  # Validate tests argument
+  # 3.4 Validate tests argument
     tests <- match.arg(tests, c("auto", "none"))
   
-  # Validate p-value styling arguments
+  # 3.5 Validate p-value styling arguments
     if (!is.numeric(pvalue.cex) || length(pvalue.cex) != 1 || is.na(pvalue.cex) || pvalue.cex <= 0) {
       stop("plot_means(): 'pvalue.cex' must be a single positive number", call. = FALSE)
     }
@@ -348,7 +394,7 @@ plot_means_validate <- function(mc,
       stop("plot_means(): 'pvalue.col' must be a single color name", call. = FALSE)
     }
   
-  # Validate buffer.top argument
+  # 3.6 Validate buffer.top argument
     if (is.character(buffer.top) && length(buffer.top) == 1 && identical(buffer.top, "auto")) {
       buffer.top <- "auto"
     } else {
@@ -357,7 +403,7 @@ plot_means_validate <- function(mc,
       }
     }
   
-  # Validate save.as argument
+  # 3.7 Validate save.as argument
     save_as_is_default <- FALSE
     if (!is.null(save.as)) {
       if (!is.character(save.as) || length(save.as) != 1 || is.na(save.as) || !nzchar(save.as)) {
@@ -376,12 +422,21 @@ plot_means_validate <- function(mc,
       }
     }
   
-  # Resolve cluster argument (optional; for lm2(..., clusters=))
+  # 4. Resolve cluster argument (optional; for lm2(..., clusters=))
+  #   Accept both `cluster=` (documented) and `clusters=` (alias) in the user call.
+  #   If both are provided, error to avoid ambiguity.
     cluster_vec <- NULL
-    if (!is.null(cluster)) {
+    has_cluster_expr <- !is.null(mc$cluster) && !identical(mc$cluster, quote(NULL))
+    has_clusters_expr <- !is.null(mc$clusters) && !identical(mc$clusters, quote(NULL))
+    if (isTRUE(has_cluster_expr) && isTRUE(has_clusters_expr)) {
+      stop("plot_means(): use only one of `cluster=` or `clusters=` (not both)", call. = FALSE)
+    }
+    
+    cluster_expr <- if (isTRUE(has_cluster_expr)) mc$cluster else if (isTRUE(has_clusters_expr)) mc$clusters else NULL
+    if (!is.null(cluster_expr)) {
       cluster_resolved <- evaluate_variable_arguments(
-        arg_expr = mc$cluster,
-        arg_name = "cluster",
+        arg_expr = cluster_expr,
+        arg_name = if (isTRUE(has_clusters_expr)) "clusters" else "cluster",
         data = data,
         calling_env = calling_env,
         func_name = "plot_means",
@@ -423,6 +478,9 @@ plot_means_validate <- function(mc,
   )
 }
 
+
+
+#----------------------------------
 # plot_means_params: derive plotting parameters (levels/order, colors, legend layout, buffer.top) ----
 plot_means_params <- function(v, result, result_plot) {
   get_levels <- function(var_name, fallback_values) {
@@ -564,6 +622,9 @@ plot_means_params <- function(v, result, result_plot) {
   )
 }
 
+
+
+#----------------------------------
 # Internal helpers used by multiple plot_means_* functions ----
 plot_means_model_frame <- function(formula_eval, data, na.action, context = "model.frame") {
   mf <- tryCatch(
@@ -594,6 +655,9 @@ plot_means_span <- function(y_min, y_max) {
   span
 }
 
+
+
+#----------------------------------
 # plot_means_compute: expand to a full x1/x2/x3 grid, compute CIs, and build bar/layout vectors ----
 plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   x1_name <- v$x1_name
@@ -808,6 +872,9 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   )
 }
 
+
+
+#----------------------------------
 # plot_means_draw: render bars, CIs, labels, legend, and p-value annotations in base graphics ----
 plot_means_draw <- function(v,
                             params,
@@ -1107,10 +1174,11 @@ plot_means_draw <- function(v,
     labels <- paste0("n=", n_vals)
     neg    <- is.finite(heights) & heights < 0
     y_labs <- ifelse(neg, 0 - pad, 0 + pad)
+    n_cex <- 0.9 * values.cex
     
     # Split into two calls because adj y-component differs by sign of height
-    if (any(!neg)) graphics::text(x_centers_drawn[!neg], y_labs[!neg], labels[!neg], col = text_cols[!neg], cex = values.cex, adj = c(0.5, 0))
-    if (any(neg))  graphics::text(x_centers_drawn[neg],  y_labs[neg],  labels[neg],  col = text_cols[neg],  cex = values.cex, adj = c(0.5, 1))
+    if (any(!neg)) graphics::text(x_centers_drawn[!neg], y_labs[!neg], labels[!neg], col = text_cols[!neg], cex = n_cex, adj = c(0.5, 0))
+    if (any(neg))  graphics::text(x_centers_drawn[neg],  y_labs[neg],  labels[neg],  col = text_cols[neg],  cex = n_cex, adj = c(0.5, 1))
   }
   
   if (!identical(values.pos, "none") && length(x_centers_drawn) > 0) {
@@ -1203,6 +1271,9 @@ plot_means_draw <- function(v,
   invisible(NULL)
 }
 
+
+
+#----------------------------------
 # plot_means_compute_pvalues: run the default inferential tests and return p-values for annotation ----
 #   This is only used when `tests = "auto"`. It returns a small table with the exact
 #   comparisons needed by the plotting code (group labels, means, diffs, and p-values).
@@ -1247,6 +1318,21 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
     }
     fit
   }
+
+  ttest_x1 <- function(df_sub) {
+    out <- list(t.value = NA_real_, p.value = NA_real_)
+    if (nrow(df_sub) == 0) return(out)
+    if (!(".__y" %in% names(df_sub)) || !(".__x1" %in% names(df_sub))) return(out)
+    if (length(unique(df_sub$.__x1)) < 2) return(out)
+    tt <- tryCatch(
+      stats::t.test(.__y ~ .__x1, data = df_sub, var.equal = FALSE),
+      error = function(e) NULL
+    )
+    if (is.null(tt)) return(out)
+    out$t.value <- as.numeric(tt$statistic[[1]])
+    out$p.value <- as.numeric(tt$p.value)
+    out
+  }
   
   x1_levels <- params$x1_levels
   x2_levels <- params$x2_levels
@@ -1290,24 +1376,31 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
   
   # Scenario 1: x1 only, binary
     if (length(v$x_names) == 1 && x1_is_binary) {
-      fit <- p_lm2_x1(mf_tests[, c(".__y", ".__x1"), drop = FALSE])
-      tr <- get_term_row(fit, ".__x1")
-      if (!is.null(tr)) {
-        g1 <- group_label(x1_levels[1])
-        g2 <- group_label(x1_levels[2])
-        m1 <- mean_lookup(x1_levels[1])
-        m2 <- mean_lookup(x1_levels[2])
-        rows <- rbind(rows, data.frame(
-          group1 = g1,
-          group2 = g2,
-          mean1 = m1,
-          mean2 = m2,
-          diff = m2 - m1,
-          t.value = as.numeric(tr$t),
-          p.value = as.numeric(tr$p.value),
-          stringsAsFactors = FALSE
-        ))
+      df_sub <- mf_tests[, c(".__y", ".__x1"), drop = FALSE]
+      if (is.null(v$cluster_vec)) {
+        tt <- ttest_x1(df_sub)
+        t_val <- tt$t.value
+        p_val <- tt$p.value
+      } else {
+        fit <- p_lm2_x1(df_sub)
+        tr <- get_term_row(fit, ".__x1")
+        t_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$t)
+        p_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$p.value)
       }
+      g1 <- group_label(x1_levels[1])
+      g2 <- group_label(x1_levels[2])
+      m1 <- mean_lookup(x1_levels[1])
+      m2 <- mean_lookup(x1_levels[2])
+      rows <- rbind(rows, data.frame(
+        group1 = g1,
+        group2 = g2,
+        mean1 = m1,
+        mean2 = m2,
+        diff = m2 - m1,
+        t.value = t_val,
+        p.value = p_val,
+        stringsAsFactors = FALSE
+      ))
       return(rows)
     }
   
@@ -1315,9 +1408,16 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
     if (length(v$x_names) == 2 && x1_is_binary && x2_is_binary && x3_is_null) {
       for (x2v in x2_levels) {
         df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
-        fit <- p_lm2_x1(df_sub)
-        tr <- get_term_row(fit, ".__x1")
-        if (is.null(tr)) next
+        if (is.null(v$cluster_vec)) {
+          tt <- ttest_x1(df_sub)
+          t_val <- tt$t.value
+          p_val <- tt$p.value
+        } else {
+          fit <- p_lm2_x1(df_sub)
+          tr <- get_term_row(fit, ".__x1")
+          t_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$t)
+          p_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$p.value)
+        }
         
         g1 <- group_label(x1_levels[1], x2 = x2v)
         g2 <- group_label(x1_levels[2], x2 = x2v)
@@ -1329,12 +1429,13 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
           mean1 = m1,
           mean2 = m2,
           diff = m2 - m1,
-          t.value = as.numeric(tr$t),
-          p.value = as.numeric(tr$p.value),
+          t.value = t_val,
+          p.value = p_val,
           stringsAsFactors = FALSE
         ))
       }
       
+      # Interaction: always use lm2(), even when cluster is NULL
       fit_int <- if (is.null(v$cluster_vec)) {
         lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE])
       } else {
@@ -1361,9 +1462,16 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
     if (length(v$x_names) == 2 && x1_is_binary && !is.null(v$x2_name) && length(x2_levels) > 2 && x3_is_null) {
       for (x2v in x2_levels) {
         df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
-        fit <- p_lm2_x1(df_sub)
-        tr <- get_term_row(fit, ".__x1")
-        if (is.null(tr)) next
+        if (is.null(v$cluster_vec)) {
+          tt <- ttest_x1(df_sub)
+          t_val <- tt$t.value
+          p_val <- tt$p.value
+        } else {
+          fit <- p_lm2_x1(df_sub)
+          tr <- get_term_row(fit, ".__x1")
+          t_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$t)
+          p_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$p.value)
+        }
         
         g1 <- group_label(x1_levels[1], x2 = x2v)
         g2 <- group_label(x1_levels[2], x2 = x2v)
@@ -1375,8 +1483,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
           mean1 = m1,
           mean2 = m2,
           diff = m2 - m1,
-          t.value = as.numeric(tr$t),
-          p.value = as.numeric(tr$p.value),
+          t.value = t_val,
+          p.value = p_val,
           stringsAsFactors = FALSE
         ))
       }

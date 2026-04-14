@@ -8,7 +8,6 @@ plot_means(
   formula,
   data = NULL,
   order = NULL,
-  add = FALSE,
   legend.title = NULL,
   col = NULL,
   col.text = NULL,
@@ -27,9 +26,13 @@ plot_means(
 \arguments{
 \item{formula}{A formula like \code{y ~ x1}, \code{y ~ x1 + x2}, or
 \code{y ~ x1 + x2 + x3}. The left-hand side (y) must be numeric. Up to three
-grouping variables are supported. Bars for different \code{x1} values are
-shown side-by-side within each \code{(x2, x3)} block, with larger gaps
-separating \code{x2} and \code{x3} blocks.}
+grouping variables are supported. Here \code{x1} is the primary grouping
+variable (the side-by-side bars, e.g. control vs treatment), while \code{x2}
+and \code{x3} are optional secondary grouping variables that define blocks
+along the x-axis (e.g. low vs high moderator; online vs lab sample). Bars
+for different \code{x1} values are shown side-by-side within each
+\code{(x2, x3)} block, with larger gaps separating \code{x2} and \code{x3}
+blocks.}
 
 \item{data}{An optional data frame containing the variables in the formula.}
 
@@ -37,40 +40,59 @@ separating \code{x2} and \code{x3} blocks.}
 Use \code{-1} to reverse the default order, or provide a character vector
 with the desired order.}
 
-\item{add}{Logical. Reserved for future plotting (currently unused).}
-
 \item{legend.title}{Character string. Title for the legend. If \code{NULL},
-defaults to \code{x1} variable name.}
+no title is shown.}
 
 \item{col}{Color(s) for \code{x1} bars. If \code{NULL}, colors are chosen
-automatically using \code{get.colors(k)} where \code{k} is the number of
-unique \code{x1} values.}
+automatically.}
 
-\item{col.text}{Reserved for future plotting (currently unused). Default \code{NULL}.}
+\item{col.text}{Color for confidence intervals and other non-bar annotations.
+If \code{NULL}, defaults to a dark gray.}
 
-\item{cluster}{Reserved for future clustering support (currently unused). Default \code{NULL}.}
+\item{cluster}{Optional clustering variable for cluster-robust inference via
+\code{lm2(..., clusters=)}. May be a vector (same length as \code{nrow(data)})
+or a column name in \code{data}. When provided, confidence intervals and any
+regression-based p-values use clustered standard errors.
+When \code{NULL}, simple-effect p-values (difference in means) are computed
+using Welch \code{t.test()}.
+For convenience, \code{clusters=} is accepted as an alias for \code{cluster=}.}
 
-\item{values.cex}{Numeric. Size of the value labels drawn inside bars (default 1).}
+\item{values.cex}{Numeric scalar controlling text size for mean value labels
+(and related annotations).}
 
-\item{values.pos}{Character. Position for the mean value labels: \code{"top"} (default) draws labels inside the bar near the top; \code{"middle"} draws them in the middle of the bar; \code{"bottom"} draws them just above the \code{n=} label and prefixes the mean with \code{M=}; \code{"none"} suppresses them.}
+\item{values.pos}{Where to draw mean value labels: \code{"top"}, \code{"middle"},
+\code{"bottom"}, or \code{"none"}.}
 
-\item{values.round}{Numeric. Number of decimal places for mean value labels (default 1).}
+\item{values.round}{Non-negative integer. Number of decimal places for mean
+value labels.}
 
-\item{tests}{Character. If \code{"auto"} (default), compute and annotate p-values for supported scenarios (currently: binary x1; binary x1 and x2). If \code{"none"}, suppress tests/annotations.}
+\item{tests}{Either \code{"auto"} (default) to compute and annotate p-values for
+supported scenarios, or \code{"none"}.}
 
-\item{pvalue.cex}{Numeric. Size of p-value labels (default 0.9). Also used for the interaction p-value label.}
+\item{pvalue.cex}{Numeric scalar controlling p-value label size.}
 
-\item{pvalue.col}{Color for p-value labels and significance lines (default \code{"gray50"}).}
+\item{pvalue.col}{Color for p-value brackets/labels.}
 
-\item{buffer.top}{Either \code{"auto"} (default) or a numeric value. Extra vertical headroom (as a fraction of the data y-range) added above the maximum y value to make room for annotations. When \code{"auto"}, uses 0.35 when an interaction p-value is shown (scenario 2) and 0.25 otherwise.}
+\item{buffer.top}{Either \code{"auto"} (default) or a numeric value. Extra
+vertical headroom (as a fraction of the data y-range) added above the
+maximum y value to make room for annotations. When \code{"auto"}, uses 0.35
+when an interaction p-value is shown (scenario 2) and 0.25 otherwise.}
 
-\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default is \code{"plot_means.svg"}. If no folder is provided, the file is saved in \code{tempdir()}. When set, the plot is still drawn on screen and also saved to the file using fixed device dimensions. The export size is 6x6 inches for up to 4 bars, and increases the width by 1 inch for each additional pair of bars.}
+\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default
+is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
+\code{tempdir()}.}
 
 \item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
 \code{ylim}, \code{ylab}).}
 }
 \value{
-Returns a minimal list (invisibly) with the computed means table and plot inputs.
+A minimal list returned invisibly with two elements:
+\describe{
+  \item{\code{means}}{A data frame of means (and, when available, confidence intervals)
+    aligned to the plotting grid.}
+  \item{\code{means_comparisons}}{A data frame of comparisons used for p-value
+    annotation (or \code{NULL} if not applicable).}
+}
 }
 \description{
 Plots group means as a barplot and returns the summary table used.
@@ -86,5 +108,12 @@ df2 <- data.frame(
 )
 plot_means(y ~ x1 + x2, data = df2)
 
-}
+df3 <- data.frame(
+  y = rnorm(600),
+  x1 = rep(c("control", "treatment"), times = 300),
+  x2 = rep(rep(c("low", "high"), each = 150), times = 2),
+  x3 = rep(c("online", "lab"), each = 300)
+)
+plot_means(y ~ x1 + x2 + x3, data = df3)
 
+}
