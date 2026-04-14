@@ -110,7 +110,6 @@ plot_means <- function(formula,
     save_as_is_default <- v$save_as_is_default
 
   # 3. Compute descriptives (means) using desc_var()
-  #   Non-obvious: desc_var() needs the original unevaluated expression.
     result <- eval(call("desc_var", v$mc$formula, data = v$data), envir = v$calling_env)
 
   # 3.1 Normalize desc_var output for single grouping variable
@@ -184,6 +183,7 @@ plot_means <- function(formula,
       means$ciL <- NA_real_
       means$ciH <- NA_real_
       if (!is.null(ci_map) && is.data.frame(ci_map) && nrow(ci_map) > 0) {
+
         # 7.1 Join CIs onto the grid via the same stable cell key used in CI model
         x2_col <- if (is.null(x2_name)) ".x2" else x2_name
         x3_col <- if (is.null(x3_name)) ".x3" else x3_name
@@ -219,6 +219,8 @@ plot_means <- function(formula,
   # 7.2 Compute mean comparisons to report (matches what is drawn)
     means_comparisons <- plot_means_compute_pvalues(v = v, params = params, mean_results = means)
     
+
+    #what is returned by plot_means()
     out <- list2(
       means,
       means_comparisons
@@ -272,7 +274,7 @@ plot_means <- function(formula,
     invisible(out)
 }
 
-# plot_means_validate ----
+# plot_means_validate: evaluate NSE inputs, validate args, and normalize to a single list `v` ----
 plot_means_validate <- function(mc,
                                 data,
                                 order,
@@ -419,7 +421,7 @@ plot_means_validate <- function(mc,
   )
 }
 
-# plot_means_params ----
+# plot_means_params: derive plotting parameters (levels/order, colors, legend layout, buffer.top) ----
 plot_means_params <- function(v, result, result_plot) {
   get_levels <- function(var_name, fallback_values) {
     if (!is.null(v$data) && is.data.frame(v$data) && var_name %in% names(v$data) && is.factor(v$data[[var_name]])) {
@@ -439,6 +441,11 @@ plot_means_params <- function(v, result, result_plot) {
   x3_levels <- if (is.null(v$x3_name)) "All" else get_levels(v$x3_name, if (v$x3_name %in% names(result_plot)) result_plot[[v$x3_name]] else NULL)
   
   # Apply ordering to x1 only (controls bar order/colors)
+  #   `order` is interpreted as an instruction for the *within-block* series (x1):
+  #   it changes the left-to-right bar order and, by extension, the mapping of
+  #   `col_vec[i]` to the i-th x1 level. We do not reorder x2/x3 here because
+  #   those define block layout on the x-axis (reordering them would change the
+  #   overall panel/block arrangement rather than the series inside each block).
     if (!is.null(v$order)) {
       if (length(v$order) == 1 && is.numeric(v$order) && v$order == -1) {
         x1_levels <- rev(x1_levels)
@@ -515,6 +522,11 @@ plot_means_params <- function(v, result, result_plot) {
     }
   
   # Label disambiguation overlap set and formatter
+  #   When x2 and/or x3 are present, the same label text can appear in more than
+  #   one role (e.g., an x1 level "A" and an x2 level "A"). If we print raw levels
+  #   everywhere, axis labels become ambiguous. We precompute the set of labels
+  #   that overlap across x1/x2/x3 and, only for those, format as "var=level"
+  #   (e.g., "x2=A") to make the plot self-explanatory without being verbose.
     label_overlap_set <- character(0)
     if (!is.null(v$x2_name) || !is.null(v$x3_name)) {
       x1_lab <- as.character(x1_levels)
@@ -549,7 +561,7 @@ plot_means_params <- function(v, result, result_plot) {
   )
 }
 
-# plot_means_compute ----
+# plot_means_compute: expand to a full x1/x2/x3 grid, compute CIs, and build bar/layout vectors ----
 plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   x1_name <- v$x1_name
   x2_name <- v$x2_name
@@ -562,6 +574,7 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   format_level_label <- params$format_level_label
   
   # Build complete grid of combinations, keeping empty slots
+  #   Intent: preserve (x1,x2,x3) combinations with no observations so spacing and axes remain stable.
     result_key <- result_plot
     if (x1_name %in% names(result_key)) result_key[[x1_name]] <- as.character(result_key[[x1_name]])
     if (!is.null(x2_name) && x2_name %in% names(result_key)) result_key[[x2_name]] <- as.character(result_key[[x2_name]])
@@ -584,6 +597,7 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
     merged <- merge(grid_df, result_key, by = merge_by, all.x = TRUE, sort = FALSE)
   
   # Confidence intervals via dummy-coded lm2() (always)
+  #   Intent: a single model fit over cell indicators yields consistent CI computation (and supports clustering).
     ci_map <- NULL
     mf <- tryCatch(
       model.frame(v$formula_eval, data = v$data, na.action = na.pass),
@@ -644,6 +658,8 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
     }
   
   # Bar positions and block labels
+  #   Intent: compute x-positions once and return vectors used by the draw step.
+  #   Performance: use a pre-keyed `merged` lookup + pre-allocation to avoid O(n^2) scans and repeated vector growth.
     gap_x2 <- 1
     gap_x3 <- 2
     bar_width <- 1
@@ -766,7 +782,7 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   )
 }
 
-# plot_means_draw ----
+# plot_means_draw: render bars, CIs, labels, legend, and p-value annotations in base graphics ----
 plot_means_draw <- function(v,
                             params,
                             comp,
@@ -1176,10 +1192,15 @@ plot_means_draw <- function(v,
   invisible(NULL)
 }
 
-# plot_means_compute_pvalues ----
+# plot_means_compute_pvalues: run the default inferential tests and return p-values for annotation ----
+#   This is only used when `tests = "auto"`. It returns a small table with the exact
+#   comparisons needed by the plotting code (group labels, means, diffs, and p-values).
 plot_means_compute_pvalues <- function(v, params, mean_results) {
   if (!identical(v$tests, "auto")) return(NULL)
   
+  # Pull the relevant term row from the lm2() summary table.
+  #   Non-obvious: lm2() stores the coefficient table in an attribute ("statuser_table"),
+  #   and interaction term naming can vary, so we match by pattern.
   get_term_row <- function(fit, var_a, var_b = NULL, want_interaction = FALSE) {
     tab <- attr(fit, "statuser_table")
     if (is.null(tab) || !is.data.frame(tab) || !"term" %in% names(tab)) return(NULL)
@@ -1193,6 +1214,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
     tab[idx[1], , drop = FALSE]
   }
   
+  # Build the model frame once, applying the same NA filtering policy as the tests.
+  #   This keeps p-values consistent with the data actually available for inference.
   mf_tests <- tryCatch(model.frame(v$formula_eval, data = v$data, na.action = na.omit), error = function(e) NULL)
   if (is.null(mf_tests) || !is.data.frame(mf_tests) || nrow(mf_tests) == 0) return(NULL)
   
@@ -1211,6 +1234,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
     }
   }
   
+  # Fit helper that keeps the clustered and non-clustered paths in one place.
+  #   Returns the fitted model (or NA) so callers can extract the term row they need.
   p_lm2_x1 <- function(df_sub) {
     if (nrow(df_sub) == 0) return(NA_real_)
     fit <- if (is.null(v$cluster_vec)) {
@@ -1247,6 +1272,9 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
     as.numeric(val[1])
   }
   
+  # Output table: one row per displayed comparison
+  #   group1/group2 are plot labels (used to map to specific bars), and mean/diff are included
+  #   so the draw step can position p-value brackets relative to the bars.
   rows <- data.frame(
     group1 = character(0),
     group2 = character(0),
