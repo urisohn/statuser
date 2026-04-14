@@ -11,7 +11,6 @@
 #' @param order Controls the order of \code{x1} groups (bar order and colors).
 #'   Use \code{-1} to reverse the default order, or provide a character vector
 #'   with the desired order.
-#' @param add Logical. Reserved for future plotting (currently unused).
 #' @param legend.title Character string. Title for the legend. If \code{NULL},
 #'   no title is shown.
 #' @param col Color(s) for \code{x1} bars. If \code{NULL}, colors are chosen
@@ -44,10 +43,18 @@
 #' plot_means(y ~ x1 + x2, data = df2)
 #'
 #' @export
+#'
+#: 1 plot_means: validate -> descriptives -> params -> compute -> draw -> output/export
+#: 2 plot_means_validate: NSE-safe arg evaluation + input validation/normalization
+#: 3 plot_means_params: derive factor levels/order, colors, legend layout, buffer.top
+#: 4 plot_means_compute: build full grid, compute CIs, and bar/layout vectors used for plotting
+#: 5 plot_means_draw: render the plot in base graphics (bars, CIs, labels, legend, p-values)
+#: 6 plot_means_compute_pvalues: compute and format p-values shown on the plot (scenario-specific)
+
+# plot_means (exported) ----
 plot_means <- function(formula,
                        data = NULL,
                        order = NULL,
-                       add = FALSE,
                        legend.title = NULL,
                        col = NULL,
                        col.text = NULL,
@@ -61,16 +68,16 @@ plot_means <- function(formula,
                        buffer.top = "auto",
                        save.as = "plot_means.svg",
                        ...) {
-  #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
+  # 2. Validate + normalize inputs (NSE-safe)
+  #   (mc must be captured before anything is evaluated)
     mc <- match.call()
     calling_env <- parent.frame()
 
-  #1. Validate and normalize inputs
+  # 2.1 Validate and normalize inputs
     v <- plot_means_validate(
       mc = mc,
       data = data,
       order = order,
-      add = add,
       legend.title = legend.title,
       col = col,
       col.text = col.text,
@@ -102,19 +109,20 @@ plot_means <- function(formula,
     save.as <- v$save.as
     save_as_is_default <- v$save_as_is_default
 
-  #2. Compute descriptives (means) using desc_var()
+  # 3. Compute descriptives (means) using desc_var()
+  #   Non-obvious: desc_var() needs the original unevaluated expression.
     result <- eval(call("desc_var", v$mc$formula, data = v$data), envir = v$calling_env)
 
-  #3. Normalize desc_var output for single grouping variable
+  # 3.1 Normalize desc_var output for single grouping variable
     result_plot <- result
     if (length(x_names) == 1 && "group" %in% names(result_plot) && !(x1_name %in% names(result_plot))) {
       result_plot[[x1_name]] <- as.character(result_plot$group)
     }
 
-  #3b. CI settings (always computed)
+  # 3.2 CI settings (always computed)
     ci_level <- 0.95
 
-  #4-6. Levels, ordering, colors, legend layout, buffer
+  # 4. Levels/order/colors/buffer/legend layout (derived from data + args)
     params <- plot_means_params(v, result = result, result_plot = result_plot)
     result <- params$result
     x1_levels <- params$x1_levels
@@ -126,7 +134,7 @@ plot_means <- function(formula,
     buffer_top_effective <- params$buffer_top_effective
     format_level_label <- params$format_level_label
 
-  #7-8. Grid/CI computation and bar layout
+  # 5. Grid/CI computation and bar layout
     comp <- plot_means_compute(v, params = params, result_plot = result_plot, ci_level = ci_level)
     merged <- comp$merged
     ci_map <- comp$ci_map
@@ -146,7 +154,7 @@ plot_means <- function(formula,
     bar_width <- comp$bar_width
     bar_step <- comp$bar_step
 
-  #9. Draw plot
+  # 6. Draw plot
     plot_means_draw(
       v = v,
       params = params,
@@ -168,449 +176,15 @@ plot_means <- function(formula,
       buffer_top_effective = buffer_top_effective,
       ...
     )
-    
-    if (FALSE) {
-    dots <- list(...)
-    y_max <- max(heights, na.rm = TRUE)
-    if (!is.finite(y_max)) y_max <- 1
-    y_min <- min(0, min(heights, na.rm = TRUE))
-    if (!is.finite(y_min)) y_min <- 0
-    
-    # Expand range to include CI whiskers when available
-      if (!is.null(ci_map) && nrow(ci_map) > 0) {
-        y_min_ci <- suppressWarnings(min(ci_map$lwr, na.rm = TRUE))
-        y_max_ci <- suppressWarnings(max(ci_map$upr, na.rm = TRUE))
-        if (is.finite(y_min_ci)) y_min <- min(y_min, y_min_ci)
-        if (is.finite(y_max_ci)) y_max <- max(y_max, y_max_ci)
-      }
 
-    if (!"xlab" %in% names(dots)) dots$xlab <- ""
-    
-    # If we have x2 but not x3, show x2 name as x-axis label (centered)
-      if (is.null(x3_name) && !is.null(x2_name) && nzchar(x2_name) && identical(dots$xlab, "")) {
-        dots$xlab <- x2_name
-      }
-    if (!"ylab" %in% names(dots)) dots$ylab <- "Mean"
-    if (!"main" %in% names(dots)) dots$main <- paste0("Means of ", y_name)
-    # Add headroom for annotations, but keep y-axis ticks based on the
-    # unbuffered data range (so extra space doesn't add extra tick marks).
-      y_span_data <- (y_max - y_min)
-      if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- abs(y_max)
-      if (!is.finite(y_span_data) || y_span_data <= 0) y_span_data <- 1
-      ylim_top <- y_max + buffer_top_effective * y_span_data
-      if (!"ylim" %in% names(dots)) dots$ylim <- c(y_min, ylim_top)
-    if (!"xlim" %in% names(dots)) dots$xlim <- c(0, x_pos)
-    if (!"las" %in% names(dots)) dots$las <- 1
-    if (!"font.lab" %in% names(dots)) dots$font.lab <- 2
-    if (!"cex.lab" %in% names(dots)) dots$cex.lab <- 1.2
-    if (!"cex.main" %in% names(dots)) dots$cex.main <- 1.38
 
-    dots$type <- "n"
-    dots$xaxt <- "n"
-    
-    user_provided_yaxt <- "yaxt" %in% names(dots)
-    if (!user_provided_yaxt) dots$yaxt <- "n"
-
-    plot_args <- c(list(x = 0, y = 0), dots)
-    do.call(plot, plot_args)
-    
-    # Draw y-axis ticks without including the extra headroom
-      if (!user_provided_yaxt && (is.null(dots$axes) || isTRUE(dots$axes))) {
-        y_ticks <- pretty(c(y_min, y_max), n = 5)
-        y_ticks <- y_ticks[y_ticks >= y_min & y_ticks <= y_max + 1e-9]
-        axis(2, at = y_ticks, las = 1)
-      }
-
-    if (length(heights)) {
-      rect(x_lefts, 0, x_rights, heights, col = cols, border = cols)
-    }
-
-    # Compute label colors based on bar fill (shared by n= and mean labels)
-      lum <- function(col_one) {
-        rgb <- grDevices::col2rgb(col_one)
-        as.numeric((0.299 * rgb[1, ] + 0.587 * rgb[2, ] + 0.114 * rgb[3, ]) / 255)
-      }
-      text_cols <- ifelse(sapply(cols, lum) < 0.5, "white", "black")
-    
-    # Error bars
-      if (!is.null(ci_map) && nrow(ci_map) > 0 && length(x_centers_drawn) == length(cell_keys_drawn)) {
-        eb_col <- if (!is.null(col.text)) col.text else "gray20"
-        cap <- bar_width * 0.08
-        match_idx <- match(cell_keys_drawn, ci_map$cell_key)
-        ok <- !is.na(match_idx)
-        if (any(ok)) {
-          lwr <- ci_map$lwr[match_idx[ok]]
-          upr <- ci_map$upr[match_idx[ok]]
-          x_ok <- x_centers_drawn[ok]
-          
-          ok2 <- is.finite(lwr) & is.finite(upr)
-          if (any(ok2)) {
-            x_ok <- x_ok[ok2]
-            lwr <- lwr[ok2]
-            upr <- upr[ok2]
-            
-            segments(x_ok, lwr, x_ok, upr, col = eb_col)
-            segments(x_ok - cap, lwr, x_ok + cap, lwr, col = eb_col)
-            segments(x_ok - cap, upr, x_ok + cap, upr, col = eb_col)
-          }
-        }
-      }
-
-    # Automatic tests and p-value annotations (limited scenarios)
-      if (identical(tests, "auto")) {
-        format_p_expr <- function(p, digits = 3) {
-          if (!is.finite(p)) return(NULL)
-          min_threshold <- 10^(-digits)
-          max_threshold <- 1 - 10^(-digits)
-          # NOTE: plotmath numeric literals cannot start with '.' (e.g., '.005' is invalid).
-          # So we keep the leading zero for expressions.
-          min_str <- format(min_threshold, nsmall = digits, scientific = FALSE)
-          max_str <- format(max_threshold, nsmall = digits, scientific = FALSE)
-          
-          if (p < min_threshold) {
-            return(as.expression(parse(text = paste0("italic(p) < ", min_str))))
-          }
-          if (p > max_threshold) {
-            return(as.expression(parse(text = paste0("italic(p) > ", max_str))))
-          }
-          
-          p_clean <- round(p, digits)
-          p_str <- format(p_clean, nsmall = digits, scientific = FALSE)
-          as.expression(parse(text = paste0("italic(p) == ", p_str)))
-        }
-        
-        get_p_for_term <- function(fit, var_a, var_b = NULL, want_interaction = FALSE) {
-          tab <- attr(fit, "statuser_table")
-          if (is.null(tab) || !is.data.frame(tab) || !"term" %in% names(tab) || !"p.value" %in% names(tab)) {
-            return(NA_real_)
-          }
-          terms <- as.character(tab$term)
-          if (want_interaction) {
-            idx <- which(grepl(":", terms) & grepl(var_a, terms) & grepl(var_b, terms))
-          } else {
-            idx <- which(grepl(paste0("^", var_a), terms))
-          }
-          if (!length(idx)) return(NA_real_)
-          as.numeric(tab$p.value[idx[1]])
-        }
-        
-        # Helper to compute a robust lm2 p-value for y ~ x1 (optionally clustered)
-          p_lm2_x1 <- function(df_sub) {
-            if (nrow(df_sub) == 0) return(NA_real_)
-            fit <- if (is.null(cluster)) {
-              lm2(.__y ~ .__x1, data = df_sub)
-            } else {
-              lm2(.__y ~ .__x1, data = df_sub, clusters = cluster)
-            }
-            get_p_for_term(fit, ".__x1")
-          }
-        
-        # Determine scenario based on number of grouping vars and binary checks
-          x1_is_binary <- length(x1_levels) == 2
-          x2_is_binary <- !is.null(x2_name) && length(x2_levels) == 2
-          x3_is_null <- is.null(x3_name)
-        
-        # Prepare model frame for tests (aligned with original formula vars)
-          mf_tests <- tryCatch(model.frame(formula, data = data, na.action = na.omit), error = function(e) NULL)
-        
-        if (!is.null(mf_tests) && is.data.frame(mf_tests) && nrow(mf_tests) > 0) {
-          names(mf_tests)[1] <- ".__y"
-          mf_tests$.__x1 <- as.factor(mf_tests[[x1_name]])
-          if (!is.null(x2_name)) mf_tests$.__x2 <- as.factor(mf_tests[[x2_name]])
-          
-          # Scenario 1: x1 only, binary
-            if (length(x_names) == 1 && x1_is_binary) {
-              p1 <- p_lm2_x1(mf_tests[, c(".__y", ".__x1"), drop = FALSE])
-              p1_txt <- format_p_expr(p1, digits = 3)
-              
-              k1 <- paste0(x1_levels[1], "|All|All")
-              k2 <- paste0(x1_levels[2], "|All|All")
-              i1 <- match(k1, cell_keys_drawn)
-              i2 <- match(k2, cell_keys_drawn)
-              if (is.finite(i1) && is.finite(i2)) {
-                xA <- x_centers_drawn[i1]
-                xB <- x_centers_drawn[i2]
-                x_mid <- mean(c(xA, xB))
-                
-                # y position based on CI uppers (if available)
-                  y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
-                  if (!is.null(ci_map) && nrow(ci_map) > 0) {
-                    mi <- match(c(k1, k2), ci_map$cell_key)
-                    if (all(!is.na(mi))) {
-                      y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
-                    }
-                  }
-                  y_span <- diff(par("usr")[3:4])
-                  y <- y_base + 0.06 * y_span
-                  tick <- 0.015 * y_span
-                
-                segments(xA, y, xB, y, col = pvalue.col)
-                segments(xA, y - tick, xA, y, col = pvalue.col)
-                segments(xB, y - tick, xB, y, col = pvalue.col)
-                if (!is.null(p1_txt)) text2(x_mid, y + 0.03 * y_span, p1_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
-              }
-            }
-          
-          # Scenario 2: x1 and x2, both binary, no x3
-            if (length(x_names) == 2 && x1_is_binary && x2_is_binary && x3_is_null) {
-              # Pairwise p-values by x2 level
-                p_by_x2 <- sapply(x2_levels, function(x2v) {
-                  df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
-                  p_lm2_x1(df_sub)
-                })
-                p_txt <- lapply(p_by_x2, format_p_expr, digits = 3)
-              
-              # Interaction p-value from y ~ x1 * x2
-                fit_int <- if (is.null(cluster)) {
-                  lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE])
-                } else {
-                  lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE], clusters = cluster)
-                }
-                p_int <- get_p_for_term(fit_int, ".__x1", ".__x2", want_interaction = TRUE)
-                p_int_txt <- format_p_expr(p_int, digits = 3)
-              
-              # Draw brackets for each x2 pair
-                y_span <- diff(par("usr")[3:4])
-                tick <- 0.015 * y_span
-                y_tops <- numeric(length(x2_levels))
-                x_mids <- numeric(length(x2_levels))
-                
-                for (j in seq_along(x2_levels)) {
-                  x2v <- x2_levels[j]
-                  k1 <- paste0(x1_levels[1], "|", x2v, "|All")
-                  k2 <- paste0(x1_levels[2], "|", x2v, "|All")
-                  i1 <- match(k1, cell_keys_drawn)
-                  i2 <- match(k2, cell_keys_drawn)
-                  if (!is.finite(i1) || !is.finite(i2)) next
-                  
-                  xA <- x_centers_drawn[i1]
-                  xB <- x_centers_drawn[i2]
-                  x_mids[j] <- mean(c(xA, xB))
-                  
-                  y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
-                  if (!is.null(ci_map) && nrow(ci_map) > 0) {
-                    mi <- match(c(k1, k2), ci_map$cell_key)
-                    if (all(!is.na(mi))) {
-                      y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
-                    }
-                  }
-                  
-                  y <- y_base + 0.06 * y_span
-                  y_tops[j] <- y
-                  
-                  segments(xA, y, xB, y, col = pvalue.col)
-                  segments(xA, y - tick, xA, y, col = pvalue.col)
-                  segments(xB, y - tick, xB, y, col = pvalue.col)
-                  if (!is.null(p_txt[[j]])) text2(x_mids[j], y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
-                }
-              
-              # Interaction annotation: connect midpoints + label above
-                if (all(is.finite(x_mids)) && all(is.finite(y_tops)) && !is.null(p_int_txt)) {
-                  x_int <- mean(x_mids)
-                  y_line <- max(y_tops) + 0.06 * y_span
-                  y_lab <- y_line + 0.025 * y_span
-                  
-                  # Shorter vertical connectors for interaction annotation
-                  y_line_from <- max(y_tops) + 0.05 * y_span
-                  segments(x_mids[1], y_line_from, x_mids[1], y_line, col = pvalue.col)
-                  segments(x_mids[2], y_line_from, x_mids[2], y_line, col = pvalue.col)
-                  segments(x_mids[1], y_line, x_mids[2], y_line, col = pvalue.col)
-                  text2(x_int, y_lab, p_int_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
-                }
-            }
-          
-          # Scenario 3: x1 binary, x2 has >2 levels, no x3 (simple effects only)
-            if (length(x_names) == 2 && x1_is_binary && !is.null(x2_name) && length(x2_levels) > 2 && x3_is_null) {
-              # Pairwise p-values by x2 level (compare x1 within each x2)
-                p_by_x2 <- sapply(x2_levels, function(x2v) {
-                  df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
-                  p_lm2_x1(df_sub)
-                })
-                p_txt <- lapply(p_by_x2, format_p_expr, digits = 3)
-              
-              # Draw brackets for each x2 level; no interaction annotation
-                y_span <- diff(par("usr")[3:4])
-                tick <- 0.015 * y_span
-                
-                for (j in seq_along(x2_levels)) {
-                  x2v <- x2_levels[j]
-                  k1 <- paste0(x1_levels[1], "|", x2v, "|All")
-                  k2 <- paste0(x1_levels[2], "|", x2v, "|All")
-                  i1 <- match(k1, cell_keys_drawn)
-                  i2 <- match(k2, cell_keys_drawn)
-                  if (!is.finite(i1) || !is.finite(i2)) next
-                  
-                  xA <- x_centers_drawn[i1]
-                  xB <- x_centers_drawn[i2]
-                  x_mid <- mean(c(xA, xB))
-                  
-                  y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
-                  if (!is.null(ci_map) && nrow(ci_map) > 0) {
-                    mi <- match(c(k1, k2), ci_map$cell_key)
-                    if (all(!is.na(mi))) {
-                      y_base <- max(y_base, ci_map$upr[mi], na.rm = TRUE)
-                    }
-                  }
-                  
-                  y <- y_base + 0.06 * y_span
-                  
-                  segments(xA, y, xB, y, col = pvalue.col)
-                  segments(xA, y - tick, xA, y, col = pvalue.col)
-                  segments(xB, y - tick, xB, y, col = pvalue.col)
-                  if (!is.null(p_txt[[j]])) text2(x_mid, y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
-                }
-            }
-        }
-      }
-    
-    # n labels inside each bar (bottom)
-      if (length(x_centers_drawn) > 0 && length(n_total_drawn) == length(x_centers_drawn)) {
-        usr <- par("usr")
-        pad <- 0.02 * (usr[4] - usr[3])
-        
-        labels <- character(length(x_centers_drawn))
-        y_labs <- numeric(length(x_centers_drawn))
-        adjs <- vector("list", length(x_centers_drawn))
-        for (i in seq_along(x_centers_drawn)) {
-          n_i <- n_total_drawn[i]
-          if (!is.finite(n_i)) n_i <- NA
-          
-          labels[i] <- paste0("n=", n_i)
-          
-          # Place inside the bar at the bottom (near the baseline)
-          if (is.finite(heights[i]) && heights[i] < 0) {
-            y_labs[i] <- 0 - pad
-            adjs[[i]] <- c(0.5, 1)
-          } else {
-            y_labs[i] <- 0 + pad
-            adjs[[i]] <- c(0.5, 0)
-          }
-        }
-        
-        for (i in seq_along(x_centers_drawn)) {
-          graphics::text(
-            x = x_centers_drawn[i],
-            y = y_labs[i],
-            labels = labels[i],
-            col = text_cols[i],
-            cex = values.cex,
-            adj = adjs[[i]]
-          )
-        }
-      }
-    
-    # Mean value labels using text2() with bar-colored background
-      if (!identical(values.pos, "none") && length(x_centers_drawn) > 0) {
-        usr <- par("usr")
-        pad_top <- 0.03 * (usr[4] - usr[3])
-        pad_bot <- 0.06 * (usr[4] - usr[3])
-        
-        mean_labels <- character(length(x_centers_drawn))
-        y_mean <- numeric(length(x_centers_drawn))
-        for (i in seq_along(x_centers_drawn)) {
-          if (identical(values.pos, "bottom")) {
-            mean_labels[i] <- paste0("M=", formatC(heights[i], format = "f", digits = values.round))
-          } else {
-            mean_labels[i] <- formatC(heights[i], format = "f", digits = values.round)
-          }
-          
-          if (identical(values.pos, "top")) {
-            if (is.finite(heights[i]) && heights[i] < 0) {
-              # Negative bar: top is near 0
-              y_mean[i] <- 0 - pad_top
-            } else {
-              y_mean[i] <- heights[i] - pad_top
-            }
-          } else if (identical(values.pos, "middle")) {
-            # Middle of the bar (halfway between 0 and mean)
-            y_mean[i] <- heights[i] / 2
-          } else if (identical(values.pos, "bottom")) {
-            # Just above the n= label inside the bar
-            if (is.finite(heights[i]) && heights[i] < 0) {
-              y_mean[i] <- 0 - pad_top
-            } else {
-              y_mean[i] <- 0 + pad_bot
-            }
-          }
-        }
-        
-        for (i in seq_along(x_centers_drawn)) {
-          text2(
-            x = x_centers_drawn[i],
-            y = y_mean[i],
-            labels = mean_labels[i],
-            bg = cols[i],
-            cex = values.cex,
-            col = text_cols[i],
-            pad = 0,
-            pad_v = 0
-          )
-        }
-      }
-
-    # X-axis labels: use mtext() for both variable names and values so they are
-    # vertically aligned (same 'line').
-      usr <- par("usr")
-      x_left <- usr[1] - 0.03 * (usr[2] - usr[1])
-      old_xpd <- par("xpd")
-      par(xpd = NA)
-      on.exit(par(xpd = old_xpd), add = TRUE)
-      
-      if (is.null(x2_name) || !nzchar(x2_name)) {
-        axis(1, at = block_centers, labels = block_labels, las = 1)
-      } else {
-        if (is.null(x3_name) || !nzchar(x3_name)) {
-          axis(1, at = block_centers, labels = block_labels, las = 1)
-        } else {
-          # Draw ticks only, then draw both name and values with mtext() on same line
-            axis(1, at = block_centers, labels = FALSE, las = 1)
-            mtext(x2_name, side = 1, at = x_left, adj = 0, line = 1, font = 2, cex = 1.17)
-            mtext(block_labels, side = 1, at = block_centers, line = 1, cex = 1.17)
-            
-            mtext(x3_name, side = 1, at = x_left, adj = 0, line = 2.5, font = 2, cex = 1.17)
-            mtext(x3_section_labels, side = 1, at = x3_section_centers, line = 2.5, font = 2, cex = 1.17)
-        }
-      }
-
-    if (k > 1) {
-      # Add extra spacing so larger markers don't overlap text
-        tw <- suppressWarnings(max(strwidth(x1_levels, cex = 1.3), na.rm = TRUE))
-        if (!is.finite(tw)) tw <- 0
-        gap_w <- suppressWarnings(strwidth("      ", cex = 1.3))
-        if (!is.finite(gap_w)) gap_w <- 0
-      legend_args <- list(
-        "top",
-        legend = x1_levels,
-        pch = 15,
-        col = col,
-        bty = "n",
-        inset = 0.01,
-        cex = 1.15,
-        pt.cex = 2,
-        x.intersp = 1.2,
-        # text.width controls the per-entry width in horizontal legends
-        # so this increases the gap between label blocks (A vs B).
-        text.width = tw + gap_w,
-        horiz = legend_horiz
-      )
-      if (!legend_horiz) {
-        legend_args$text.width <- NULL
-        legend_args$x.intersp <- 1.2
-      }
-      if (!is.null(legend.title)) {
-        legend_args$title <- legend.title
-        legend_args$title.font <- 2
-      }
-      do.call(legend, legend_args)
-    }
-    }
-
-  #10. Prepare minimal output (returned invisibly)
+  # 7. Prepare minimal output (returned invisibly)
     # Build one output table aligned with the plotting grid (keeps missing combos)
       means <- merged
       means$ciL <- NA_real_
       means$ciH <- NA_real_
       if (!is.null(ci_map) && is.data.frame(ci_map) && nrow(ci_map) > 0) {
+        # 7.1 Join CIs onto the grid via the same stable cell key used in CI model
         x2_col <- if (is.null(x2_name)) ".x2" else x2_name
         x3_col <- if (is.null(x3_name)) ".x3" else x3_name
         
@@ -642,7 +216,7 @@ plot_means <- function(formula,
       keep_cols <- keep_cols[keep_cols %in% names(means)]
       means <- means[, keep_cols, drop = FALSE]
     
-  #10b. Compute p-values to report
+  # 7.2 Compute mean comparisons to report (matches what is drawn)
     means_comparisons <- plot_means_compute_pvalues(v = v, params = params, mean_results = means)
     
     out <- list2(
@@ -650,7 +224,7 @@ plot_means <- function(formula,
       means_comparisons
     )
   
-  #11. Optional export (plot still shown on screen)
+  # 7.3 Optional export (plot is still shown on screen)
     if (!is.null(save.as)) {
       headless_dev <- (grDevices::dev.cur() == 1L)
       tmp_dev_file <- NULL
@@ -698,10 +272,10 @@ plot_means <- function(formula,
     invisible(out)
 }
 
+# plot_means_validate ----
 plot_means_validate <- function(mc,
                                 data,
                                 order,
-                                add,
                                 legend.title,
                                 col,
                                 col.text,
@@ -798,6 +372,25 @@ plot_means_validate <- function(mc,
       }
     }
   
+  # Resolve cluster argument (optional; for lm2(..., clusters=))
+    cluster_vec <- NULL
+    if (!is.null(cluster)) {
+      cluster_resolved <- evaluate_variable_arguments(
+        arg_expr = mc$cluster,
+        arg_name = "cluster",
+        data = data,
+        calling_env = calling_env,
+        func_name = "plot_means",
+        allow_null = TRUE
+      )
+      cluster_vec <- cluster_resolved$value
+      if (!is.null(cluster_vec)) {
+        if (!is.atomic(cluster_vec) || length(cluster_vec) == 0) {
+          stop("plot_means(): 'cluster' must be a vector (or a column name in 'data')", call. = FALSE)
+        }
+      }
+    }
+  
   list2(
     mc,
     formula_eval,
@@ -808,11 +401,11 @@ plot_means_validate <- function(mc,
     x3_name,
     data,
     order,
-    add,
     legend.title,
     col,
     col.text,
     cluster,
+    cluster_vec,
     values.cex,
     values.pos,
     values.round,
@@ -826,6 +419,7 @@ plot_means_validate <- function(mc,
   )
 }
 
+# plot_means_params ----
 plot_means_params <- function(v, result, result_plot) {
   get_levels <- function(var_name, fallback_values) {
     if (!is.null(v$data) && is.data.frame(v$data) && var_name %in% names(v$data) && is.factor(v$data[[var_name]])) {
@@ -955,6 +549,7 @@ plot_means_params <- function(v, result, result_plot) {
   )
 }
 
+# plot_means_compute ----
 plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   x1_name <- v$x1_name
   x2_name <- v$x2_name
@@ -1001,6 +596,18 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
       if (is.null(x2_name)) df_m$.x2 <- "All" else df_m[[x2_name]] <- as.character(df_m[[x2_name]])
       if (is.null(x3_name)) df_m$.x3 <- "All" else df_m[[x3_name]] <- as.character(df_m[[x3_name]])
       
+      if (!is.null(v$cluster_vec)) {
+        if (!is.null(v$data) && is.data.frame(v$data) && length(v$cluster_vec) == nrow(v$data)) {
+          idx <- suppressWarnings(as.integer(rownames(df_m)))
+          if (anyNA(idx)) idx <- seq_len(nrow(df_m))
+          df_m$.__cluster <- v$cluster_vec[idx]
+        } else if (length(v$cluster_vec) == nrow(df_m)) {
+          df_m$.__cluster <- v$cluster_vec
+        } else {
+          stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
+        }
+      }
+      
       x2_col <- if (is.null(x2_name)) ".x2" else x2_name
       x3_col <- if (is.null(x3_name)) ".x3" else x3_name
       
@@ -1014,10 +621,10 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
         df_m$cell_key <- paste(df_m[[x1_name]], df_m[[x2_col]], df_m[[x3_col]], sep = "|")
         df_m$cell_factor <- factor(df_m$cell_key)
         
-        fit <- if (is.null(v$cluster)) {
+        fit <- if (is.null(v$cluster_vec)) {
           lm2(.__y ~ 0 + cell_factor, data = df_m)
         } else {
-          lm2(.__y ~ 0 + cell_factor, data = df_m, clusters = v$cluster)
+          lm2(.__y ~ 0 + cell_factor, data = df_m, clusters = df_m$.__cluster)
         }
         
         newdata <- data.frame(cell_factor = levels(df_m$cell_factor))
@@ -1128,6 +735,7 @@ plot_means_compute <- function(v, params, result_plot, ci_level = 0.95) {
   )
 }
 
+# plot_means_draw ----
 plot_means_draw <- function(v,
                             params,
                             comp,
@@ -1243,6 +851,31 @@ plot_means_draw <- function(v,
   }
   
   if (identical(tests, "auto")) {
+    pvalue_line <- function(x0, x1, y, p) {
+      n <- max(length(x0), length(x1), length(y), length(p))
+      x0 <- rep_len(x0, n)
+      x1 <- rep_len(x1, n)
+      y <- rep_len(y, n)
+      p <- rep_len(p, n)
+      
+      y_span <- diff(par("usr")[3:4])
+      tick <- 0.015 * y_span
+      
+      segments(x0, y, x1, y, col = pvalue.col)
+      segments(x0, y - tick, x0, y, col = pvalue.col)
+      segments(x1, y - tick, x1, y, col = pvalue.col)
+      
+      x_mid <- (x0 + x1) / 2
+      for (i in seq_len(n)) {
+        p_txt <- format_p_expr(p[i], digits = 3)
+        if (!is.null(p_txt)) {
+          text2(x_mid[i], y[i] + 0.03 * y_span, p_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
+        }
+      }
+      
+      invisible(NULL)
+    }
+    
     format_p_expr <- function(p, digits = 3) {
       if (!is.finite(p)) return(NULL)
       min_threshold <- 10^(-digits)
@@ -1273,10 +906,10 @@ plot_means_draw <- function(v,
     
     p_lm2_x1 <- function(df_sub) {
       if (nrow(df_sub) == 0) return(NA_real_)
-      fit <- if (is.null(v$cluster)) {
+      fit <- if (is.null(v$cluster_vec)) {
         lm2(.__y ~ .__x1, data = df_sub)
       } else {
-        lm2(.__y ~ .__x1, data = df_sub, clusters = v$cluster)
+        lm2(.__y ~ .__x1, data = df_sub, clusters = df_sub$.__cluster)
       }
       get_p_for_term(fit, ".__x1")
     }
@@ -1287,10 +920,20 @@ plot_means_draw <- function(v,
       names(mf_tests)[1] <- ".__y"
       mf_tests$.__x1 <- as.factor(mf_tests[[x1_name]])
       if (!is.null(v$x2_name)) mf_tests$.__x2 <- as.factor(mf_tests[[v$x2_name]])
+      if (!is.null(v$cluster_vec)) {
+        if (!is.null(v$data) && is.data.frame(v$data) && length(v$cluster_vec) == nrow(v$data)) {
+          idx <- suppressWarnings(as.integer(rownames(mf_tests)))
+          if (anyNA(idx)) idx <- seq_len(nrow(mf_tests))
+          mf_tests$.__cluster <- v$cluster_vec[idx]
+        } else if (length(v$cluster_vec) == nrow(mf_tests)) {
+          mf_tests$.__cluster <- v$cluster_vec
+        } else {
+          stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
+        }
+      }
       
       if (length(v$x_names) == 1 && x1_is_binary) {
         p1 <- p_lm2_x1(mf_tests[, c(".__y", ".__x1"), drop = FALSE])
-        p1_txt <- format_p_expr(p1, digits = 3)
         
         k1 <- paste0(x1_levels[1], "|All|All")
         k2 <- paste0(x1_levels[2], "|All|All")
@@ -1299,7 +942,6 @@ plot_means_draw <- function(v,
         if (is.finite(i1) && is.finite(i2)) {
           xA <- x_centers_drawn[i1]
           xB <- x_centers_drawn[i2]
-          x_mid <- mean(c(xA, xB))
           
           y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
           if (!is.null(ci_map) && nrow(ci_map) > 0) {
@@ -1308,12 +950,8 @@ plot_means_draw <- function(v,
           }
           y_span <- diff(par("usr")[3:4])
           y <- y_base + 0.06 * y_span
-          tick <- 0.015 * y_span
           
-          segments(xA, y, xB, y, col = pvalue.col)
-          segments(xA, y - tick, xA, y, col = pvalue.col)
-          segments(xB, y - tick, xB, y, col = pvalue.col)
-          if (!is.null(p1_txt)) text2(x_mid, y + 0.03 * y_span, p1_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
+          pvalue_line(x0 = xA, x1 = xB, y = y, p = p1)
         }
       }
       
@@ -1326,18 +964,16 @@ plot_means_draw <- function(v,
           df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
           p_lm2_x1(df_sub)
         })
-        p_txt <- lapply(p_by_x2, format_p_expr, digits = 3)
         
-        fit_int <- if (is.null(v$cluster)) {
+        fit_int <- if (is.null(v$cluster_vec)) {
           lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE])
         } else {
-          lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE], clusters = v$cluster)
+          lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2", ".__cluster"), drop = FALSE], clusters = mf_tests$.__cluster)
         }
         p_int <- get_p_for_term(fit_int, ".__x1", ".__x2", want_interaction = TRUE)
         p_int_txt <- format_p_expr(p_int, digits = 3)
         
         y_span <- diff(par("usr")[3:4])
-        tick <- 0.015 * y_span
         y_tops <- rep(NA_real_, length(x2_levels))
         x_mids <- rep(NA_real_, length(x2_levels))
         
@@ -1361,11 +997,7 @@ plot_means_draw <- function(v,
           
           y <- y_base + 0.06 * y_span
           y_tops[j] <- y
-          
-          segments(xA, y, xB, y, col = pvalue.col)
-          segments(xA, y - tick, xA, y, col = pvalue.col)
-          segments(xB, y - tick, xB, y, col = pvalue.col)
-          if (!is.null(p_txt[[j]])) text2(x_mids[j], y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
+          pvalue_line(x0 = xA, x1 = xB, y = y, p = p_by_x2[[j]])
         }
         
         if (all(is.finite(x_mids)) && all(is.finite(y_tops)) && !is.null(p_int_txt)) {
@@ -1387,10 +1019,8 @@ plot_means_draw <- function(v,
           df_sub <- mf_tests[mf_tests$.__x2 == x2v, c(".__y", ".__x1"), drop = FALSE]
           p_lm2_x1(df_sub)
         })
-        p_txt <- lapply(p_by_x2, format_p_expr, digits = 3)
         
         y_span <- diff(par("usr")[3:4])
-        tick <- 0.015 * y_span
         
         for (j in seq_along(x2_levels)) {
           x2v <- x2_levels[j]
@@ -1402,7 +1032,6 @@ plot_means_draw <- function(v,
           
           xA <- x_centers_drawn[i1]
           xB <- x_centers_drawn[i2]
-          x_mid <- mean(c(xA, xB))
           
           y_base <- max(heights[c(i1, i2)], na.rm = TRUE)
           if (!is.null(ci_map) && nrow(ci_map) > 0) {
@@ -1411,11 +1040,7 @@ plot_means_draw <- function(v,
           }
           
           y <- y_base + 0.06 * y_span
-          
-          segments(xA, y, xB, y, col = pvalue.col)
-          segments(xA, y - tick, xA, y, col = pvalue.col)
-          segments(xB, y - tick, xB, y, col = pvalue.col)
-          if (!is.null(p_txt[[j]])) text2(x_mid, y + 0.03 * y_span, p_txt[[j]], bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
+          pvalue_line(x0 = xA, x1 = xB, y = y, p = p_by_x2[[j]])
         }
       }
     }
@@ -1554,6 +1179,7 @@ plot_means_draw <- function(v,
   invisible(NULL)
 }
 
+# plot_means_compute_pvalues ----
 plot_means_compute_pvalues <- function(v, params, mean_results) {
   if (!identical(v$tests, "auto")) return(NULL)
   
@@ -1576,13 +1202,24 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
   names(mf_tests)[1] <- ".__y"
   mf_tests$.__x1 <- as.factor(mf_tests[[v$x1_name]])
   if (!is.null(v$x2_name)) mf_tests$.__x2 <- as.factor(mf_tests[[v$x2_name]])
+  if (!is.null(v$cluster_vec)) {
+    if (!is.null(v$data) && is.data.frame(v$data) && length(v$cluster_vec) == nrow(v$data)) {
+      idx <- suppressWarnings(as.integer(rownames(mf_tests)))
+      if (anyNA(idx)) idx <- seq_len(nrow(mf_tests))
+      mf_tests$.__cluster <- v$cluster_vec[idx]
+    } else if (length(v$cluster_vec) == nrow(mf_tests)) {
+      mf_tests$.__cluster <- v$cluster_vec
+    } else {
+      stop("plot_means(): 'cluster' length must match rows in 'data'", call. = FALSE)
+    }
+  }
   
   p_lm2_x1 <- function(df_sub) {
     if (nrow(df_sub) == 0) return(NA_real_)
-    fit <- if (is.null(v$cluster)) {
+    fit <- if (is.null(v$cluster_vec)) {
       lm2(.__y ~ .__x1, data = df_sub)
     } else {
-      lm2(.__y ~ .__x1, data = df_sub, clusters = v$cluster)
+      lm2(.__y ~ .__x1, data = df_sub, clusters = df_sub$.__cluster)
     }
     fit
   }
@@ -1671,10 +1308,10 @@ plot_means_compute_pvalues <- function(v, params, mean_results) {
         ))
       }
       
-      fit_int <- if (is.null(v$cluster)) {
+      fit_int <- if (is.null(v$cluster_vec)) {
         lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE])
       } else {
-        lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2"), drop = FALSE], clusters = v$cluster)
+        lm2(.__y ~ .__x1 * .__x2, data = mf_tests[, c(".__y", ".__x1", ".__x2", ".__cluster"), drop = FALSE], clusters = mf_tests$.__cluster)
       }
       tr_int <- get_term_row(fit_int, ".__x1", ".__x2", want_interaction = TRUE)
       if (!is.null(tr_int)) {
