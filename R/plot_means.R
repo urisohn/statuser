@@ -20,6 +20,7 @@
 #' @param save.as File path to save plot (\code{.png} or \code{.svg}). Default
 #'   is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
 #'   \code{tempdir()}.
+#' @param quiet Logical. When \code{TRUE}, suppresses console messages from \code{plot_means()}.
 #' @param order Controls the order of \code{x1} groups (bar order and colors).
 #'   Use \code{-1} to reverse the default order, or provide a character vector
 #'   with the desired order.
@@ -88,6 +89,7 @@ plot_means <- function(formula,
                        cluster = NULL,
                        tests = "auto",
                        save.as = "plot_means.svg",
+                       quiet = FALSE,
                        order = NULL,
                        # Graphics / annotation options
                        legend.title = NULL,
@@ -104,6 +106,11 @@ plot_means <- function(formula,
   #   (mc must be captured before anything is evaluated)
     mc <- match.call()
     calling_env <- parent.frame()
+    
+    msg2 <- function(...) {
+      if (isTRUE(quiet)) return(invisible(NULL))
+      message2(...)
+    }
 
   # 1. Validate and normalize inputs
   # Convert user-facing arguments into a single normalized list (`v`) used throughout.
@@ -225,8 +232,87 @@ plot_means <- function(formula,
       keep_cols <- c(group_cols, "mean", "sd", "n.total", "n.missing", "ciL", "ciH")
       keep_cols <- keep_cols[keep_cols %in% names(means)]
       means <- means[, keep_cols, drop = FALSE]
+      rownames(means) <- NULL
     
     means_comparisons <- plot_means_compute_pvalues(v = v, params = params, mean_results = means, comp = comp)
+    means_comparisons__out <- means_comparisons
+    if (!is.null(means_comparisons__out) && is.data.frame(means_comparisons__out)) {
+      drop_cols <- intersect(c("col1", "col2", "col3", "col4"), names(means_comparisons__out))
+      if (length(drop_cols)) means_comparisons__out[drop_cols] <- NULL
+    }
+    
+    if (!isTRUE(quiet) && !is.null(means_comparisons) && is.data.frame(means_comparisons) && nrow(means_comparisons) > 0) {
+      fmt_p <- function(p) {
+        if (!is.finite(p)) return("NA")
+        if (p < 0.001) return("<0.001")
+        format(round(p, 3), nsmall = 3, scientific = FALSE)
+      }
+      fmt_df <- function(df) {
+        if (!is.finite(df)) return("NA")
+        format(round(df, 1), nsmall = 1, scientific = FALSE)
+      }
+      fmt_t <- function(t) {
+        if (!is.finite(t)) return("NA")
+        format(round(t, 1), nsmall = 1, scientific = FALSE)
+      }
+      
+      method_fallback <- function(row) {
+        # When not provided by compute_pvalues(), infer from cluster + test type.
+        if (!is.null(v$cluster_vec)) return("regression (clustered SE)")
+        if ("test_type" %in% names(row) && identical(as.character(row$test_type[1]), "interaction")) return("regression interaction")
+        "Welch t-test"
+      }
+      
+      lines <- character(0)
+      any_welch <- FALSE
+      any_interaction <- FALSE
+      for (i in seq_len(nrow(means_comparisons))) {
+        r <- means_comparisons[i, , drop = FALSE]
+        
+        label <- ""
+        if (all(c("test_type", "col1", "col2") %in% names(r))) {
+          tt <- as.character(r$test_type[1])
+          if (identical(tt, "simple")) {
+            label <- paste0(r$col1[1], " vs ", r$col2[1])
+          } else if (identical(tt, "pooled") && all(c("cols_left", "cols_right") %in% names(r))) {
+            left <- gsub(",", ",", as.character(r$cols_left[1]), fixed = TRUE)
+            right <- gsub(",", ",", as.character(r$cols_right[1]), fixed = TRUE)
+            label <- paste0(left, " vs ", right)
+          } else if (identical(tt, "interaction") && all(c("col3", "col4") %in% names(r))) {
+            label <- paste0("(", r$col1[1], "-", r$col2[1], ")-(", r$col3[1], "-", r$col4[1], ")")
+          } else {
+            label <- as.character(r$group1[1])
+          }
+        } else if (all(c("group1", "group2") %in% names(r)) && nzchar(as.character(r$group2[1]))) {
+          label <- paste0(as.character(r$group1[1]), " vs ", as.character(r$group2[1]))
+        } else if ("group1" %in% names(r)) {
+          label <- as.character(r$group1[1])
+        } else {
+          label <- paste0("test ", i)
+        }
+        
+        method <- if ("method" %in% names(r) && nzchar(as.character(r$method[1]))) as.character(r$method[1]) else method_fallback(r)
+        df_txt <- if ("df" %in% names(r)) fmt_df(as.numeric(r$df[1])) else "NA"
+        t_txt <- fmt_t(as.numeric(r$t.value[1]))
+        p_txt <- fmt_p(as.numeric(r$p.value[1]))
+        
+        any_welch <- any_welch || identical(method, "Welch t-test")
+        any_interaction <- any_interaction ||
+          (("test_type" %in% names(r) && identical(as.character(r$test_type[1]), "interaction")) ||
+             ("group1" %in% names(r) && grepl("^interaction\\(", as.character(r$group1[1]))))
+        
+        if (identical(method, "Welch t-test")) {
+          lines <- c(lines, paste0(i, ") ", label, ": t(", df_txt, ")=", t_txt, ", p=", p_txt))
+        } else {
+          lines <- c(lines, paste0(i, ") ", label, ": ", method, ": t(", df_txt, ")=", t_txt, ", p=", p_txt))
+        }
+      }
+      
+      footer <- character(0)
+      if (isTRUE(any_welch)) footer <- c(footer, "Note: all t-tests are Welch.")
+      if (isTRUE(any_interaction)) footer <- c(footer, "Note: interaction tested with linear regression (HC3 errors).")
+      msg2(paste0("tests:\n", paste(lines, collapse = "\n"), if (length(footer)) paste0("\n", paste(footer, collapse = "\n")) else ""), col = "gray")
+    }
 
   # 6. Draw plot
     plot_means_draw(
@@ -254,9 +340,9 @@ plot_means <- function(formula,
 
 
   # 7. Prepare minimal output (returned invisibly)
-    out <- list2(
-      means,
-      means_comparisons
+    out <- list(
+      means = means,
+      means_comparisons = means_comparisons__out
     )
   
   # 7.1 Optional export (plot is still shown on screen)
@@ -277,7 +363,7 @@ plot_means <- function(formula,
       p_err <- NULL
       p <- tryCatch(recordPlot(), error = function(e) { p_err <<- e; NULL })
       if (is.null(p)) {
-        message2("plot_means() says: could not record plot for export (skipping save): ", conditionMessage(p_err), col = "gray")
+        msg2("plot_means() says: could not record plot for export (skipping save): ", conditionMessage(p_err), col = "gray")
       } else {
         extension <- tools::file_ext(save.as)
         
@@ -300,16 +386,18 @@ plot_means <- function(formula,
         save_as_print <- gsub("\\\\", "/", save_as_print)
         if (isTRUE(save_as_is_default)) {
           msg <- paste0(
-            "plot_means() says: The figure was saved with pre-set dimensions to \n",
-            save_as_print, " (set `save.as` to change default location)"
+            "\nThe figure was saved to \n",
+            save_as_print, "\n(set `save.as` to change default location)"
           )
-          message2(msg, col = "gray")
+          msg2(msg, col = "gray")
         }
         if (!isTRUE(save_as_is_default)) {
-          message2("plot_means() says: The figure was saved to `", save_as_print,"`" ,col = "gray")
+          msg2("plot_means() says: The figure was saved to `", save_as_print,"`" ,col = "gray")
         }
       }
     }
+    
+    msg2("\nSet quiet=TRUE to suppress this output.", col = "gray")
     invisible(out)
 }
 
@@ -1218,7 +1306,6 @@ plot_means_draw <- function(v,
       # - a small bracket over the pooled-left bars, and one over pooled-right bars (y_sub)
       # - a main bracket connecting the two pooled groups (y)
       y_span <- diff(par("usr")[3:4])
-      tick <- 0.015 * y_span
       sub_drop <- 0.03 * y_span
       y_sub <- if (isTRUE(from_below)) y + sub_drop else y - sub_drop
       
@@ -1713,7 +1800,18 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
       
       if (is.null(cluster_mf)) {
         tt <- stats::t.test(.__y ~ .__g, data = df_sub, var.equal = FALSE)
-        list(diff = as.numeric(tt$estimate[[2]] - tt$estimate[[1]]), t.value = as.numeric(tt$statistic[[1]]), p.value = as.numeric(tt$p.value))
+        meanA <- as.numeric(tt$estimate[[1]])
+        meanB <- as.numeric(tt$estimate[[2]])
+        list(
+          mean1 = meanA,
+          mean2 = meanB,
+          diff = meanB - meanA,
+          # Align sign with diff (B - A). t.test reports t for (A - B).
+          t.value = -as.numeric(tt$statistic[[1]]),
+          p.value = as.numeric(tt$p.value),
+          df = as.numeric(tt$parameter[[1]]),
+          method = "Welch t-test"
+        )
       } else {
         fit <- lm2(.__y ~ .__g, data = df_sub, clusters = df_sub$.__cluster)
         tab <- attr(fit, "statuser_table")
@@ -1721,7 +1819,17 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
         idx <- which(grepl("^\\.__g", as.character(tab$term)))
         if (!length(idx)) stop("plot_means(): failed to find group term for custom test", call. = FALSE)
         tr <- tab[idx[1], , drop = FALSE]
-        list(diff = as.numeric(tr$estimate), t.value = as.numeric(tr$t), p.value = as.numeric(tr$p.value))
+        meanA <- mean(df_sub$.__y[df_sub$.__g == "A"], na.rm = TRUE)
+        meanB <- mean(df_sub$.__y[df_sub$.__g == "B"], na.rm = TRUE)
+        list(
+          mean1 = as.numeric(meanA),
+          mean2 = as.numeric(meanB),
+          diff = as.numeric(tr$estimate),
+          t.value = as.numeric(tr$t),
+          p.value = as.numeric(tr$p.value),
+          df = if ("df" %in% names(tr)) as.numeric(tr$df) else NA_real_,
+          method = "regression (clustered SE)"
+        )
       }
     }
     
@@ -1768,7 +1876,13 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
       if (!is.finite(df_fit)) df_fit <- suppressWarnings(min(fit$df, na.rm = TRUE))
       if (!is.finite(df_fit)) df_fit <- 1
       p_val <- 2 * stats::pt(-abs(t_val), df = df_fit)
-      list(diff = as.numeric(est), t.value = as.numeric(t_val), p.value = as.numeric(p_val))
+      list(
+        diff = as.numeric(est),
+        t.value = as.numeric(t_val),
+        p.value = as.numeric(p_val),
+        df = as.numeric(df_fit),
+        method = if (is.null(cluster_mf)) "regression interaction" else "regression interaction (clustered SE)"
+      )
     }
     
     calc_pooled <- function(left, right) {
@@ -1782,7 +1896,18 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
       
       if (is.null(cluster_mf)) {
         tt <- stats::t.test(.__y ~ .__g, data = df_sub, var.equal = FALSE)
-        list(diff = as.numeric(tt$estimate[[2]] - tt$estimate[[1]]), t.value = as.numeric(tt$statistic[[1]]), p.value = as.numeric(tt$p.value))
+        meanA <- as.numeric(tt$estimate[[1]])
+        meanB <- as.numeric(tt$estimate[[2]])
+        list(
+          mean1 = meanA,
+          mean2 = meanB,
+          diff = meanB - meanA,
+          # Align sign with diff (B - A). t.test reports t for (A - B).
+          t.value = -as.numeric(tt$statistic[[1]]),
+          p.value = as.numeric(tt$p.value),
+          df = as.numeric(tt$parameter[[1]]),
+          method = "Welch t-test"
+        )
       } else {
         fit <- lm2(.__y ~ .__g, data = df_sub, clusters = df_sub$.__cluster)
         tab <- attr(fit, "statuser_table")
@@ -1790,7 +1915,17 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
         idx <- which(grepl("^\\.__g", as.character(tab$term)))
         if (!length(idx)) stop("plot_means(): failed to find group term for pooled test", call. = FALSE)
         tr <- tab[idx[1], , drop = FALSE]
-        list(diff = as.numeric(tr$estimate), t.value = as.numeric(tr$t), p.value = as.numeric(tr$p.value))
+        meanA <- mean(df_sub$.__y[df_sub$.__g == "A"], na.rm = TRUE)
+        meanB <- mean(df_sub$.__y[df_sub$.__g == "B"], na.rm = TRUE)
+        list(
+          mean1 = as.numeric(meanA),
+          mean2 = as.numeric(meanB),
+          diff = as.numeric(tr$estimate),
+          t.value = as.numeric(tr$t),
+          p.value = as.numeric(tr$p.value),
+          df = if ("df" %in% names(tr)) as.numeric(tr$df) else NA_real_,
+          method = "regression (clustered SE)"
+        )
       }
     }
     
@@ -1802,6 +1937,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
       diff = numeric(0),
       t.value = numeric(0),
       p.value = numeric(0),
+      df = numeric(0),
+      method = character(0),
       test_type = character(0),
       cols_left = character(0),
       cols_right = character(0),
@@ -1818,11 +1955,13 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
         rows <- rbind(rows, data.frame(
           group1 = paste0("col", s$a),
           group2 = paste0("col", s$b),
-          mean1 = NA_real_,
-          mean2 = NA_real_,
+          mean1 = res$mean1,
+          mean2 = res$mean2,
           diff = res$diff,
           t.value = res$t.value,
           p.value = res$p.value,
+          df = res$df,
+          method = res$method,
           test_type = "simple",
           cols_left = "",
           cols_right = "",
@@ -1838,11 +1977,13 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
         rows <- rbind(rows, data.frame(
           group1 = paste0("(", paste(s$left, collapse = "+"), ")-(", paste(s$right, collapse = "+"), ")"),
           group2 = "",
-          mean1 = NA_real_,
-          mean2 = NA_real_,
+          mean1 = res$mean1,
+          mean2 = res$mean2,
           diff = res$diff,
           t.value = res$t.value,
           p.value = res$p.value,
+          df = res$df,
+          method = res$method,
           test_type = "pooled",
           cols_left = paste(s$left, collapse = ","),
           cols_right = paste(s$right, collapse = ","),
@@ -1862,6 +2003,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           diff = res$diff,
           t.value = res$t.value,
           p.value = res$p.value,
+          df = res$df,
+          method = res$method,
           test_type = "interaction",
           cols_left = "",
           cols_right = "",
@@ -1916,7 +2059,7 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
   }
 
   ttest_x1 <- function(df_sub) {
-    out <- list(t.value = NA_real_, p.value = NA_real_)
+    out <- list(t.value = NA_real_, p.value = NA_real_, df = NA_real_, method = "Welch t-test")
     if (nrow(df_sub) == 0) return(out)
     if (!(".__y" %in% names(df_sub)) || !(".__x1" %in% names(df_sub))) return(out)
     if (length(unique(df_sub$.__x1)) < 2) return(out)
@@ -1927,6 +2070,7 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
     if (is.null(tt)) return(out)
     out$t.value <- as.numeric(tt$statistic[[1]])
     out$p.value <- as.numeric(tt$p.value)
+    out$df <- as.numeric(tt$parameter[[1]])
     out
   }
   
@@ -1967,6 +2111,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
     diff = numeric(0),
     t.value = numeric(0),
     p.value = numeric(0),
+    df = numeric(0),
+    method = character(0),
     stringsAsFactors = FALSE
   )
   
@@ -1977,11 +2123,15 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
         tt <- ttest_x1(df_sub)
         t_val <- tt$t.value
         p_val <- tt$p.value
+        df_val <- tt$df
+        method <- tt$method
       } else {
         fit <- p_lm2_x1(df_sub)
         tr <- get_term_row(fit, ".__x1")
         t_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$t)
         p_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$p.value)
+        df_val <- if (is.null(tr) || !"df" %in% names(tr)) NA_real_ else as.numeric(tr$df)
+        method <- "regression (clustered SE)"
       }
       g1 <- group_label(x1_levels[1])
       g2 <- group_label(x1_levels[2])
@@ -1995,6 +2145,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
         diff = m2 - m1,
         t.value = t_val,
         p.value = p_val,
+        df = df_val,
+        method = method,
         stringsAsFactors = FALSE
       ))
       return(rows)
@@ -2008,11 +2160,15 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           tt <- ttest_x1(df_sub)
           t_val <- tt$t.value
           p_val <- tt$p.value
+          df_val <- tt$df
+          method <- tt$method
         } else {
           fit <- p_lm2_x1(df_sub)
           tr <- get_term_row(fit, ".__x1")
           t_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$t)
           p_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$p.value)
+          df_val <- if (is.null(tr) || !"df" %in% names(tr)) NA_real_ else as.numeric(tr$df)
+          method <- "regression (clustered SE)"
         }
         
         g1 <- group_label(x1_levels[1], x2 = x2v)
@@ -2027,6 +2183,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           diff = m2 - m1,
           t.value = t_val,
           p.value = p_val,
+          df = df_val,
+          method = method,
           stringsAsFactors = FALSE
         ))
       }
@@ -2047,6 +2205,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           diff = as.numeric(tr_int$estimate),
           t.value = as.numeric(tr_int$t),
           p.value = as.numeric(tr_int$p.value),
+          df = if ("df" %in% names(tr_int)) as.numeric(tr_int$df) else NA_real_,
+          method = if (is.null(v$cluster_vec)) "regression interaction" else "regression interaction (clustered SE)",
           stringsAsFactors = FALSE
         ))
       }
@@ -2062,11 +2222,15 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           tt <- ttest_x1(df_sub)
           t_val <- tt$t.value
           p_val <- tt$p.value
+          df_val <- tt$df
+          method <- tt$method
         } else {
           fit <- p_lm2_x1(df_sub)
           tr <- get_term_row(fit, ".__x1")
           t_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$t)
           p_val <- if (is.null(tr)) NA_real_ else as.numeric(tr$p.value)
+          df_val <- if (is.null(tr) || !"df" %in% names(tr)) NA_real_ else as.numeric(tr$df)
+          method <- "regression (clustered SE)"
         }
         
         g1 <- group_label(x1_levels[1], x2 = x2v)
@@ -2081,6 +2245,8 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           diff = m2 - m1,
           t.value = t_val,
           p.value = p_val,
+          df = df_val,
+          method = method,
           stringsAsFactors = FALSE
         ))
       }
