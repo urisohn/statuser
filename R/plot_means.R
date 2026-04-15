@@ -309,8 +309,8 @@ plot_means <- function(formula,
       }
       
       footer <- character(0)
-      if (isTRUE(any_welch)) footer <- c(footer, "Note: all t-tests are Welch.")
-      if (isTRUE(any_interaction)) footer <- c(footer, "Note: interaction tested with linear regression (HC3 errors).")
+      if (isTRUE(any_welch)) footer <- c(footer, "Note: Welch t-tests. ")
+      if (isTRUE(any_interaction)) footer <- c(footer, "Interaction tested with linear regression (HC3 errors).")
       msg2(paste0("tests:\n", paste(lines, collapse = "\n"), if (length(footer)) paste0("\n", paste(footer, collapse = "\n")) else ""), col = "gray")
     }
 
@@ -1120,6 +1120,28 @@ plot_means_draw <- function(v,
     y_min <- y_min - extra_bottom * y_span_data
     y_span_data <- plot_means_span(y_min, y_max)
   }
+  
+  # Reserve a band below the lowest error whisker for n= labels.
+  if (length(x_centers_drawn) && !"yaxt" %in% names(dots) && !"ylim" %in% names(dots)) {
+    min_whisker <- y_min
+    if (nrow(ci_map) > 0 && length(cell_keys_drawn) == length(x_centers_drawn)) {
+      mi <- match(cell_keys_drawn, ci_map$cell_key)
+      ok <- !is.na(mi)
+      if (any(ok)) {
+        lwr <- ci_map$lwr[mi[ok]]
+        lwr <- lwr[is.finite(lwr)]
+        if (length(lwr)) min_whisker <- min(min_whisker, min(lwr))
+      }
+    }
+    # Minimal expansion: just enough room to place n= slightly below the lowest whisker.
+    #   If all CIs are above 0, we still want n= below the bars (below 0), not inside them.
+    min_anchor <- min(0, min_whisker)
+    pad_n <- 0.04 * y_span_data
+    y_n_target <- min_anchor - pad_n
+    y_min_target <- y_n_target - pad_n
+    y_min <- min(y_min, y_min_target)
+    y_span_data <- plot_means_span(y_min, y_max)
+  }
 
   # Extra headroom only when stacked p-value brackets require it.
   extra_top <- 0
@@ -1247,7 +1269,7 @@ plot_means_draw <- function(v,
   text_cols <- ifelse(sapply(cols, lum) < 0.5, "white", "black")
   
   if (nrow(ci_map) > 0 && length(x_centers_drawn) == length(cell_keys_drawn)) {
-    eb_col <- if (!is.null(col.text)) col.text else "gray20"
+    eb_col <- "black"
     cap <- bar_width * 0.08
     match_idx <- match(cell_keys_drawn, ci_map$cell_key)
     ok <- !is.na(match_idx)
@@ -1262,9 +1284,9 @@ plot_means_draw <- function(v,
         lwr <- lwr[ok2]
         upr <- upr[ok2]
         
-        segments(x_ok, lwr, x_ok, upr, col = eb_col, lwd = 2)
-        segments(x_ok - cap, lwr, x_ok + cap, lwr, col = eb_col, lwd = 2)
-        segments(x_ok - cap, upr, x_ok + cap, upr, col = eb_col, lwd = 2)
+        segments(x_ok, lwr, x_ok, upr, col = eb_col, lwd = 1)
+        segments(x_ok - cap, lwr, x_ok + cap, lwr, col = eb_col, lwd = 1)
+        segments(x_ok - cap, upr, x_ok + cap, upr, col = eb_col, lwd = 1)
       }
     }
   }
@@ -1632,17 +1654,29 @@ plot_means_draw <- function(v,
   
   if (length(x_centers_drawn) > 0 && length(n_total_drawn) == length(x_centers_drawn)) {
     usr <- par("usr")
-    pad <- 0.02 * (usr[4] - usr[3])
+    y_span <- (usr[4] - usr[3])
+    
+    # Place sample sizes just below the lowest CI whisker (with a small pad), so we
+    # don't have to create a large empty band under the plot.
+    min_whisker <- 0
+    if (nrow(ci_map) > 0 && length(cell_keys_drawn) == length(x_centers_drawn)) {
+      mi <- match(cell_keys_drawn, ci_map$cell_key)
+      ok <- !is.na(mi)
+      if (any(ok)) {
+        lwr <- ci_map$lwr[mi[ok]]
+        lwr <- lwr[is.finite(lwr)]
+        if (length(lwr)) min_whisker <- min(lwr, na.rm = TRUE)
+      }
+    }
+    pad_n <- 0.04 * y_span
+    min_anchor <- min(0, min_whisker)
+    y_n <- min_anchor - pad_n
+    y_n <- max(y_n, usr[3] + pad_n)
     
     n_vals <- ifelse(is.finite(n_total_drawn), n_total_drawn, NA)
     labels <- paste0("n=", n_vals)
-    neg    <- is.finite(heights) & heights < 0
-    y_labs <- ifelse(neg, 0 - pad, 0 + pad)
     n_cex <- 0.9 * values.cex
-    
-    # Split into two calls because adj y-component differs by sign of height
-    if (any(!neg)) graphics::text(x_centers_drawn[!neg], y_labs[!neg], labels[!neg], col = text_cols[!neg], cex = n_cex, adj = c(0.5, 0))
-    if (any(neg))  graphics::text(x_centers_drawn[neg],  y_labs[neg],  labels[neg],  col = text_cols[neg],  cex = n_cex, adj = c(0.5, 1))
+    graphics::text(x_centers_drawn, y_n, labels, col = pvalue.col, cex = n_cex, adj = c(0.5, 0))
   }
   
   if (!identical(values.pos, "none") && length(x_centers_drawn) > 0) {
