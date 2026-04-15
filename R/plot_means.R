@@ -1,11 +1,10 @@
-﻿#' Barplot of means 
+#' Barplot of means
 #'
-#' Barplot for means, with confidence intervals, and p-values for differences between means
+#' Plots means, with confidence intervals, and (optionally) p-values for differences of means and interactions 
 #'
-#' @param formula A formula like \code{y ~ x1+x2} where y is the dependent variable and x1 & x2 are 
-#' grouping varialbes (e.g., the two categorical variables indicating manipulations in a 2x2 experiment). 
-#' The formula accepts up to three grouping variables. The bars for  \code{x1} 
-#' values are shown side-by-side, grouped in \code{(x2, x3)} blocks.
+#' @param formula A formula like \code{y ~ x1+x2} where x1 & x2 are 
+#' grouping variables (e.g., the two categorical variables indicating manipulations in a 2x2 experiment). 
+#' Accepts up to three grouping variables. The plot will show contiguous bars for x1, and group the bair pairs by x2 and x3. 
 #' @param data Optional data frame containing  variables in the formula.
 #' @param cluster Optional clustering variable when there are repeated observations per cluster
 #'   e.g., \code{cluster="participant_ID"}. When provided, inference is based on clustered standard errors.

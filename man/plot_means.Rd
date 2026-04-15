@@ -2,39 +2,52 @@
 % Please edit documentation in R/plot_means.R
 \name{plot_means}
 \alias{plot_means}
-\title{Plot means (barplot)}
+\title{Barplot of means}
 \usage{
 plot_means(
   formula,
   data = NULL,
+  cluster = NULL,
+  tests = "auto",
+  save.as = "plot_means.svg",
+  quiet = FALSE,
   order = NULL,
   legend.title = NULL,
   col = NULL,
   col.text = NULL,
-  cluster = NULL,
   values.cex = 1,
   values.pos = "top",
   values.round = 1,
-  tests = "auto",
   pvalue.cex = 0.9,
   pvalue.col = "gray50",
   buffer.top = "auto",
-  save.as = "plot_means.svg",
   ...
 )
 }
 \arguments{
-\item{formula}{A formula like \code{y ~ x1}, \code{y ~ x1 + x2}, or
-\code{y ~ x1 + x2 + x3}. The left-hand side (y) must be numeric. Up to three
-grouping variables are supported. Here \code{x1} is the primary grouping
-variable (the side-by-side bars, e.g. control vs treatment), while \code{x2}
-and \code{x3} are optional secondary grouping variables that define blocks
-along the x-axis (e.g. low vs high moderator; online vs lab sample). Bars
-for different \code{x1} values are shown side-by-side within each
-\code{(x2, x3)} block, with larger gaps separating \code{x2} and \code{x3}
-blocks.}
+\item{formula}{A formula like \code{y ~ x1+x2} where x1 & x2 are 
+grouping variables (e.g., the two categorical variables indicating manipulations in a 2x2 experiment). 
+Accepts up to three grouping variables. The plot will show contiguous bars for x1, and group the bair pairs by x2 and x3.}
 
-\item{data}{An optional data frame containing the variables in the formula.}
+\item{data}{Optional data frame containing  variables in the formula.}
+
+\item{cluster}{Optional clustering variable when there are repeated observations per cluster
+e.g., \code{cluster="participant_ID"}. When provided, inference is based on clustered standard errors.
+When \code{NULL}, simple-effect p-values (difference in means) are computed
+using Welch \code{t.test()}.}
+
+\item{tests}{specifies which tests to report in the graph through p-values with lines connecting 
+columns. Syntax involves putting column numbers in a string, with a - to symbolize a comparison and a + symbolizing combination. 
+For example tests="1-2" reports t-test comparing columns 1 and 2. 
+tests="1-2,3-4" t-test comparing columns 1 & 2 and another 3 & 4. Interaction tests use parentheses:
+  tests=\code{"(4-3)-(2-1)"} and can also be combined with simple tests. Main effects can be incorporated with +, 
+for exaample (1+2)-(3+4) compares all observations in the first two columns with all observations in the next two columns.}
+
+\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default
+is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
+\code{tempdir()}.}
+
+\item{quiet}{Logical. When \code{TRUE}, suppresses console messages from \code{plot_means()}.}
 
 \item{order}{Controls the order of \code{x1} groups (bar order and colors).
 Use \code{-1} to reverse the default order, or provide a character vector
@@ -49,14 +62,6 @@ automatically.}
 \item{col.text}{Color for confidence intervals and other non-bar annotations.
 If \code{NULL}, defaults to a dark gray.}
 
-\item{cluster}{Optional clustering variable for cluster-robust inference via
-\code{lm2(..., clusters=)}. May be a vector (same length as \code{nrow(data)})
-or a column name in \code{data}. When provided, confidence intervals and any
-regression-based p-values use clustered standard errors.
-When \code{NULL}, simple-effect p-values (difference in means) are computed
-using Welch \code{t.test()}.
-For convenience, \code{clusters=} is accepted as an alias for \code{cluster=}.}
-
 \item{values.cex}{Numeric scalar controlling text size for mean value labels
 (and related annotations).}
 
@@ -66,22 +71,6 @@ For convenience, \code{clusters=} is accepted as an alias for \code{cluster=}.}
 \item{values.round}{Non-negative integer. Number of decimal places for mean
 value labels.}
 
-\item{tests}{Either \code{"auto"} (default), \code{"none"}, or a custom comparison
-string.
-
-For custom comparisons, columns are numbered left-to-right in the plotted bar
-order (x3 blocks, within x3 x2 blocks, within x2 x1 bars). Use \code{a-b} to
-request a p-value comparing column \code{a} to column \code{b}. Multiple tests
-are comma-separated, e.g. \code{"3-1,4-2"}.
-
-Interaction (difference-in-differences) tests use parentheses:
-\code{"(4-3)-(2-1)"} tests \eqn{(\mu_4-\mu_3)-(\mu_2-\mu_1)}. These can be
-combined with simple tests, e.g. \code{"2-1,4-3,(4-3)-(2-1)"}.
-
-When \code{cluster} (or \code{clusters}) is provided, tests are computed via
-cluster-robust \code{lm2(..., clusters=)}. When \code{cluster} is \code{NULL},
-simple mean differences use Welch \code{t.test()}.}
-
 \item{pvalue.cex}{Numeric scalar controlling p-value label size.}
 
 \item{pvalue.col}{Color for p-value brackets/labels.}
@@ -90,10 +79,6 @@ simple mean differences use Welch \code{t.test()}.}
 vertical headroom (as a fraction of the data y-range) added above the
 maximum y value to make room for annotations. When \code{"auto"}, uses 0.35
 when an interaction p-value is shown (scenario 2) and 0.25 otherwise.}
-
-\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default
-is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
-\code{tempdir()}.}
 
 \item{...}{Additional arguments passed to \code{plot()} (e.g., \code{main},
 \code{ylim}, \code{ylab}).}
@@ -108,7 +93,7 @@ A minimal list returned invisibly with two elements:
 }
 }
 \description{
-Plots group means as a barplot and returns the summary table used.
+Plots means, with confidence intervals, and (optionally) p-values for differences of means and interactions
 }
 \examples{
 df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
