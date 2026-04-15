@@ -7,12 +7,16 @@
 #' The formula accepts up to three grouping variables. The bars for  \code{x1} 
 #' values are shown side-by-side, grouped in \code{(x2, x3)} blocks.
 #' @param data Optional data frame containing  variables in the formula.
-#' @param cluster Optional clustering variable when there are repeated observations per cluster 
-#' #' e.g., cluster='participant_ID'. When provided, inference is based on clustered standard errors.
+#' @param cluster Optional clustering variable when there are repeated observations per cluster
+#'   e.g., \code{cluster="participant_ID"}. When provided, inference is based on clustered standard errors.
 #'   When \code{NULL}, simple-effect p-values (difference in means) are computed
 #'   using Welch \code{t.test()}.
-#' @param tests Either \code{"auto"} (default) to compute and annotate p-values for
-#'   supported scenarios, or \code{"none"}.
+#' @param tests specifies which tests to report in the graph through p-values with lines connecting 
+#' columns. Syntax involves putting column numbers in a string, with a - to symbolize a comparison and a + symbolizing combination. 
+#' For example tests="1-2" reports t-test comparing columns 1 and 2. 
+#' tests="1-2,3-4" t-test comparing columns 1 & 2 and another 3 & 4. Interaction tests use parentheses:
+#'   tests=\code{"(4-3)-(2-1)"} and can also be combined with simple tests. Main effects can be incorporated with +, 
+#' for exaample (1+2)-(3+4) compares all observations in the first two columns with all observations in the next two columns.
 #' @param save.as File path to save plot (\code{.png} or \code{.svg}). Default
 #'   is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
 #'   \code{tempdir()}.
@@ -672,7 +676,7 @@ plot_means_parse_tests <- function(tests_str) {
   parts <- strsplit(tests_str, ",", fixed = TRUE)[[1]]
   parts <- parts[nzchar(parts)]
   if (!length(parts)) {
-    stop("plot_means(): 'tests' is empty. Example: tests=\"3-1,4-2,(4-3)-(2-1)\"", call. = FALSE)
+    stop("plot_means(): 'tests' is empty. Example: tests=\"3-1,4-2,(1+2)-(3+4),(4-3)-(2-1)\"", call. = FALSE)
   }
   
   parse_pair <- function(s) {
@@ -683,6 +687,15 @@ plot_means_parse_tests <- function(tests_str) {
     b <- as.integer(mm[3])
     if (!is.finite(a) || !is.finite(b) || a <= 0L || b <= 0L) return(NULL)
     list(a = a, b = b)
+  }
+  
+  parse_sum <- function(s) {
+    # one-or-more indices joined by '+', e.g. "1+3" or "2+1+4"
+    if (!grepl("^[0-9]+(\\+[0-9]+)+$", s)) return(NULL)
+    ss <- strsplit(s, "\\+", fixed = FALSE)[[1]]
+    idx <- suppressWarnings(as.integer(ss))
+    if (!length(idx) || any(!is.finite(idx)) || any(idx <= 0L)) return(NULL)
+    idx
   }
   
   out <- vector("list", length(parts))
@@ -699,12 +712,24 @@ plot_means_parse_tests <- function(tests_str) {
       out[[i]] <- list(type = "interaction", a = a, b = b, c = c, d = d, expr = parts[i])
       next
     }
+    # pooled: (a+b+...)-(c+d+...)
+    m_pool <- regexec("^\\(([0-9\\+]+)\\)-\\(([0-9\\+]+)\\)$", p)
+    mm <- regmatches(p, m_pool)[[1]]
+    if (length(mm)) {
+      left <- parse_sum(mm[2])
+      right <- parse_sum(mm[3])
+      if (is.null(left) || is.null(right)) {
+        stop("plot_means(): invalid pooled test in 'tests': ", parts[i], call. = FALSE)
+      }
+      out[[i]] <- list(type = "pooled", left = left, right = right, expr = parts[i])
+      next
+    }
     pr <- parse_pair(p)
     if (!is.null(pr)) {
       out[[i]] <- list(type = "simple", a = pr$a, b = pr$b, expr = parts[i])
       next
     }
-    stop("plot_means(): could not parse 'tests' entry: ", parts[i], ". Example: tests=\"3-1,4-2,(4-3)-(2-1)\"", call. = FALSE)
+    stop("plot_means(): could not parse 'tests' entry: ", parts[i], ". Example: tests=\"3-1,4-2,(1+2)-(3+4),(4-3)-(2-1)\"", call. = FALSE)
   }
   out
 }
@@ -1042,8 +1067,30 @@ plot_means_draw <- function(v,
     
     if (all(c("col1", "col2") %in% names(means_comparisons))) {
       simple_rows <- means_comparisons[is.na(means_comparisons$col3) & is.finite(means_comparisons$p.value), , drop = FALSE]
-      x0 <- x_centers_drawn[as.integer(simple_rows$col1)]
-      x1 <- x_centers_drawn[as.integer(simple_rows$col2)]
+      
+      x0 <- rep(NA_real_, nrow(simple_rows))
+      x1 <- rep(NA_real_, nrow(simple_rows))
+      for (r in seq_len(nrow(simple_rows))) {
+        is_pooled <- ("test_type" %in% names(simple_rows)) && identical(as.character(simple_rows$test_type[r]), "pooled")
+        if (isTRUE(is_pooled) && all(c("cols_left", "cols_right") %in% names(simple_rows))) {
+          left <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_left[r]), ",", fixed = TRUE)[[1]]))
+          right <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_right[r]), ",", fixed = TRUE)[[1]]))
+          idx <- c(left, right)
+          idx <- idx[is.finite(idx)]
+          if (length(idx)) {
+            xx <- x_centers_drawn[idx]
+            x0[r] <- min(xx, na.rm = TRUE)
+            x1[r] <- max(xx, na.rm = TRUE)
+          }
+        } else {
+          i1 <- as.integer(simple_rows$col1[r])
+          i2 <- as.integer(simple_rows$col2[r])
+          if (is.finite(i1) && is.finite(i2)) {
+            x0[r] <- x_centers_drawn[i1]
+            x1[r] <- x_centers_drawn[i2]
+          }
+        }
+      }
     } else {
       simple_rows <- means_comparisons[is.character(means_comparisons$group2) & nzchar(means_comparisons$group2) & is.finite(means_comparisons$p.value), , drop = FALSE]
       # Build a temporary label -> bar index map (idx_by_label is created later for drawing).
@@ -1165,6 +1212,35 @@ plot_means_draw <- function(v,
       
       invisible(NULL)
     }
+
+    pvalue_line_pooled <- function(xL0, xL1, xR0, xR1, y, p, from_below = FALSE) {
+      # Draw a two-level bracket for pooled comparisons:
+      # - a small bracket over the pooled-left bars, and one over pooled-right bars (y_sub)
+      # - a main bracket connecting the two pooled groups (y)
+      y_span <- diff(par("usr")[3:4])
+      tick <- 0.015 * y_span
+      sub_drop <- 0.03 * y_span
+      y_sub <- if (isTRUE(from_below)) y + sub_drop else y - sub_drop
+      
+      # Small grouping lines for each pooled group (flat: no end ticks)
+      segments(xL0, y_sub, xL1, y_sub, col = pvalue.col)
+      segments(xR0, y_sub, xR1, y_sub, col = pvalue.col)
+      
+      # Connect pooled-group midpoints up to the main bracket
+      xLm <- (xL0 + xL1) / 2
+      xRm <- (xR0 + xR1) / 2
+      if (isTRUE(from_below)) {
+        segments(xLm, y_sub, xLm, y, col = pvalue.col)
+        segments(xRm, y_sub, xRm, y, col = pvalue.col)
+      } else {
+        segments(xLm, y, xLm, y_sub, col = pvalue.col)
+        segments(xRm, y, xRm, y_sub, col = pvalue.col)
+      }
+      
+      # Main bracket + p-value label
+      pvalue_line(x0 = xLm, x1 = xRm, y = y, p = p, from_below = from_below)
+      invisible(NULL)
+    }
     
     format_p_expr <- function(p, digits = 3) {
       if (!is.finite(p)) return(NULL)
@@ -1241,6 +1317,16 @@ plot_means_draw <- function(v,
       y_simple <- NA_real_
       if (nrow(simple_rows) > 0) {
         involved_idx <- unique(c(as.integer(simple_rows$col1), as.integer(simple_rows$col2)))
+        if ("test_type" %in% names(simple_rows) && "cols_left" %in% names(simple_rows) && "cols_right" %in% names(simple_rows)) {
+          pooled_idx <- which(as.character(simple_rows$test_type) == "pooled")
+          if (length(pooled_idx)) {
+            for (rr in pooled_idx) {
+              left <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_left[rr]), ",", fixed = TRUE)[[1]]))
+              right <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_right[rr]), ",", fixed = TRUE)[[1]]))
+              involved_idx <- unique(c(involved_idx, left, right))
+            }
+          }
+        }
         if (any(involved_idx < 1L) || any(involved_idx > length(x_centers_drawn))) {
           stop("plot_means(): invalid column index in custom tests (out of range)", call. = FALSE)
         }
@@ -1259,17 +1345,52 @@ plot_means_draw <- function(v,
         }
         y_simple <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
         
-        x0 <- x_centers_drawn[as.integer(simple_rows$col1)]
-        x1 <- x_centers_drawn[as.integer(simple_rows$col2)]
+        x0 <- rep(NA_real_, nrow(simple_rows))
+        x1 <- rep(NA_real_, nrow(simple_rows))
+        for (r in seq_len(nrow(simple_rows))) {
+          is_pooled <- ("test_type" %in% names(simple_rows)) && identical(as.character(simple_rows$test_type[r]), "pooled")
+          if (isTRUE(is_pooled) && all(c("cols_left", "cols_right") %in% names(simple_rows))) {
+            left <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_left[r]), ",", fixed = TRUE)[[1]]))
+            right <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_right[r]), ",", fixed = TRUE)[[1]]))
+            idx <- c(left, right)
+            idx <- idx[is.finite(idx)]
+            if (length(idx)) {
+              xx <- x_centers_drawn[idx]
+              x0[r] <- min(xx, na.rm = TRUE)
+              x1[r] <- max(xx, na.rm = TRUE)
+            }
+          } else {
+            i1 <- as.integer(simple_rows$col1[r])
+            i2 <- as.integer(simple_rows$col2[r])
+            if (is.finite(i1) && is.finite(i2)) {
+              x0[r] <- x_centers_drawn[i1]
+              x1[r] <- x_centers_drawn[i2]
+            }
+          }
+        }
         tiers <- assign_overlap_tier(x0, x1)
         step <- 0.05 * y_span
         for (r in seq_len(nrow(simple_rows))) {
-          i1 <- as.integer(simple_rows$col1[r])
-          i2 <- as.integer(simple_rows$col2[r])
-          if (!is.finite(i1) || !is.finite(i2)) next
           off <- (tiers[r] - 1L) * step
           y <- if (isTRUE(from_below)) y_simple - off else y_simple + off
-          pvalue_line(x0 = x_centers_drawn[i1], x1 = x_centers_drawn[i2], y = y, p = simple_rows$p.value[r], from_below = from_below)
+          if (!is.finite(x0[r]) || !is.finite(x1[r])) next
+          
+          is_pooled <- ("test_type" %in% names(simple_rows)) && identical(as.character(simple_rows$test_type[r]), "pooled")
+          if (isTRUE(is_pooled) && all(c("cols_left", "cols_right") %in% names(simple_rows))) {
+            left <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_left[r]), ",", fixed = TRUE)[[1]]))
+            right <- suppressWarnings(as.integer(strsplit(as.character(simple_rows$cols_right[r]), ",", fixed = TRUE)[[1]]))
+            left <- left[is.finite(left)]
+            right <- right[is.finite(right)]
+            if (!length(left) || !length(right)) next
+            
+            xL <- x_centers_drawn[left]
+            xR <- x_centers_drawn[right]
+            xL0 <- min(xL, na.rm = TRUE); xL1 <- max(xL, na.rm = TRUE)
+            xR0 <- min(xR, na.rm = TRUE); xR1 <- max(xR, na.rm = TRUE)
+            pvalue_line_pooled(xL0 = xL0, xL1 = xL1, xR0 = xR0, xR1 = xR1, y = y, p = simple_rows$p.value[r], from_below = from_below)
+          } else {
+            pvalue_line(x0 = x0[r], x1 = x1[r], y = y, p = simple_rows$p.value[r], from_below = from_below)
+          }
         }
       }
       
@@ -1545,7 +1666,13 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
     cell_keys_drawn <- comp$cell_keys_drawn
     n_cols <- length(cell_keys_drawn)
     
-    all_idx <- unlist(lapply(specs, function(s) unlist(s[c("a", "b", "c", "d")], use.names = FALSE)), use.names = FALSE)
+    all_idx <- unlist(lapply(specs, function(s) {
+      if (identical(s$type, "pooled")) {
+        c(s$left, s$right)
+      } else {
+        unlist(s[c("a", "b", "c", "d")], use.names = FALSE)
+      }
+    }), use.names = FALSE)
     all_idx <- all_idx[is.finite(all_idx)]
     if (any(all_idx < 1L) || any(all_idx > n_cols)) {
       stop("plot_means(): invalid column index in 'tests'. There are ", n_cols, " plotted columns.", call. = FALSE)
@@ -1644,6 +1771,29 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
       list(diff = as.numeric(est), t.value = as.numeric(t_val), p.value = as.numeric(p_val))
     }
     
+    calc_pooled <- function(left, right) {
+      kL <- unique(cell_keys_drawn[left])
+      kR <- unique(cell_keys_drawn[right])
+      keys <- unique(c(kL, kR))
+      df_sub <- mf_tests[mf_tests$cell_key %in% keys, c(".__y", "cell_key", if (!is.null(cluster_mf)) ".__cluster" else NULL), drop = FALSE]
+      if (nrow(df_sub) == 0) stop("plot_means(): no data for pooled test", call. = FALSE)
+      df_sub$.__g <- factor(ifelse(df_sub$cell_key %in% kL, "A", "B"), levels = c("A", "B"))
+      if (length(unique(df_sub$.__g)) < 2) stop("plot_means(): not enough data for pooled test", call. = FALSE)
+      
+      if (is.null(cluster_mf)) {
+        tt <- stats::t.test(.__y ~ .__g, data = df_sub, var.equal = FALSE)
+        list(diff = as.numeric(tt$estimate[[2]] - tt$estimate[[1]]), t.value = as.numeric(tt$statistic[[1]]), p.value = as.numeric(tt$p.value))
+      } else {
+        fit <- lm2(.__y ~ .__g, data = df_sub, clusters = df_sub$.__cluster)
+        tab <- attr(fit, "statuser_table")
+        if (is.null(tab) || !is.data.frame(tab) || !"term" %in% names(tab)) stop("plot_means(): failed to extract lm2 table for pooled test", call. = FALSE)
+        idx <- which(grepl("^\\.__g", as.character(tab$term)))
+        if (!length(idx)) stop("plot_means(): failed to find group term for pooled test", call. = FALSE)
+        tr <- tab[idx[1], , drop = FALSE]
+        list(diff = as.numeric(tr$estimate), t.value = as.numeric(tr$t), p.value = as.numeric(tr$p.value))
+      }
+    }
+    
     rows <- data.frame(
       group1 = character(0),
       group2 = character(0),
@@ -1652,6 +1802,9 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
       diff = numeric(0),
       t.value = numeric(0),
       p.value = numeric(0),
+      test_type = character(0),
+      cols_left = character(0),
+      cols_right = character(0),
       col1 = integer(0),
       col2 = integer(0),
       col3 = integer(0),
@@ -1670,8 +1823,31 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           diff = res$diff,
           t.value = res$t.value,
           p.value = res$p.value,
+          test_type = "simple",
+          cols_left = "",
+          cols_right = "",
           col1 = s$a,
           col2 = s$b,
+          col3 = NA_integer_,
+          col4 = NA_integer_,
+          stringsAsFactors = FALSE
+        ))
+      } else if (identical(s$type, "pooled")) {
+        res <- calc_pooled(s$left, s$right)
+        involved <- c(s$left, s$right)
+        rows <- rbind(rows, data.frame(
+          group1 = paste0("(", paste(s$left, collapse = "+"), ")-(", paste(s$right, collapse = "+"), ")"),
+          group2 = "",
+          mean1 = NA_real_,
+          mean2 = NA_real_,
+          diff = res$diff,
+          t.value = res$t.value,
+          p.value = res$p.value,
+          test_type = "pooled",
+          cols_left = paste(s$left, collapse = ","),
+          cols_right = paste(s$right, collapse = ","),
+          col1 = min(involved),
+          col2 = max(involved),
           col3 = NA_integer_,
           col4 = NA_integer_,
           stringsAsFactors = FALSE
@@ -1686,6 +1862,9 @@ plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
           diff = res$diff,
           t.value = res$t.value,
           p.value = res$p.value,
+          test_type = "interaction",
+          cols_left = "",
+          cols_right = "",
           col1 = s$a,
           col2 = s$b,
           col3 = s$c,

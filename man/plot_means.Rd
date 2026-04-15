@@ -66,8 +66,21 @@ For convenience, \code{clusters=} is accepted as an alias for \code{cluster=}.}
 \item{values.round}{Non-negative integer. Number of decimal places for mean
 value labels.}
 
-\item{tests}{Either \code{"auto"} (default) to compute and annotate p-values for
-supported scenarios, or \code{"none"}.}
+\item{tests}{Either \code{"auto"} (default), \code{"none"}, or a custom comparison
+string.
+
+For custom comparisons, columns are numbered left-to-right in the plotted bar
+order (x3 blocks, within x3 x2 blocks, within x2 x1 bars). Use \code{a-b} to
+request a p-value comparing column \code{a} to column \code{b}. Multiple tests
+are comma-separated, e.g. \code{"3-1,4-2"}.
+
+Interaction (difference-in-differences) tests use parentheses:
+\code{"(4-3)-(2-1)"} tests \eqn{(\mu_4-\mu_3)-(\mu_2-\mu_1)}. These can be
+combined with simple tests, e.g. \code{"2-1,4-3,(4-3)-(2-1)"}.
+
+When \code{cluster} (or \code{clusters}) is provided, tests are computed via
+cluster-robust \code{lm2(..., clusters=)}. When \code{cluster} is \code{NULL},
+simple mean differences use Welch \code{t.test()}.}
 
 \item{pvalue.cex}{Numeric scalar controlling p-value label size.}
 
