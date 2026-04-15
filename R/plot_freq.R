@@ -73,6 +73,11 @@
 plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
   mc <- match.call()
+  # sys.call() preserves original supplied names; match.call() renames partial
+  # matches to the formal name (e.g. ylim= becomes y= in mc, never ylim=).
+  sc <- sys.call()
+  sc_names <- names(as.list(sc))[-1]
+  ylim_matched_to_y <- "ylim" %in% sc_names && !"y" %in% sc_names
   
   # Resolve first argument (formula or first vector)
   formula_resolved <- evaluate_variable_arguments(
@@ -84,8 +89,10 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     allow_null = FALSE
   )
   
-  # Resolve second argument if present (for two-vector mode)
-  y_resolved <- if (!is.null(mc$y)) {
+  # Resolve second argument if present (for two-vector mode).
+  # Skip when ylim_matched_to_y: mc$y holds a ..N symbol in wrapper contexts
+  # which must not be evaluated as a column name.
+  y_resolved <- if (!is.null(mc$y) && !ylim_matched_to_y) {
     evaluate_variable_arguments(
       arg_expr = mc$y,
       arg_name = "y",
@@ -98,19 +105,22 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     list(value = NULL, name = NULL, name_raw = NULL, was_symbol = FALSE)
   }
   
-  # Now overwrite the arguments with resolved values
+  # Now overwrite the arguments with resolved values.
+  # Capture the original formal y first: when ylim_matched_to_y, R already
+  # bound the ylim value to formal y before we had a chance to intercept it.
+  y_before_resolved <- y
   formula <- formula_resolved$value
   y <- y_resolved$value
-  
+
   # Extract additional arguments
   dots <- list(...)
-  
-  # Fix partial argument matching: `ylim=` gets matched to `y` in the signature.
-  # Treat it as a plotting argument and restore `y` to NULL.
-    if ("ylim" %in% names(mc) && !"y" %in% names(mc) && !is.null(y) && !"ylim" %in% names(dots)) {
-      dots$ylim <- y
-      y <- NULL
-    }
+
+  # R's partial matching binds ylim= to formal y (since "ylim" begins with "y").
+  # Move it to dots so it reaches plot() correctly.
+  if (ylim_matched_to_y && !"ylim" %in% names(dots)) {
+    dots$ylim <- y_before_resolved
+    y <- NULL
+  }
 
   # Decide x-axis tick positions for plot_freq
     get_plot_freq_x_ticks <- function(x_values, dots, max_unique_ticks = 30) {
