@@ -1,17 +1,21 @@
-﻿#' Plot means (barplot)
+﻿#' Barplot of means 
 #'
-#' Plots group means as a barplot and returns the summary table used.
+#' Barplot for means, with confidence intervals, and p-values for differences between means
 #'
-#' @param formula A formula like \code{y ~ x1}, \code{y ~ x1 + x2}, or
-#'   \code{y ~ x1 + x2 + x3}. The left-hand side (y) must be numeric. Up to three
-#'   grouping variables are supported. Here \code{x1} is the primary grouping
-#'   variable (the side-by-side bars, e.g. control vs treatment), while \code{x2}
-#'   and \code{x3} are optional secondary grouping variables that define blocks
-#'   along the x-axis (e.g. low vs high moderator; online vs lab sample). Bars
-#'   for different \code{x1} values are shown side-by-side within each
-#'   \code{(x2, x3)} block, with larger gaps separating \code{x2} and \code{x3}
-#'   blocks.
-#' @param data An optional data frame containing the variables in the formula.
+#' @param formula A formula like \code{y ~ x1+x2} where y is the dependent variable and x1 & x2 are 
+#' grouping varialbes (e.g., the two categorical variables indicating manipulations in a 2x2 experiment). 
+#' The formula accepts up to three grouping variables. The bars for  \code{x1} 
+#' values are shown side-by-side, grouped in \code{(x2, x3)} blocks.
+#' @param data Optional data frame containing  variables in the formula.
+#' @param cluster Optional clustering variable when there are repeated observations per cluster 
+#' #' e.g., cluster='participant_ID'. When provided, inference is based on clustered standard errors.
+#'   When \code{NULL}, simple-effect p-values (difference in means) are computed
+#'   using Welch \code{t.test()}.
+#' @param tests Either \code{"auto"} (default) to compute and annotate p-values for
+#'   supported scenarios, or \code{"none"}.
+#' @param save.as File path to save plot (\code{.png} or \code{.svg}). Default
+#'   is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
+#'   \code{tempdir()}.
 #' @param order Controls the order of \code{x1} groups (bar order and colors).
 #'   Use \code{-1} to reverse the default order, or provide a character vector
 #'   with the desired order.
@@ -21,30 +25,18 @@
 #'   automatically.
 #' @param col.text Color for confidence intervals and other non-bar annotations.
 #'   If \code{NULL}, defaults to a dark gray.
-#' @param cluster Optional clustering variable for cluster-robust inference via
-#'   \code{lm2(..., clusters=)}. May be a vector (same length as \code{nrow(data)})
-#'   or a column name in \code{data}. When provided, confidence intervals and any
-#'   regression-based p-values use clustered standard errors.
-#'   When \code{NULL}, simple-effect p-values (difference in means) are computed
-#'   using Welch \code{t.test()}.
-#'   For convenience, \code{clusters=} is accepted as an alias for \code{cluster=}.
 #' @param values.cex Numeric scalar controlling text size for mean value labels
 #'   (and related annotations).
 #' @param values.pos Where to draw mean value labels: \code{"top"}, \code{"middle"},
 #'   \code{"bottom"}, or \code{"none"}.
 #' @param values.round Non-negative integer. Number of decimal places for mean
 #'   value labels.
-#' @param tests Either \code{"auto"} (default) to compute and annotate p-values for
-#'   supported scenarios, or \code{"none"}.
 #' @param pvalue.cex Numeric scalar controlling p-value label size.
 #' @param pvalue.col Color for p-value brackets/labels.
 #' @param buffer.top Either \code{"auto"} (default) or a numeric value. Extra
 #'   vertical headroom (as a fraction of the data y-range) added above the
 #'   maximum y value to make room for annotations. When \code{"auto"}, uses 0.35
 #'   when an interaction p-value is shown (scenario 2) and 0.25 otherwise.
-#' @param save.as File path to save plot (\code{.png} or \code{.svg}). Default
-#'   is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
-#'   \code{tempdir()}.
 #' @param ... Additional arguments passed to \code{plot()} (e.g., \code{main},
 #'   \code{ylim}, \code{ylab}).
 #'
@@ -89,19 +81,20 @@
 # plot_means (exported) ----
 plot_means <- function(formula,
                        data = NULL,
+                       cluster = NULL,
+                       tests = "auto",
+                       save.as = "plot_means.svg",
                        order = NULL,
+                       # Graphics / annotation options
                        legend.title = NULL,
                        col = NULL,
                        col.text = NULL,
-                       cluster = NULL,
                        values.cex = 1,
                        values.pos = "top",
                        values.round = 1,
-                       tests = "auto",
                        pvalue.cex = 0.9,
                        pvalue.col = "gray50",
                        buffer.top = "auto",
-                       save.as = "plot_means.svg",
                        ...) {
   # 2. Validate + normalize inputs (NSE-safe)
   #   (mc must be captured before anything is evaluated)
@@ -229,7 +222,7 @@ plot_means <- function(formula,
       keep_cols <- keep_cols[keep_cols %in% names(means)]
       means <- means[, keep_cols, drop = FALSE]
     
-    means_comparisons <- plot_means_compute_pvalues(v = v, params = params, mean_results = means)
+    means_comparisons <- plot_means_compute_pvalues(v = v, params = params, mean_results = means, comp = comp)
 
   # 6. Draw plot
     plot_means_draw(
@@ -384,7 +377,16 @@ plot_means_validate <- function(mc,
     values.round <- as.integer(values.round)
   
   # 3.4 Validate tests argument
-    tests <- match.arg(tests, c("auto", "none"))
+  #   Accept "auto", "none", or a custom comparison string like "3-1,4-2,(4-3)-(2-1)".
+    if (is.character(tests) && length(tests) == 1 && !is.na(tests) && nzchar(tests)) {
+      if (!(tests %in% c("auto", "none"))) {
+        tests <- as.character(tests)
+      } else {
+        tests <- match.arg(tests, c("auto", "none"))
+      }
+    } else {
+      stop("plot_means(): 'tests' must be a single string: \"auto\", \"none\", or custom comparisons like \"3-1, 4-2\"", call. = FALSE)
+    }
   
   # 3.5 Validate p-value styling arguments
     if (!is.numeric(pvalue.cex) || length(pvalue.cex) != 1 || is.na(pvalue.cex) || pvalue.cex <= 0) {
@@ -567,15 +569,22 @@ plot_means_params <- function(v, result, result_plot) {
     legend_horiz <- isTRUE(max_legend_chars <= 10)
   
   # Resolve buffer.top when set to 'auto'
-    show_interaction <- identical(v$tests, "auto") &&
-      length(v$x_names) == 2 &&
+    is_default_interaction_scenario <- length(v$x_names) == 2 &&
       length(x1_levels) == 2 &&
       !is.null(v$x2_name) &&
       length(x2_levels) == 2 &&
       is.null(v$x3_name)
     
+    # Treat custom diff-in-diff requests like the default interaction scenario for auto buffer sizing.
+    # This ensures identical tests produce identical headroom regardless of whether they are requested
+    # via tests="auto" or an explicit string like "(4-3)-(2-1),2-1,4-3".
+    tests_str <- if (is.character(v$tests) && length(v$tests) == 1 && !is.na(v$tests)) gsub("\\s+", "", v$tests) else ""
+    has_interaction_test <- nzchar(tests_str) && grepl("\\([0-9]+-[0-9]+\\)-\\([0-9]+-[0-9]+\\)", tests_str)
+    
+    show_interaction <- (identical(v$tests, "auto") && is_default_interaction_scenario) || has_interaction_test
+    
     buffer_top_effective <- if (identical(v$buffer.top, "auto")) {
-      base <- if (show_interaction) 0.4 else 0.2
+      base <- if (show_interaction) 0.3 else 0.2
       if (!legend_horiz) base <- base + 0.05
       base
     } else {
@@ -653,6 +662,51 @@ plot_means_span <- function(y_min, y_max) {
   if (!is.finite(span) || span <= 0) span <- abs(y_max)
   if (!is.finite(span) || span <= 0) span <- 1
   span
+}
+
+plot_means_parse_tests <- function(tests_str) {
+  if (!is.character(tests_str) || length(tests_str) != 1 || is.na(tests_str) || !nzchar(tests_str)) {
+    stop("plot_means(): 'tests' must be a single non-empty string", call. = FALSE)
+  }
+  tests_str <- gsub("\\s+", "", tests_str)
+  parts <- strsplit(tests_str, ",", fixed = TRUE)[[1]]
+  parts <- parts[nzchar(parts)]
+  if (!length(parts)) {
+    stop("plot_means(): 'tests' is empty. Example: tests=\"3-1,4-2,(4-3)-(2-1)\"", call. = FALSE)
+  }
+  
+  parse_pair <- function(s) {
+    m <- regexec("^([0-9]+)-([0-9]+)$", s)
+    mm <- regmatches(s, m)[[1]]
+    if (!length(mm)) return(NULL)
+    a <- as.integer(mm[2])
+    b <- as.integer(mm[3])
+    if (!is.finite(a) || !is.finite(b) || a <= 0L || b <= 0L) return(NULL)
+    list(a = a, b = b)
+  }
+  
+  out <- vector("list", length(parts))
+  for (i in seq_along(parts)) {
+    p <- parts[i]
+    # interaction: (a-b)-(c-d)
+    m_int <- regexec("^\\(([0-9]+)-([0-9]+)\\)-\\(([0-9]+)-([0-9]+)\\)$", p)
+    mm <- regmatches(p, m_int)[[1]]
+    if (length(mm)) {
+      a <- as.integer(mm[2]); b <- as.integer(mm[3]); c <- as.integer(mm[4]); d <- as.integer(mm[5])
+      if (any(!is.finite(c(a, b, c, d))) || any(c(a, b, c, d) <= 0L)) {
+        stop("plot_means(): invalid interaction test in 'tests': ", parts[i], call. = FALSE)
+      }
+      out[[i]] <- list(type = "interaction", a = a, b = b, c = c, d = d, expr = parts[i])
+      next
+    }
+    pr <- parse_pair(p)
+    if (!is.null(pr)) {
+      out[[i]] <- list(type = "simple", a = pr$a, b = pr$b, expr = parts[i])
+      next
+    }
+    stop("plot_means(): could not parse 'tests' entry: ", parts[i], ". Example: tests=\"3-1,4-2,(4-3)-(2-1)\"", call. = FALSE)
+  }
+  out
 }
 
 
@@ -943,7 +997,7 @@ plot_means_draw <- function(v,
   #   Reserve extra bottom space so brackets/labels don't overlap bars (and so the
   #   interaction bracket, when present, isn't clipped at the bottom).
   all_below_zero <- (is.finite(y_max_raw) && y_max_raw <= 0)
-  if (isTRUE(all_below_zero) && identical(tests, "auto") && !"ylim" %in% names(dots)) {
+  if (isTRUE(all_below_zero) && !identical(tests, "none") && !"ylim" %in% names(dots)) {
     is_interaction_scenario <- length(v$x_names) == 2 &&
       length(params$x1_levels) == 2 &&
       !is.null(v$x2_name) &&
@@ -954,7 +1008,77 @@ plot_means_draw <- function(v,
     y_span_data <- plot_means_span(y_min, y_max)
   }
 
-  ylim_top <- y_max + buffer_top_effective * y_span_data
+  # Extra headroom only when stacked p-value brackets require it.
+  extra_top <- 0
+  if (!identical(tests, "none") && !is.null(means_comparisons) && is.data.frame(means_comparisons) && nrow(means_comparisons) > 0) {
+    assign_overlap_tier <- function(x0, x1) {
+      n <- length(x0)
+      if (!n) return(integer(0))
+      left <- pmin(x0, x1)
+      right <- pmax(x0, x1)
+      ord <- order(left, right)
+      tiers <- integer(n)
+      tier_rights <- numeric(0)
+      
+      for (ii in ord) {
+        placed <- FALSE
+        if (length(tier_rights)) {
+          for (t in seq_along(tier_rights)) {
+            if (left[ii] > tier_rights[t]) {
+              tiers[ii] <- t
+              tier_rights[t] <- right[ii]
+              placed <- TRUE
+              break
+            }
+          }
+        }
+        if (!placed) {
+          tiers[ii] <- length(tier_rights) + 1L
+          tier_rights <- c(tier_rights, right[ii])
+        }
+      }
+      tiers
+    }
+    
+    if (all(c("col1", "col2") %in% names(means_comparisons))) {
+      simple_rows <- means_comparisons[is.na(means_comparisons$col3) & is.finite(means_comparisons$p.value), , drop = FALSE]
+      x0 <- x_centers_drawn[as.integer(simple_rows$col1)]
+      x1 <- x_centers_drawn[as.integer(simple_rows$col2)]
+    } else {
+      simple_rows <- means_comparisons[is.character(means_comparisons$group2) & nzchar(means_comparisons$group2) & is.finite(means_comparisons$p.value), , drop = FALSE]
+      # Build a temporary label -> bar index map (idx_by_label is created later for drawing).
+      group_label_tmp <- function(x1, x2 = NULL, x3 = NULL) {
+        parts <- character(0)
+        if (!is.null(x3) && nzchar(x3)) parts <- c(parts, x3)
+        if (!is.null(x2) && nzchar(x2)) parts <- c(parts, x2)
+        parts <- c(parts, x1)
+        paste(parts, collapse = "_")
+      }
+      key_parts <- strsplit(cell_keys_drawn, "\\|")
+      x1_vals <- vapply(key_parts, function(z) z[1], character(1))
+      x2_vals <- vapply(key_parts, function(z) z[2], character(1))
+      x3_vals <- vapply(key_parts, function(z) z[3], character(1))
+      x2_use <- if (is.null(v$x2_name)) rep(list(NULL), length(x1_vals)) else as.list(x2_vals)
+      x3_use <- if (is.null(v$x3_name)) rep(list(NULL), length(x1_vals)) else as.list(x3_vals)
+      bar_labels <- mapply(group_label_tmp, x1 = x1_vals, x2 = x2_use, x3 = x3_use, USE.NAMES = FALSE)
+      idx_by_label_tmp <- seq_along(bar_labels)
+      names(idx_by_label_tmp) <- bar_labels
+      
+      i1 <- idx_by_label_tmp[as.character(simple_rows$group1)]
+      i2 <- idx_by_label_tmp[as.character(simple_rows$group2)]
+      x0 <- x_centers_drawn[as.integer(i1)]
+      x1 <- x_centers_drawn[as.integer(i2)]
+    }
+    ok <- is.finite(x0) & is.finite(x1)
+    if (any(ok)) {
+      tiers <- assign_overlap_tier(x0[ok], x1[ok])
+      step <- 0.05 * y_span_data
+      extra_top <- (max(tiers, na.rm = TRUE) - 1L) * step
+      if (!is.finite(extra_top) || extra_top < 0) extra_top <- 0
+    }
+  }
+  
+  ylim_top <- y_max + buffer_top_effective * y_span_data + extra_top
   if (!"ylim" %in% names(dots)) dots$ylim <- c(y_min, ylim_top)
   if (!"xlim" %in% names(dots)) dots$xlim <- c(0, x_pos)
   if (!"las" %in% names(dots)) dots$las <- 1
@@ -1010,7 +1134,7 @@ plot_means_draw <- function(v,
     }
   }
   
-  if (identical(tests, "auto") && !is.null(means_comparisons) && is.data.frame(means_comparisons) && nrow(means_comparisons) > 0) {
+  if (!identical(tests, "none") && !is.null(means_comparisons) && is.data.frame(means_comparisons) && nrow(means_comparisons) > 0) {
     pvalue_line <- function(x0, x1, y, p, from_below = FALSE) {
       n <- max(length(x0), length(x1), length(y), length(p))
       x0 <- rep_len(x0, n)
@@ -1080,6 +1204,128 @@ plot_means_draw <- function(v,
     from_below <- (is.finite(max(heights, na.rm = TRUE)) && max(heights, na.rm = TRUE) <= 0)
     y_span <- diff(par("usr")[3:4])
     
+    assign_overlap_tier <- function(x0, x1) {
+      n <- length(x0)
+      if (!n) return(integer(0))
+      left <- pmin(x0, x1)
+      right <- pmax(x0, x1)
+      ord <- order(left, right)
+      tiers <- integer(n)
+      tier_rights <- numeric(0)
+      
+      for (ii in ord) {
+        placed <- FALSE
+        if (length(tier_rights)) {
+          for (t in seq_along(tier_rights)) {
+            if (left[ii] > tier_rights[t]) {
+              tiers[ii] <- t
+              tier_rights[t] <- right[ii]
+              placed <- TRUE
+              break
+            }
+          }
+        }
+        if (!placed) {
+          tiers[ii] <- length(tier_rights) + 1L
+          tier_rights <- c(tier_rights, right[ii])
+        }
+      }
+      tiers
+    }
+
+    has_custom_cols <- all(c("col1", "col2") %in% names(means_comparisons))
+    if (isTRUE(has_custom_cols)) {
+      simple_rows <- means_comparisons[is.na(means_comparisons$col3) & is.finite(means_comparisons$p.value), , drop = FALSE]
+      int_rows <- means_comparisons[is.finite(means_comparisons$col3) & is.finite(means_comparisons$col4) & is.finite(means_comparisons$p.value), , drop = FALSE]
+      
+      y_simple <- NA_real_
+      if (nrow(simple_rows) > 0) {
+        involved_idx <- unique(c(as.integer(simple_rows$col1), as.integer(simple_rows$col2)))
+        if (any(involved_idx < 1L) || any(involved_idx > length(x_centers_drawn))) {
+          stop("plot_means(): invalid column index in custom tests (out of range)", call. = FALSE)
+        }
+        y_extreme <- if (isTRUE(from_below)) min(heights[involved_idx], na.rm = TRUE) else max(heights[involved_idx], na.rm = TRUE)
+        if (nrow(ci_map) > 0) {
+          k_all <- cell_keys_drawn[involved_idx]
+          mi_all <- match(k_all, ci_map$cell_key)
+          mi_all <- mi_all[!is.na(mi_all)]
+          if (length(mi_all)) {
+            if (isTRUE(from_below)) {
+              y_extreme <- min(y_extreme, ci_map$lwr[mi_all], na.rm = TRUE)
+            } else {
+              y_extreme <- max(y_extreme, ci_map$upr[mi_all], na.rm = TRUE)
+            }
+          }
+        }
+        y_simple <- if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
+        
+        x0 <- x_centers_drawn[as.integer(simple_rows$col1)]
+        x1 <- x_centers_drawn[as.integer(simple_rows$col2)]
+        tiers <- assign_overlap_tier(x0, x1)
+        step <- 0.05 * y_span
+        for (r in seq_len(nrow(simple_rows))) {
+          i1 <- as.integer(simple_rows$col1[r])
+          i2 <- as.integer(simple_rows$col2[r])
+          if (!is.finite(i1) || !is.finite(i2)) next
+          off <- (tiers[r] - 1L) * step
+          y <- if (isTRUE(from_below)) y_simple - off else y_simple + off
+          pvalue_line(x0 = x_centers_drawn[i1], x1 = x_centers_drawn[i2], y = y, p = simple_rows$p.value[r], from_below = from_below)
+        }
+      }
+      
+      if (nrow(int_rows) > 0) {
+        for (r in seq_len(nrow(int_rows))) {
+          a <- as.integer(int_rows$col1[r]); b <- as.integer(int_rows$col2[r])
+          c <- as.integer(int_rows$col3[r]); d <- as.integer(int_rows$col4[r])
+          if (any(!is.finite(c(a, b, c, d)))) next
+          x_ab <- mean(c(x_centers_drawn[a], x_centers_drawn[b]))
+          x_cd <- mean(c(x_centers_drawn[c], x_centers_drawn[d]))
+          p_txt <- format_p_expr(int_rows$p.value[r], digits = 3)
+          if (is.null(p_txt)) next
+          
+          y_anchor <- if (is.finite(y_simple)) y_simple else {
+            involved <- unique(c(a, b, c, d))
+            y_extreme <- if (isTRUE(from_below)) min(heights[involved], na.rm = TRUE) else max(heights[involved], na.rm = TRUE)
+            if (nrow(ci_map) > 0) {
+              k_all <- cell_keys_drawn[involved]
+              mi_all <- match(k_all, ci_map$cell_key)
+              mi_all <- mi_all[!is.na(mi_all)]
+              if (length(mi_all)) {
+                if (isTRUE(from_below)) {
+                  y_extreme <- min(y_extreme, ci_map$lwr[mi_all], na.rm = TRUE)
+                } else {
+                  y_extreme <- max(y_extreme, ci_map$upr[mi_all], na.rm = TRUE)
+                }
+              }
+            }
+            if (isTRUE(from_below)) y_extreme - 0.02 * y_span else y_extreme + 0.02 * y_span
+          }
+          if (exists("tiers", inherits = FALSE) && length(tiers)) {
+            max_off <- (max(tiers, na.rm = TRUE) - 1L) * (0.05 * y_span)
+            y_anchor <- if (isTRUE(from_below)) y_anchor - max_off else y_anchor + max_off
+          }
+          
+          if (isTRUE(from_below)) {
+            y_line <- y_anchor - 0.06 * y_span
+            y_lab <- y_line - 0.025 * y_span
+            y_line_from <- y_anchor - 0.045 * y_span
+            segments(x_ab, y_line, x_ab, y_line_from, col = pvalue.col)
+            segments(x_cd, y_line, x_cd, y_line_from, col = pvalue.col)
+          } else {
+            y_line <- y_anchor + 0.06 * y_span
+            y_lab <- y_line + 0.025 * y_span
+            y_line_from <- y_anchor + 0.045 * y_span
+            segments(x_ab, y_line_from, x_ab, y_line, col = pvalue.col)
+            segments(x_cd, y_line_from, x_cd, y_line, col = pvalue.col)
+          }
+          segments(x_ab, y_line, x_cd, y_line, col = pvalue.col)
+          text2(mean(c(x_ab, x_cd)), y_lab, p_txt, bg = "white", cex = pvalue.cex, col = pvalue.col, pad = 0, pad_v = 0)
+        }
+      }
+      
+      invisible(NULL)
+    }
+    
     # Simple-effect comparisons: rows with a non-empty group2 and non-missing p.value
     simple_rows <- means_comparisons[is.character(means_comparisons$group2) & nzchar(means_comparisons$group2), , drop = FALSE]
     simple_rows <- simple_rows[is.finite(simple_rows$p.value), , drop = FALSE]
@@ -1107,11 +1353,17 @@ plot_means_draw <- function(v,
       }
       
       if (is.finite(y_simple)) {
+        x0 <- x_centers_drawn[as.integer(idx_by_label[as.character(simple_rows$group1)])]
+        x1 <- x_centers_drawn[as.integer(idx_by_label[as.character(simple_rows$group2)])]
+        tiers <- assign_overlap_tier(x0, x1)
+        step <- 0.05 * y_span
         for (r in seq_len(nrow(simple_rows))) {
           i1 <- idx_by_label[as.character(simple_rows$group1[r])]
           i2 <- idx_by_label[as.character(simple_rows$group2[r])]
           if (!is.finite(i1) || !is.finite(i2)) next
-          pvalue_line(x0 = x_centers_drawn[i1], x1 = x_centers_drawn[i2], y = y_simple, p = simple_rows$p.value[r], from_below = from_below)
+          off <- (tiers[r] - 1L) * step
+          y <- if (isTRUE(from_below)) y_simple - off else y_simple + off
+          pvalue_line(x0 = x_centers_drawn[i1], x1 = x_centers_drawn[i2], y = y, p = simple_rows$p.value[r], from_below = from_below)
         }
       }
     }
@@ -1145,6 +1397,10 @@ plot_means_draw <- function(v,
             } else {
               0
             }
+          }
+          if (exists("tiers", inherits = FALSE) && length(tiers)) {
+            max_off <- (max(tiers, na.rm = TRUE) - 1L) * (0.05 * y_span)
+            y_anchor <- if (isTRUE(from_below)) y_anchor - max_off else y_anchor + max_off
           }
           if (isTRUE(from_below)) {
             y_line <- y_anchor - 0.06 * y_span
@@ -1277,8 +1533,169 @@ plot_means_draw <- function(v,
 # plot_means_compute_pvalues: run the default inferential tests and return p-values for annotation ----
 #   This is only used when `tests = "auto"`. It returns a small table with the exact
 #   comparisons needed by the plotting code (group labels, means, diffs, and p-values).
-plot_means_compute_pvalues <- function(v, params, mean_results) {
-  if (!identical(v$tests, "auto")) return(NULL)
+plot_means_compute_pvalues <- function(v, params, mean_results, comp = NULL) {
+  if (identical(v$tests, "none")) return(NULL)
+
+  # Custom tests: parse and compute from bar indices (left-to-right draw order)
+  if (!identical(v$tests, "auto")) {
+    if (is.null(comp) || !is.list(comp) || is.null(comp$cell_keys_drawn)) {
+      stop("plot_means(): internal error: custom 'tests' requires computed bar layout", call. = FALSE)
+    }
+    specs <- plot_means_parse_tests(v$tests)
+    cell_keys_drawn <- comp$cell_keys_drawn
+    n_cols <- length(cell_keys_drawn)
+    
+    all_idx <- unlist(lapply(specs, function(s) unlist(s[c("a", "b", "c", "d")], use.names = FALSE)), use.names = FALSE)
+    all_idx <- all_idx[is.finite(all_idx)]
+    if (any(all_idx < 1L) || any(all_idx > n_cols)) {
+      stop("plot_means(): invalid column index in 'tests'. There are ", n_cols, " plotted columns.", call. = FALSE)
+    }
+    
+    mf_tests <- plot_means_model_frame(v$formula_eval, data = v$data, na.action = na.omit, context = "custom tests")
+    if (nrow(mf_tests) == 0) return(NULL)
+    names(mf_tests)[1] <- ".__y"
+    
+    x1_name <- v$x1_name
+    x2_name <- v$x2_name
+    x3_name <- v$x3_name
+    x2_col <- if (is.null(x2_name)) ".x2" else x2_name
+    x3_col <- if (is.null(x3_name)) ".x3" else x3_name
+    
+    mf_tests[[x1_name]] <- as.character(mf_tests[[x1_name]])
+    if (is.null(x2_name)) mf_tests$.x2 <- "All" else mf_tests[[x2_name]] <- as.character(mf_tests[[x2_name]])
+    if (is.null(x3_name)) mf_tests$.x3 <- "All" else mf_tests[[x3_name]] <- as.character(mf_tests[[x3_name]])
+    
+    complete_mask <- !is.na(mf_tests$.__y) &
+      !is.na(mf_tests[[x1_name]]) &
+      !is.na(mf_tests[[x2_col]]) &
+      !is.na(mf_tests[[x3_col]])
+    mf_tests <- mf_tests[complete_mask, , drop = FALSE]
+    if (nrow(mf_tests) == 0) return(NULL)
+    
+    mf_tests$cell_key <- paste(mf_tests[[x1_name]], mf_tests[[x2_col]], mf_tests[[x3_col]], sep = "|")
+    cluster_mf <- plot_means_align_cluster(v, mf_tests)
+    if (!is.null(cluster_mf)) mf_tests$.__cluster <- cluster_mf
+    
+    calc_simple <- function(a, b) {
+      kA <- cell_keys_drawn[a]
+      kB <- cell_keys_drawn[b]
+      df_sub <- mf_tests[mf_tests$cell_key %in% c(kA, kB), c(".__y", "cell_key", if (!is.null(cluster_mf)) ".__cluster" else NULL), drop = FALSE]
+      if (nrow(df_sub) == 0) stop("plot_means(): no data for columns ", a, " and ", b, call. = FALSE)
+      df_sub$.__g <- factor(ifelse(df_sub$cell_key == kA, "A", "B"), levels = c("A", "B"))
+      if (length(unique(df_sub$.__g)) < 2) stop("plot_means(): not enough data to compare columns ", a, " and ", b, call. = FALSE)
+      
+      if (is.null(cluster_mf)) {
+        tt <- stats::t.test(.__y ~ .__g, data = df_sub, var.equal = FALSE)
+        list(diff = as.numeric(tt$estimate[[2]] - tt$estimate[[1]]), t.value = as.numeric(tt$statistic[[1]]), p.value = as.numeric(tt$p.value))
+      } else {
+        fit <- lm2(.__y ~ .__g, data = df_sub, clusters = df_sub$.__cluster)
+        tab <- attr(fit, "statuser_table")
+        if (is.null(tab) || !is.data.frame(tab) || !"term" %in% names(tab)) stop("plot_means(): failed to extract lm2 table for custom test", call. = FALSE)
+        idx <- which(grepl("^\\.__g", as.character(tab$term)))
+        if (!length(idx)) stop("plot_means(): failed to find group term for custom test", call. = FALSE)
+        tr <- tab[idx[1], , drop = FALSE]
+        list(diff = as.numeric(tr$estimate), t.value = as.numeric(tr$t), p.value = as.numeric(tr$p.value))
+      }
+    }
+    
+    calc_interaction <- function(a, b, c, d) {
+      keys <- unique(cell_keys_drawn[c(a, b, c, d)])
+      df_sub <- mf_tests[mf_tests$cell_key %in% keys, c(".__y", "cell_key", if (!is.null(cluster_mf)) ".__cluster" else NULL), drop = FALSE]
+      if (nrow(df_sub) == 0) stop("plot_means(): no data for interaction test", call. = FALSE)
+      df_sub$.__g <- factor(df_sub$cell_key, levels = keys)
+      
+      fit <- if (is.null(cluster_mf)) {
+        lm2(.__y ~ 0 + .__g, data = df_sub)
+      } else {
+        lm2(.__y ~ 0 + .__g, data = df_sub, clusters = df_sub$.__cluster)
+      }
+      beta <- stats::coef(fit)
+      V <- stats::vcov(fit)
+      if (is.null(beta) || is.null(V)) stop("plot_means(): failed to extract coef/vcov for interaction test", call. = FALSE)
+      
+      coef_names <- names(beta)
+      name_for <- function(key) {
+        target <- paste0(".__g", key)
+        idx <- match(target, coef_names)
+        if (is.na(idx)) stop("plot_means(): missing coefficient for bar in interaction test", call. = FALSE)
+        coef_names[idx]
+      }
+      nA <- name_for(cell_keys_drawn[a])
+      nB <- name_for(cell_keys_drawn[b])
+      nC <- name_for(cell_keys_drawn[c])
+      nD <- name_for(cell_keys_drawn[d])
+      
+      L <- rep(0, length(beta))
+      names(L) <- coef_names
+      L[nA] <-  1
+      L[nB] <- -1
+      L[nC] <- -1
+      L[nD] <-  1
+      
+      est <- sum(L * beta)
+      se <- sqrt(as.numeric(t(L) %*% V %*% L))
+      if (!is.finite(se) || se <= 0) stop("plot_means(): could not compute SE for interaction test", call. = FALSE)
+      t_val <- est / se
+      df_fit <- fit$df
+      if (length(df_fit) != 1) df_fit <- suppressWarnings(min(df_fit, na.rm = TRUE))
+      if (!is.finite(df_fit)) df_fit <- suppressWarnings(min(fit$df, na.rm = TRUE))
+      if (!is.finite(df_fit)) df_fit <- 1
+      p_val <- 2 * stats::pt(-abs(t_val), df = df_fit)
+      list(diff = as.numeric(est), t.value = as.numeric(t_val), p.value = as.numeric(p_val))
+    }
+    
+    rows <- data.frame(
+      group1 = character(0),
+      group2 = character(0),
+      mean1 = numeric(0),
+      mean2 = numeric(0),
+      diff = numeric(0),
+      t.value = numeric(0),
+      p.value = numeric(0),
+      col1 = integer(0),
+      col2 = integer(0),
+      col3 = integer(0),
+      col4 = integer(0),
+      stringsAsFactors = FALSE
+    )
+    
+    for (s in specs) {
+      if (identical(s$type, "simple")) {
+        res <- calc_simple(s$a, s$b)
+        rows <- rbind(rows, data.frame(
+          group1 = paste0("col", s$a),
+          group2 = paste0("col", s$b),
+          mean1 = NA_real_,
+          mean2 = NA_real_,
+          diff = res$diff,
+          t.value = res$t.value,
+          p.value = res$p.value,
+          col1 = s$a,
+          col2 = s$b,
+          col3 = NA_integer_,
+          col4 = NA_integer_,
+          stringsAsFactors = FALSE
+        ))
+      } else if (identical(s$type, "interaction")) {
+        res <- calc_interaction(s$a, s$b, s$c, s$d)
+        rows <- rbind(rows, data.frame(
+          group1 = paste0("interaction(", s$a, "-", s$b, ")-(", s$c, "-", s$d, ")"),
+          group2 = "",
+          mean1 = NA_real_,
+          mean2 = NA_real_,
+          diff = res$diff,
+          t.value = res$t.value,
+          p.value = res$p.value,
+          col1 = s$a,
+          col2 = s$b,
+          col3 = s$c,
+          col4 = s$d,
+          stringsAsFactors = FALSE
+        ))
+      }
+    }
+    return(rows)
+  }
   
   # Pull the relevant term row from the lm2() summary table.
   #   Non-obvious: lm2() stores the coefficient table in an attribute ("statuser_table"),
