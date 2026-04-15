@@ -419,6 +419,16 @@ test_that("plot_freq xlim includes all bars", {
   expect_error(plot_freq(x), NA)
 })
 
+test_that("plot_freq uses pretty x-ticks for many unique values", {
+  # With >30 unique values, plot_freq should still run (and not attempt to label every x)
+    x <- 1:40
+    expect_error(plot_freq(x, ylim = c(0, 10)), NA)
+    
+  # Grouped path also should run
+    df <- data.frame(value = 1:40, group = rep(c("A", "B"), each = 20))
+    expect_error(plot_freq(value ~ group, data = df, ylim = c(0, 10)), NA)
+})
+
 test_that("plot_freq reserves space for legend", {
   y1 <- c(1, 1, 2, 2, 3)
   y2 <- c(1, 4, 4, 4)

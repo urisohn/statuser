@@ -105,6 +105,34 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
   # Extract additional arguments
   dots <- list(...)
   
+  # Fix partial argument matching: `ylim=` gets matched to `y` in the signature.
+  # Treat it as a plotting argument and restore `y` to NULL.
+    if ("ylim" %in% names(mc) && !"y" %in% names(mc) && !is.null(y) && !"ylim" %in% names(dots)) {
+      dots$ylim <- y
+      y <- NULL
+    }
+
+  # Decide x-axis tick positions for plot_freq
+    get_plot_freq_x_ticks <- function(x_values, dots, max_unique_ticks = 30) {
+      # Prefer user-supplied xlim (or computed dots$xlim) when available
+        xlim_used <- if ("xlim" %in% names(dots)) dots$xlim else range(x_values, finite = TRUE)
+        xlim_used <- as.numeric(xlim_used)
+        if (length(xlim_used) != 2 || any(!is.finite(xlim_used))) {
+          xlim_used <- range(x_values, finite = TRUE)
+        }
+
+      # If few unique values, label them all; otherwise use pretty() on the range
+        x_ticks <- if (length(x_values) <= max_unique_ticks) {
+          x_values
+        } else {
+          pretty(xlim_used, n = 5)
+        }
+
+      # Clip ticks to the plotting x-range (avoid drawing far outside)
+        x_ticks <- x_ticks[x_ticks >= min(xlim_used) & x_ticks <= max(xlim_used)]
+        x_ticks
+    }
+  
   # Check if we're in two-vector comparison mode (formula is vector, y is vector)
   if (!is.null(y) && !inherits(formula, "formula")) {
     # Two-vector comparison mode: plot_freq(y1, y2)
@@ -449,7 +477,7 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
       
       # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
-        axis(1, at = all_xs, las = 1)
+        axis(1, at = get_plot_freq_x_ticks(all_xs, dots, max_unique_ticks = 30), las = 1)
       }
       
       # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
@@ -708,7 +736,7 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
         
     # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
-        axis(1, at = xs, las = 1)
+        axis(1, at = get_plot_freq_x_ticks(xs, dots, max_unique_ticks = 30), las = 1)
       }
             
     # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
