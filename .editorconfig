@@ -1,1 +1,10 @@
-root = true\n\n[*]\ncharset = utf-8\nend_of_line = lf\ninsert_final_newline = true\n\n[*.{R,Rd,Rmd,md,yml,yaml}]\nindent_style = space\nindent_size = 2\n
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{R,Rd,Rmd,md,yml,yaml}]
+indent_style = space
+indent_size = 2
