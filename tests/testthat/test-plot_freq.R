@@ -74,6 +74,24 @@ test_that("plot_freq handles value.labels parameter", {
   
   # Without labels
   expect_error(plot_freq(x ~ 1, value.labels = FALSE), NA)
+  
+  # Top-N labels
+  expect_error(plot_freq(x ~ 1, value.labels = 5), NA)
+  
+  # None / all
+  expect_error(plot_freq(x ~ 1, value.labels = 0), NA)
+  expect_error(plot_freq(x ~ 1, value.labels = -1), NA)
+  
+  # Grouped path also accepts numeric / logical
+  df <- data.frame(value = x, group = c("A", "A", "B", "B", "A"))
+  expect_error(plot_freq(value ~ group, data = df, value.labels = 2), NA)
+  expect_error(plot_freq(value ~ group, data = df, value.labels = TRUE), NA)
+  expect_error(plot_freq(value ~ group, data = df, value.labels = FALSE), NA)
+  
+  # Invalid inputs
+  expect_error(plot_freq(x ~ 1, value.labels = -2))
+  expect_error(plot_freq(x ~ 1, value.labels = NA))
+  expect_error(plot_freq(x ~ 1, value.labels = c(1, 2)))
 })
 
 test_that("plot_freq handles add parameter", {

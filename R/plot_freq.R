@@ -24,7 +24,9 @@
 #' @param col Color for the bars. 
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param width Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.
-#' @param value.labels Logical. If TRUE, displays frequencies on top of each line. 
+#' @param value.labels Controls value labeling. If numeric, shows labels for the \code{value.labels}
+#'   highest-frequency values (including ties). Use \code{-1} to show all labels and \code{0} to show
+#'   none. For backward compatibility, \code{TRUE} is treated as \code{-1} and \code{FALSE} as \code{0}.
 #' @param add Logical. If TRUE, adds to an existing plot instead of creating a new one. 
 #' @param show.legend Logical. If TRUE (default), displays a legend when \code{group} is specified. If FALSE, no legend is shown.
 #' @param legend.title Character string. Title for the legend when \code{group} is specified. If NULL (default), no title is shown.
@@ -70,7 +72,7 @@
 #'
 
 #' @export
-plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=30, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
   mc <- match.call()
   # sys.call() preserves original supplied names; match.call() renames partial
@@ -114,6 +116,19 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
 
   # Extract additional arguments
   dots <- list(...)
+
+  # Normalize and validate value.labels
+    if (isTRUE(value.labels)) value.labels <- -1
+    if (identical(value.labels, FALSE)) value.labels <- 0
+    if (length(value.labels) != 1 || is.na(value.labels) || !is.numeric(value.labels)) {
+      stop("plot_freq(): 'value.labels' must be a single numeric value, or TRUE/FALSE", call. = FALSE)
+    }
+    if (value.labels < -1) {
+      stop("plot_freq(): 'value.labels' must be -1 (all), 0 (none), or a positive integer", call. = FALSE)
+    }
+    if (value.labels > 0) {
+      value.labels <- as.integer(value.labels)
+    }
 
   # R's partial matching binds ylim= to formal y (since "ylim" begins with "y").
   # Move it to dots so it reaches plot() correctly.
@@ -557,27 +572,53 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     }
     
     # Add value labels with frequencies (colored by group)
-    if (value.labels) {
-      # For each x value and group, add label if frequency > 0
-      for (j in seq_along(all_xs)) {
-        x_val <- all_xs[j]
-        for (i in seq_len(n_groups)) {
-          freq_val <- group_freqs[[i]]$fs[j]
-          if (freq_val > 0) {
-            x_label_pos <- x_val + offsets[i]
-            # Format label based on freq parameter
-            if (freq == FALSE) {
-              label_text <- paste0(round(freq_val, 0), "%")
-            } else {
-              label_text <- freq_val
-            }
-            # Use col.text if provided, otherwise use group color
-            label_color <- if (!is.null(col.text)) col.text else group_cols[i]
-            text(x = x_label_pos, y = freq_val, labels = label_text, 
-                 cex = 0.8, pos = 3, col = label_color)
+    if (value.labels != 0) {
+      # Determine which x-values to label overall across all groups (top-N with ties)
+        fs_rank_list <- if (freq == FALSE) {
+          lapply(group_freqs, function(gf) gf$fs)
+        } else {
+          lapply(group_freqs_original, function(gf) gf$fs)
+        }
+        total_fs <- Reduce(`+`, fs_rank_list)
+        
+        xs_to_label <- numeric(0)
+        if (value.labels == -1) {
+          xs_to_label <- all_xs[total_fs > 0]
+        } else if (value.labels > 0) {
+          n_req <- value.labels
+          xs_nz <- all_xs[total_fs > 0]
+          fs_nz <- total_fs[total_fs > 0]
+          if (length(xs_nz) <= n_req) {
+            xs_to_label <- xs_nz
+          } else {
+            cutoff <- sort(fs_nz, decreasing = TRUE)[n_req]
+            xs_to_label <- xs_nz[fs_nz >= cutoff]
           }
         }
-      }
+        label_mask_x <- all_xs %in% xs_to_label
+      
+      # For each x value and group, add label if frequency > 0 and x is selected
+        if (any(label_mask_x)) {
+          for (j in which(label_mask_x)) {
+            x_val <- all_xs[j]
+            for (i in seq_len(n_groups)) {
+              freq_val <- group_freqs[[i]]$fs[j]
+              if (freq_val > 0) {
+                x_label_pos <- x_val + offsets[i]
+                # Format label based on freq parameter
+                  if (freq == FALSE) {
+                    label_text <- paste0(round(freq_val, 0), "%")
+                  } else {
+                    label_text <- freq_val
+                  }
+                # Use col.text if provided, otherwise use group color
+                  label_color <- if (!is.null(col.text)) col.text else group_cols[i]
+                  text(x = x_label_pos, y = freq_val, labels = label_text, 
+                       cex = 0.8, pos = 3, col = label_color)
+              }
+            }
+          }
+        }
     }
     
     # Add legend showing groups and colors
@@ -807,11 +848,33 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     }
     
   # Add value labels if requested
-    if (value.labels == TRUE && any(non_zero)) {
-      # Use col.text if provided, otherwise use col
-      label_color <- if (!is.null(col.text)) col.text else col
-      text(x = xs[non_zero], y = fs[non_zero], labels = fsp[non_zero], 
-           cex = 0.7, pos = 3, col = label_color)
+    if (value.labels != 0 && any(non_zero)) {
+      # Determine which x-values to label (top-N with ties)
+        fs_rank <- if (freq == FALSE) fs else fs_original
+        xs_nz <- xs[non_zero]
+        fs_nz <- fs_rank[non_zero]
+        
+        xs_to_label <- numeric(0)
+        if (value.labels == -1) {
+          xs_to_label <- xs_nz
+        } else if (value.labels > 0) {
+          n_req <- value.labels
+          if (length(xs_nz) <= n_req) {
+            xs_to_label <- xs_nz
+          } else {
+            cutoff <- sort(fs_nz, decreasing = TRUE)[n_req]
+            xs_to_label <- xs_nz[fs_nz >= cutoff]
+          }
+        }
+        
+      # Draw labels
+        label_mask <- non_zero & (xs %in% xs_to_label)
+        if (any(label_mask)) {
+          # Use col.text if provided, otherwise use col
+            label_color <- if (!is.null(col.text)) col.text else col
+            text(x = xs[label_mask], y = fs[label_mask], labels = fsp[label_mask], 
+                 cex = 0.7, pos = 3, col = label_color)
+        }
     }
     
   # Return frequencies or percentages invisibly
