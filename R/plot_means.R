@@ -77,6 +77,8 @@
 #' plot_means(y ~ x1 + x2 + x3, data = df3)
 #'
 #' @export
+#' @importFrom grDevices recordPlot replayPlot
+#' @importFrom stats na.pass
 #'
 #: 1 plot_means: validate -> descriptives -> params -> compute -> draw -> output/export
 #: 2 plot_means_validate: NSE-safe arg evaluation + input validation/normalization

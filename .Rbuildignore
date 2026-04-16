@@ -13,3 +13,4 @@
 ^Rplots\.pdf$
 ^CHANGELOG\.md$
 ^examples/
+^\\.editorconfig$
