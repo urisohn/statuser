@@ -75,6 +75,10 @@ test_that("plot_freq handles value.labels parameter", {
   # Without labels
   expect_error(plot_freq(x ~ 1, value.labels = FALSE), NA)
   
+  # Character options
+  expect_error(plot_freq(x ~ 1, value.labels = "all"), NA)
+  expect_error(plot_freq(x ~ 1, value.labels = "auto"), NA)
+  
   # Top-N labels
   expect_error(plot_freq(x ~ 1, value.labels = 5), NA)
   
@@ -87,23 +91,45 @@ test_that("plot_freq handles value.labels parameter", {
   expect_error(plot_freq(value ~ group, data = df, value.labels = 2), NA)
   expect_error(plot_freq(value ~ group, data = df, value.labels = TRUE), NA)
   expect_error(plot_freq(value ~ group, data = df, value.labels = FALSE), NA)
+  expect_error(plot_freq(value ~ group, data = df, value.labels = "all"), NA)
+  expect_error(plot_freq(value ~ group, data = df, value.labels = "auto"), NA)
+  
+  # In grouped plots, numeric value.labels applies per group (still should not error)
+  df2 <- data.frame(value = c(1, 1, 1, 2, 2, 3, 3, 4),
+                    group = c("A", "A", "A", "A", "B", "B", "B", "B"))
+  expect_error(plot_freq(value ~ group, data = df2, value.labels = 1), NA)
+  
+  # Labeling does not affect returned data
+  r1 <- plot_freq(value ~ group, data = df2, value.labels = 1)
+  r0 <- plot_freq(value ~ group, data = df2, value.labels = 0)
+  expect_equal(r1, r0)
   
   # Invalid inputs
   expect_error(plot_freq(x ~ 1, value.labels = -2))
   expect_error(plot_freq(x ~ 1, value.labels = NA))
   expect_error(plot_freq(x ~ 1, value.labels = c(1, 2)))
+  expect_error(plot_freq(x ~ 1, value.labels = "nope"))
 })
 
-test_that("plot_freq handles add parameter", {
-  x <- c(1, 1, 2, 2, 2)
+test_that("plot_freq handles show.x.value parameter", {
+  x <- c(1, 1, 2, 2, 2, 3, 3)
+  df <- data.frame(value = x, group = rep(c("A", "B"), length.out = length(x)))
   
-  # Create new plot
-  expect_error(plot_freq(x ~ 1, add = FALSE), NA)
+  # Non-grouped: x= only where frequency labels are drawn
+  expect_error(plot_freq(x ~ 1, value.labels = 2, show.x.value = "auto"), NA)
+  expect_error(plot_freq(x ~ 1, value.labels = 0, show.x.value = "auto"), NA)
   
-  # Add to existing plot (note: x + 1 needs to be evaluated first for formula)
-  plot_freq(x ~ 1, add = FALSE)
-  x_plus_1 <- x + 1
-  expect_error(plot_freq(x_plus_1 ~ 1, add = TRUE), NA)
+  # Grouped
+  expect_error(plot_freq(value ~ group, data = df, value.labels = 2, show.x.value = "auto"), NA)
+  
+  # Explicit TRUE/FALSE still accepted
+  expect_error(plot_freq(x ~ 1, show.x.value = TRUE), NA)
+  expect_error(plot_freq(x ~ 1, show.x.value = FALSE), NA)
+})
+
+test_that("plot_freq handles ticks.max parameter", {
+  x <- 1:50
+  expect_error(plot_freq(x ~ 1, ticks.max = 5), NA)
 })
 
 test_that("plot_freq handles show.legend parameter", {

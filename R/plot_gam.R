@@ -363,19 +363,19 @@ plot_gam <- function(model, predictor, quantile.others = 50,
                        bg = bg2, 
                        cex.lab = ylab_cex)
       
-      # Use plot_freq() with add=TRUE to overlay on the background
+      # Use plot_freq() with .overlay=TRUE to draw on the background
       # Set col2 if provided, otherwise use plot_freq default
       plot_freq_args <- list(formula = predictor_data, 
                              xlab = predictor,  # Predictor variable name
                              main = "",
                              xlim = xlim_dist,
-                             add = TRUE)
+                             .overlay = TRUE)
       if (!is.null(col2)) {
         plot_freq_args$col <- col2
       }
       do.call(plot_freq, plot_freq_args)
       
-      # Draw axes after plot_freq (since add=TRUE doesn't draw axes)
+      # Draw axes after plot_freq (since .overlay=TRUE doesn't draw axes)
       axis(1)  # x-axis
       axis(2, las = 1)  # y-axis on left side
       

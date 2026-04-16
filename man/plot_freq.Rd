@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_freq.R
 \name{plot_freq}
 \alias{plot_freq}
-\title{Plot frequencies of a variable, optionally by group (histogram without binning)}
+\title{Plot frequencies for a variable (histogram without binning)}
 \usage{
 plot_freq(
   formula,
@@ -14,8 +14,9 @@ plot_freq(
   col = "dodgerblue",
   lwd = 9,
   width = NULL,
-  value.labels = TRUE,
-  add = FALSE,
+  value.labels = "auto",
+  ticks.max = 30,
+  show.x.value = "auto",
   show.legend = TRUE,
   legend.title = NULL,
   col.text = NULL,
@@ -25,7 +26,7 @@ plot_freq(
 \arguments{
 \item{formula}{A formula of the form \code{x ~ group} where \code{x} is the
 variable to plot frequencies for and \code{group} is an optional grouping variable
-(with 2 or 3 unique values). For single variable (no grouping), use \code{x ~ 1}.
+(with up to 4 unique values). 
 Alternatively, pass a single vector \code{x} for a simple frequency plot.}
 
 \item{y}{An optional second vector to compare with \code{formula}. When provided,
@@ -53,9 +54,18 @@ alphabetically/numerically. Only applies when using grouped plots or comparing t
 
 \item{width}{Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.}
 
-\item{value.labels}{Logical. If TRUE, displays frequencies on top of each line.}
+\item{value.labels}{Controls value labeling. If numeric, shows labels for the \code{value.labels}
+highest-frequency values (including ties). Use \code{-1} or \code{"all"} to show all labels and
+\code{0} to show none. Use \code{"auto"} to label all values when there are 30 or fewer
+unique values; otherwise label the single most frequent value. For backward compatibility, \code{TRUE}
+is treated as \code{-1} and \code{FALSE} as \code{0}.}
 
-\item{add}{Logical. If TRUE, adds to an existing plot instead of creating a new one.}
+\item{ticks.max}{Integer. Maximum number of unique x values to label on the x-axis. If there are more
+than \code{ticks.max} unique values, \code{pretty()} ticks are used instead of labeling every value.}
+
+\item{show.x.value}{Either \code{"auto"} (default), \code{TRUE}, or \code{FALSE}. If enabled, draws a
+small \code{x=<value>} label just above each frequency value label. When \code{"auto"}, x labels are
+shown only when plot_freq is not already labeling all x values on the x-axis.}
 
 \item{show.legend}{Logical. If TRUE (default), displays a legend when \code{group} is specified. If FALSE, no legend is shown.}
 
@@ -69,8 +79,8 @@ alphabetically/numerically. Only applies when using grouped plots or comparing t
 Invisibly returns a data frame with values and their frequencies.
 }
 \description{
-Creates a frequency plot showing the frequency of every observed value,
-displaying the full range from minimum to maximum value.
+Creates a frequency plot showing the frequency of every observed value, optionaly by group. 
+Most frequent values are labeled by default.
 }
 \details{
 This function creates a frequency plot where each observed value is shown
@@ -88,7 +98,7 @@ plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
 
 # Add to an existing plot
 plot_freq(x, col = "dodgerblue")
-plot_freq(x + 1, col = "red", add = TRUE)
+
 
 # Compare two vectors
 y1 <- c(1, 1, 2, 2, 2, 5, 5)

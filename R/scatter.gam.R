@@ -410,17 +410,17 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
                        bg = "gray95",
                        cex.lab = cex_lab)
       
-      # Use plot_freq() with add=TRUE to overlay on the background
+      # Use plot_freq() with .overlay=TRUE to draw on the background
       # Pass x as first positional argument (formula parameter) without naming it
       plot_freq_args <- list(x,
                              xlab = x_name,
                              main = "",
                              xlim = xlim_dist,
-                             add = TRUE)
+                             .overlay = TRUE)
       if ("col" %in% names(dist_plot_args)) plot_freq_args$col <- dist_plot_args$col
       do.call(plot_freq, plot_freq_args)
       
-      # Draw axes after plot_freq (since add=TRUE doesn't draw axes)
+      # Draw axes after plot_freq (since .overlay=TRUE doesn't draw axes)
       axis(1)  # x-axis
       axis(2, las = 1, col = "gray40", col.axis = "gray40")  # y-axis on left side with gray40 color
       

@@ -25,23 +25,29 @@ plot_means(
 )
 }
 \arguments{
-\item{formula}{A formula like \code{y ~ x1+x2} where x1 & x2 are 
-grouping variables (e.g., the two categorical variables indicating manipulations in a 2x2 experiment). 
-Accepts up to three grouping variables. The plot will show contiguous bars for x1, and group the bair pairs by x2 and x3.}
+\item{formula}{A formula, e.g., \code{y ~ x1+x2}, where x1 & x2 are
+grouping variables (e.g., condition indicators in a 2x2 experiment). 
+The formula can include up to three grouping variables. The plot will 
+ show contiguous bars for x1, and sets of bars for x2 and x3}
 
-\item{data}{Optional data frame containing  variables in the formula.}
+\item{data}{Optional data frame containing variables in the formula.}
 
-\item{cluster}{Optional clustering variable when there are repeated observations per cluster
-e.g., \code{cluster="participant_ID"}. When provided, inference is based on clustered standard errors.
-When \code{NULL}, simple-effect p-values (difference in means) are computed
-using Welch \code{t.test()}.}
+\item{cluster}{Optional clustering variable when there are repeated 
+observations per cluster 
+e.g., \code{cluster="participant_ID"}. 
+When provided, inference is based on regressions with clustered standard errors.
+  When \code{NULL}, simple-effect p-values (difference in means) are computed
+  using Welch \code{t.test()}.}
 
-\item{tests}{specifies which tests to report in the graph through p-values with lines connecting 
-columns. Syntax involves putting column numbers in a string, with a - to symbolize a comparison and a + symbolizing combination. 
-For example tests="1-2" reports t-test comparing columns 1 and 2. 
-tests="1-2,3-4" t-test comparing columns 1 & 2 and another 3 & 4. Interaction tests use parentheses:
-  tests=\code{"(4-3)-(2-1)"} and can also be combined with simple tests. Main effects can be incorporated with +, 
-for exaample (1+2)-(3+4) compares all observations in the first two columns with all observations in the next two columns.}
+\item{tests}{specifies which comparisons of means to report. Syntax involves 
+putting column numbers in a character string, with a - to symbolize a 
+comparison and a + symbolizing combination. For example tests="1-2" reports 
+t-test comparing columns 1 and 2. tests="1-2,3-4" t-tests comparing columns 
+1 & 2 and another 3 & 4. To run an interaction use parentheses:
+tests=\code{"(4-3)-(2-1)"} and can also be combined with simple tests. 
+Main effects can be specified using `+`, for example (1+2)-(3+4) compares 
+all observations in the first two columns with all observations in 
+the next two columns.}
 
 \item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default
 is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
@@ -50,8 +56,7 @@ is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
 \item{quiet}{Logical. When \code{TRUE}, suppresses console messages from \code{plot_means()}.}
 
 \item{order}{Controls the order of \code{x1} groups (bar order and colors).
-Use \code{-1} to reverse the default order, or provide a character vector
-with the desired order.}
+Use \code{-1} to reverse the default order (e.g., if plot shows 'male' first and 'female' second, order=-1 will flip that).}
 
 \item{legend.title}{Character string. Title for the legend. If \code{NULL},
 no title is shown.}
