@@ -1,6 +1,10 @@
 #' Describe a variable, optionally by groups
 #'
-#' Returns a dataframe with one row per group
+#' Returns a dataframe with one row per group.
+#'
+#' The dependent variable (`y`) must be numeric. If you pass an existing
+#' non-numeric variable (e.g., character, factor), `desc_var()` will stop with
+#' a clear error indicating that the variable must be numeric.
 #'
 #' @param y A numeric vector of values, a column name (character string or unquoted) if \code{data} is provided,
 #'   or a formula of the form \code{y ~ x} or \code{y ~ x1 + x2} (for multiple grouping variables).
@@ -209,11 +213,16 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
       # No data: evaluate from calling environment
       y_exists <- exists(y_name, envir = calling_env, inherits = TRUE)
       if (!y_exists) {
-        # y might already be a vector passed directly, check if it's numeric
-        if (is.numeric(y) && is.vector(y)) {
-          # y is already evaluated, use it as-is
-        } else {
+        # y may be an expression like df$x; evaluate the original expression
+        # before deciding it is truly missing.
+        y_eval <- tryCatch(
+          eval(y_expr, envir = calling_env),
+          error = function(e) NULL
+        )
+        if (is.null(y_eval)) {
           message2(format_msg(sprintf("'%s' not found", y_name)), col = 'red', stop = TRUE)
+        } else {
+          y <- y_eval
         }
       } else {
         y <- get(y_name, envir = calling_env)
@@ -261,7 +270,12 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
   # 2. Validate inputs
   # 2.1. Validate that y is numeric
   if (!is.numeric(y)) {
-    message2(format_msg(sprintf("The dv is numeric: '%s' is not numeric", y_name)), col = 'red', stop = TRUE)
+    y_class <- paste(class(y), collapse = "/")
+    message2(
+      format_msg(sprintf("'%s' must be numeric; currently %s", y_name, y_class)),
+      col = "red",
+      stop = TRUE
+    )
   }
   
   # 2.2. Check that multiple grouping variables do not overlap perfectly (formula syntax only)
@@ -490,8 +504,9 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
     
     # Sort by grouping variables
       if (use_separate_group_cols && !is.null(group_list)) {
-        # Sort by all grouping variables in order
-        sort_cols <- names(group_list)
+        # Sort by grouping variables from right to left in formula
+        # y ~ x1 + x2 + x3  => sort by x3, then x2, then x1
+        sort_cols <- rev(names(group_list))
         result_df <- result_df[do.call(order, result_df[sort_cols]), , drop = FALSE]
       } else if (!is.null(group)) {
         # Sort by single group column

@@ -124,9 +124,9 @@ test_that("desc_var sorts results by grouping variables", {
   )
   
   result <- desc_var(y ~ x1 + x2, data = df)
-  # Results should be sorted by x1 then x2
-  expect_equal(as.character(result$x1), c("A", "A", "B", "B"))
-  expect_equal(as.character(result$x2), c("X", "Y", "X", "Y"))
+  # Results should be sorted by x2 then x1 (right-to-left in formula)
+  expect_equal(as.character(result$x1), c("A", "B", "A", "B"))
+  expect_equal(as.character(result$x2), c("X", "X", "Y", "Y"))
 })
 
 test_that("desc_var detects missing group combinations", {
@@ -229,4 +229,63 @@ test_that("desc_var digits parameter actually rounds differently", {
   # 2.35 (2 digits) vs 2.3457 (4 digits)
   expect_true(nchar(format(result2$mean, nsmall = 2)) < nchar(format(result4$mean, nsmall = 4)) ||
               result2$mean != result4$mean)
+})
+
+test_that("desc_var errors clearly for non-numeric y", {
+  df <- data.frame(
+    y_char = as.character(1:10),
+    y_factor = factor(1:10),
+    group = rep(c("A", "B"), each = 5)
+  )
+
+  # Non-formula, data frame input
+  expect_error(
+    desc_var(y_char, group, data = df),
+    "'y_char' must be numeric; currently character"
+  )
+
+  # Formula syntax
+  expect_error(
+    desc_var(y_char ~ group, data = df),
+    "'y_char' must be numeric; currently character"
+  )
+
+  # Factor response
+  expect_error(
+    desc_var(y_factor ~ group, data = df),
+    "'y_factor' must be numeric; currently factor"
+  )
+})
+
+test_that("desc_var still errors when variable truly does not exist", {
+  df <- data.frame(
+    y = rnorm(10),
+    group = rep(c("A", "B"), each = 5)
+  )
+
+  expect_error(
+    desc_var(nonexistent, group, data = df),
+    "'nonexistent' not found in data"
+  )
+
+  expect_error(
+    desc_var(nonexistent ~ group, data = df),
+    "'nonexistent' not found in data"
+  )
+})
+
+test_that("desc_var evaluates df$col expressions before numeric validation", {
+  df <- data.frame(x = 1:10)
+
+  # Numeric expression works
+  result <- desc_var(df$x)
+  expect_true(is.data.frame(result))
+  expect_equal(as.numeric(result$mean), 5.5)
+
+  # Existing but non-numeric expression gives numeric-type error (not not-found)
+  df$x <- "a"
+  expect_error(
+    desc_var(df$x),
+    "'x' must be numeric; currently character"
+  )
 })

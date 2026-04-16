@@ -4,12 +4,12 @@
 #' each unique value of a grouping variable, with support for vectorized
 #' plotting parameters. If no grouping variable is provided, plots a single ECDF.
 #'
-#' @param formula A formula of the form \code{y ~ group} where \code{y} is the
-#'   response variable and \code{group} is the grouping variable. Alternatively,
-#'   can be just \code{y} (without a grouping variable) to plot a single ECDF.
-#' @param y An optional second vector to compare with \code{formula}. When provided,
-#'   creates a comparison plot of two variables. This allows syntax like 
-#'   \code{plot_cdf(y1, y2)} to compare two vectors.
+#' @param formula Two possible uses (similar to \code{t.test()}):
+#'   \itemize{
+#'     \item {Single Variable (possibly by subgroup)}: \code{plot_cdf(y)} or \code{plot_cdf(y~x)}
+#'     \item {Contrast Two Variables}: \code{plot_cdf(y1, y2)}
+#'   }
+#' @param y2 optional second variable when contrasting two variables \code{plot_cdf(y1,y2)}
 #' @param data An optional data frame containing the variables in the formula.
 #'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param order Controls the order in which groups appear in the plot and legend. 
@@ -93,7 +93,7 @@
 #' summary(result$quantile_regression_50)
 
 #' @export
-plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
+plot_cdf <- function(formula, y2 = NULL, data = NULL, order = NULL, show.ks = TRUE, show.quantiles = TRUE, ...) {
   #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
   mc <- match.call()
   
@@ -108,10 +108,10 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
   )
   
   # Resolve second argument if present (for two-vector mode)
-  y_resolved <- if (!is.null(mc$y)) {
+  y2_resolved <- if (!is.null(mc$y2)) {
     evaluate_variable_arguments(
-      arg_expr = mc$y,
-      arg_name = "y",
+      arg_expr = mc$y2,
+      arg_name = "y2",
       data = data,
       calling_env = parent.frame(),
       func_name = "plot_cdf",
@@ -123,7 +123,7 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
   
   # Now overwrite the arguments with resolved values
   formula <- formula_resolved$value
-  y <- y_resolved$value
+  y2 <- y2_resolved$value
   
   # Extract plotting parameters from ...
     dots <- list(...)
@@ -133,24 +133,24 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
     dots$show.quantiles <- NULL
     
   # Check if we're in two-vector comparison mode (formula is vector, y is vector)
-  if (!is.null(y) && !inherits(formula, "formula")) {
+  if (!is.null(y2) && !inherits(formula, "formula")) {
     # Two-vector comparison mode: plot_cdf(y1, y2)
     # Use resolved names
     y1_name <- formula_resolved$name
-    y2_name <- y_resolved$name
+    y2_name <- y2_resolved$name
     
     # Validate inputs
     if (!is.numeric(formula) || !is.vector(formula)) {
       stop(sprintf("plot_cdf(): First argument '%s' must be a numeric vector", y1_name), call. = FALSE)
     }
-    if (!is.numeric(y) || !is.vector(y)) {
+    if (!is.numeric(y2) || !is.vector(y2)) {
       stop(sprintf("plot_cdf(): Second argument '%s' must be a numeric vector", y2_name), call. = FALSE)
     }
     
     # Create a data frame and recursively call with grouped syntax
     df <- data.frame(
-      value = c(formula, y),
-      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      value = c(formula, y2),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y2))),
       stringsAsFactors = FALSE
     )
     
@@ -411,12 +411,15 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
       }
     
     # Ensure adequate top margin for main title and legend
-    old_par <- par(no.readonly = TRUE)
-    on.exit(par(old_par), add = TRUE)
+    # Only save/restore what we modify; restoring full `par()` can reset `mfg`
+    # and break multi-panel plotting via `par(mfrow=...)`.
+    old_mar <- par("mar")
+    old_mgp <- par("mgp")
+    on.exit(par(mar = old_mar, mgp = old_mgp), add = TRUE)
     if (!"mar" %in% names(dots)) {
       # Increase top margin if it's too small (less than 3 lines to accommodate title and legend)
       # Add 1 line to the left margin
-      new_mar <- c(old_par$mar[1], old_par$mar[2] + 1, old_par$mar[3], old_par$mar[4])
+      new_mar <- c(old_mar[1], old_mar[2] + 1, old_mar[3], old_mar[4])
       if (new_mar[3] < 3) {
         new_mar[3] <- 3
       }
@@ -424,7 +427,7 @@ plot_cdf <- function(formula, y = NULL, data = NULL, order = NULL, show.ks = TRU
     }
     # Move ylab 0.75 lines to the left
     if (!"mgp" %in% names(dots)) {
-      new_mgp <- c(old_par$mgp[1], old_par$mgp[2] - 0.75, old_par$mgp[3])
+      new_mgp <- c(old_mgp[1], old_mgp[2] - 0.75, old_mgp[3])
       par(mgp = new_mgp)
     }
     

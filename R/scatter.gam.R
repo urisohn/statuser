@@ -211,13 +211,10 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
   g1 <- do.call(mgcv::gam, c(list(formula = gam_formula), gam_args))
   
   # Create grid for smooth line prediction
-  # Use user-provided xlim if available, otherwise use data range
-  if ("xlim" %in% names(plot_args)) {
-    x_range <- plot_args$xlim
-  } else {
-    x_range <- range(x, na.rm = TRUE)
-  }
-  newdat <- data.frame(x = seq(x_range[1], x_range[2], length.out = 400))
+  # Use a single shared xlim for both panels to keep x-axes aligned
+  # Prefer user-provided xlim if available, otherwise use data range (no buffer)
+  xlim_common <- if ("xlim" %in% names(plot_args)) plot_args$xlim else range(x, na.rm = TRUE)
+  newdat <- data.frame(x = seq(xlim_common[1], xlim_common[2], length.out = 400))
   yh <- predict(g1, newdata = newdat)
   
   # Calculate three-way spline points if requested
@@ -305,7 +302,7 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
   
   # Create plot frame first (without drawing the line yet)
   # We'll draw the line after the data points so it appears on top
-  plot_args_frame <- c(list(x = newdat$x, y = yh, type = 'n', ylim = ylim), 
+  plot_args_frame <- c(list(x = newdat$x, y = yh, type = 'n', ylim = ylim, xlim = xlim_common), 
                        plot_args)
   do.call(plot, plot_args_frame)
   
@@ -378,16 +375,8 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
     par(mar = c(5.1, 5.1, 0, 4.1))  # Bottom plot: no top margin, aligned margins with top plot
     
     # Determine xlim for distribution plot
-    # Use user-provided xlim if available, otherwise calculate from data with buffer
-    if ("xlim" %in% names(plot_args)) {
-      # Use the same xlim as the scatter plot (user-specified)
-      xlim_dist <- plot_args$xlim
-    } else {
-      # Calculate x-axis range with buffer (10% on each side for better visibility)
-      x_range <- range(x, na.rm = TRUE)
-      x_buffer <- diff(x_range) * 0.10
-      xlim_dist <- c(x_range[1] - x_buffer, x_range[2] + x_buffer)
-    }
+    # Use the same xlim as the scatter plot to keep both panels aligned
+    xlim_dist <- xlim_common
     
     # Prepare distribution plot arguments - only pass essential arguments
     # plot_freq() and hist() have their own defaults, so we only override what's necessary
@@ -421,17 +410,17 @@ scatter.gam <- function(x, y, data.dots = TRUE, three.dots = FALSE, data = NULL,
                        bg = "gray95",
                        cex.lab = cex_lab)
       
-      # Use plot_freq() with add=TRUE to overlay on the background
+      # Use plot_freq() with .overlay=TRUE to draw on the background
       # Pass x as first positional argument (formula parameter) without naming it
       plot_freq_args <- list(x,
                              xlab = x_name,
                              main = "",
                              xlim = xlim_dist,
-                             add = TRUE)
+                             .overlay = TRUE)
       if ("col" %in% names(dist_plot_args)) plot_freq_args$col <- dist_plot_args$col
       do.call(plot_freq, plot_freq_args)
       
-      # Draw axes after plot_freq (since add=TRUE doesn't draw axes)
+      # Draw axes after plot_freq (since .overlay=TRUE doesn't draw axes)
       axis(1)  # x-axis
       axis(2, las = 1, col = "gray40", col.axis = "gray40")  # y-axis on left side with gray40 color
       

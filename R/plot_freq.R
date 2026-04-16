@@ -1,20 +1,15 @@
-#' Plot frequencies of a variable, optionally by group (histogram without binning)
+#' Plot frequencies for a variable (histogram without binning)
 #'
-#' Creates a frequency plot showing the frequency of every observed value,
-#' displaying the full range from minimum to maximum value.
+#' Creates a frequency plot showing the frequency of every observed value, optionaly by group. 
+#' Most frequent values are labeled by default.
 #'
-#' @param formula A formula of the form \code{x ~ group} where \code{x} is the
-#'   variable to plot frequencies for and \code{group} is an optional grouping variable
-#'   (with 2 or 3 unique values). For single variable (no grouping), use \code{x ~ 1}.
-#'   Alternatively, pass a single vector \code{x} for a simple frequency plot.
-#' @param y An optional second vector to compare with \code{formula}. When provided,
-#'   creates a comparison plot of two variables (like grouped plot but with separate variables).
-#'   This allows syntax like \code{plot_freq(y1, y2)} to compare two vectors.
+#' @param formula Two possible uses (similar to \code{t.test()}):
+#'   \itemize{
+#'     \item {Single Variable (possibly by subgroup)}: \code{plot_freq(y)} or \code{plot_freq(y~x)}
+#'     \item {Contrast Two Variables}: \code{plot_freq(y1, y2)}
+#'   }
+#' @param y2 optional second variable when contrasting two variables \code{plot_freq(y1,y2)}
 #' @param data An optional data frame containing the variables in the formula.
-#' @param labels An optional character vector of length 2 providing custom labels for the
-#'   two vectors when using two-vector syntax. Only applicable when \code{y} is provided.
-#'   If \code{NULL} (default), uses the variable names.
-#'   If \code{data} is not provided, variables are evaluated from the calling environment.
 #' @param freq Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.
 #' @param order Controls the order in which groups appear in the plot and legend. 
 #'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
@@ -24,8 +19,17 @@
 #' @param col Color for the bars. 
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param width Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.
-#' @param value.labels Logical. If TRUE, displays frequencies on top of each line. 
-#' @param add Logical. If TRUE, adds to an existing plot instead of creating a new one. 
+#' @param value.labels Controls value labeling. If numeric, shows labels for the \code{value.labels}
+#'   highest-frequency values (including ties). Use \code{-1} or \code{"all"} to show all labels and
+#'   \code{0} to show none. Use \code{"auto"} to label all values when there are 30 or fewer
+#'   unique values; otherwise label the single most frequent value. For backward compatibility, \code{TRUE}
+#'   is treated as \code{-1} and \code{FALSE} as \code{0}.
+#' @param ticks.max Integer. Maximum number of unique x values to label on the x-axis. If there are more
+#'   than \code{ticks.max} unique values, \code{pretty()} ticks are used instead of labeling every value.
+#' @param show.x.value Either \code{"auto"} (default), \code{TRUE}, or \code{FALSE}. If enabled, draws a
+#'   small \code{x=<value>} label just above each frequency value label. When \code{"auto"}, x labels are
+#'   shown only when plot_freq is not already labeling all x values on the x-axis.
+#' 
 #' @param show.legend Logical. If TRUE (default), displays a legend when \code{group} is specified. If FALSE, no legend is shown.
 #' @param legend.title Character string. Title for the legend when \code{group} is specified. If NULL (default), no title is shown.
 #' @param col.text Color for the value labels. If not specified, uses \code{col} for non-grouped plots or group colors for grouped plots.
@@ -49,15 +53,12 @@
 #'
 #' # Add to an existing plot
 #' plot_freq(x, col = "dodgerblue")
-#' plot_freq(x + 1, col = "red", add = TRUE)
+#'
 #'
 #' # Compare two vectors
 #' y1 <- c(1, 1, 2, 2, 2, 5, 5)
 #' y2 <- c(1, 2, 2, 3, 3, 3)
 #' plot_freq(y1, y2)
-#'
-#' # Compare two vectors with custom labels
-#' plot_freq(y1, y2, labels = c("men", "women"))
 #'
 #' # Using a data frame with grouping
 #' df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
@@ -70,9 +71,31 @@
 #'
 
 #' @export
-plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels=TRUE, add=FALSE, show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
-  #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
+#'
+#: 1 plot_freq: capture call (NSE-safe) -> normalize args -> dispatch -> compute grid -> draw -> return
+#: 2 get_plot_freq_x_ticks: choose x-axis tick strategy (all unique vs pretty())
+#: 3 topk_with_ties_mask: choose which bars receive frequency labels (top-k with ties)
+#: 4 compute_show_x_value: decide whether to draw x=<value> labels above freq labels
+#: 5 draw_freq_bars_and_labels: shared base-graphics drawing loop (bars + labels)
+#: 6 grouped path: build (n_unique x n_groups) matrices + legend, then draw via helper
+#: 7 non-grouped path: build single-group matrices, then draw via helper
+#----------------------------------
+# plot_freq (exported) ----
+plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels='auto', ticks.max=30, show.x.value="auto", show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+  # 0. Capture the call before any evaluation (NSE-safe)
+  # We intentionally use sys.call() in addition to match.call(): match.call() will
+  # rename partial matches to formal argument names, which breaks detection of
+  # user-supplied argument names (notably: ylim= can partially match y2=).
   mc <- match.call()
+  # sys.call() preserves original supplied names; match.call() renames partial
+  # matches to the formal name (e.g. ylim= becomes y2= in mc, never ylim=).
+  sc <- sys.call()
+  sc_names <- names(as.list(sc))[-1]
+  # If the user wrote ylim= and did not explicitly pass y2=, R may have already
+  # bound ylim's value to formal y2 via partial matching. We detect that case so
+  # we can (a) avoid evaluating mc$y2 as an NSE variable and (b) forward ylim to
+  # plot() via dots later.
+  ylim_matched_to_y2 <- "ylim" %in% sc_names && !"y2" %in% sc_names
   
   # Resolve first argument (formula or first vector)
   formula_resolved <- evaluate_variable_arguments(
@@ -84,11 +107,13 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     allow_null = FALSE
   )
   
-  # Resolve second argument if present (for two-vector mode)
-  y_resolved <- if (!is.null(mc$y)) {
+  # Resolve second argument if present (for two-vector mode).
+  # Skip when ylim_matched_to_y2: mc$y2 holds a ..N symbol in wrapper contexts
+  # which must not be evaluated as a column name.
+  y2_resolved <- if (!is.null(mc$y2) && !ylim_matched_to_y2) {
     evaluate_variable_arguments(
-      arg_expr = mc$y,
-      arg_name = "y",
+      arg_expr = mc$y2,
+      arg_name = "y2",
       data = data,
       calling_env = parent.frame(),
       func_name = "plot_freq",
@@ -98,54 +123,228 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     list(value = NULL, name = NULL, name_raw = NULL, was_symbol = FALSE)
   }
   
-  # Now overwrite the arguments with resolved values
+  # Now overwrite the arguments with resolved values.
+  # IMPORTANT: Do not force evaluation of y2 unless we are in the special case
+  # where R partially matched ylim= into y2. In normal two-vector usage with
+  # data=, y2 may be a bare symbol that must be resolved from data.
+  y2_before_resolved <- if (isTRUE(ylim_matched_to_y2)) y2 else NULL
   formula <- formula_resolved$value
-  y <- y_resolved$value
-  
+  y2 <- y2_resolved$value
+
   # Extract additional arguments
   dots <- list(...)
   
+  # Internal-only: allow overlaying on an existing plot frame
+  # Passed via ... as .overlay by internal callers; we remove it from dots so it
+  # is never forwarded to plot().
+    overlay <- isTRUE(dots$.overlay)
+    dots$.overlay <- NULL
+
+  # 1. Normalize and validate user-facing arguments
+  # value.labels accepts numeric (k), 0 (none), -1/"all" (all), or "auto".
+  # Internally we normalize it to a single integer in {-1, 0, 1, 2, ...} and keep
+  # a separate flag to remember whether the user requested "auto" (for messaging).
+    value_labels_auto <- FALSE
+    if (is.character(value.labels)) {
+      if (length(value.labels) != 1 || is.na(value.labels)) {
+        stop("plot_freq(): 'value.labels' must be numeric, TRUE/FALSE, or one of: \"all\", \"auto\"", call. = FALSE)
+      }
+      if (value.labels == "all") {
+        value.labels <- -1
+      } else if (value.labels == "auto") {
+        value_labels_auto <- TRUE
+        value.labels <- 1
+      } else {
+        stop("plot_freq(): 'value.labels' must be numeric, TRUE/FALSE, or one of: \"all\", \"auto\"", call. = FALSE)
+      }
+    }
+    if (isTRUE(value.labels)) value.labels <- -1
+    if (identical(value.labels, FALSE)) value.labels <- 0
+    if (length(value.labels) != 1 || is.na(value.labels) || !is.numeric(value.labels)) {
+      stop("plot_freq(): 'value.labels' must be numeric, TRUE/FALSE, or one of: \"all\", \"auto\"", call. = FALSE)
+    }
+    if (value.labels < -1) {
+      stop("plot_freq(): 'value.labels' must be -1 (all), 0 (none), or a positive integer", call. = FALSE)
+    }
+    if (value.labels > 0) {
+      value.labels <- as.integer(value.labels)
+    }
+
+  # ticks.max controls when we stop labeling every unique x on the x-axis and
+  # switch to a smaller pretty() tick set.
+    if (length(ticks.max) != 1 || is.na(ticks.max) || !is.numeric(ticks.max)) {
+      stop("plot_freq(): 'ticks.max' must be a single positive numeric value", call. = FALSE)
+    }
+    if (ticks.max < 1) {
+      stop("plot_freq(): 'ticks.max' must be >= 1", call. = FALSE)
+    }
+    ticks.max <- as.integer(ticks.max)
+
+  # show.x.value controls whether we annotate x=<value> above frequency labels.
+  # "auto" means: show only when the x-axis is not already labeling all unique x.
+    if (is.character(show.x.value)) {
+      if (length(show.x.value) != 1 || is.na(show.x.value) || show.x.value != "auto") {
+        stop("plot_freq(): 'show.x.value' must be \"auto\", TRUE, or FALSE", call. = FALSE)
+      }
+    } else if (is.logical(show.x.value)) {
+      if (length(show.x.value) != 1 || is.na(show.x.value)) {
+        stop("plot_freq(): 'show.x.value' must be \"auto\", TRUE, or FALSE", call. = FALSE)
+      }
+    } else {
+      stop("plot_freq(): 'show.x.value' must be \"auto\", TRUE, or FALSE", call. = FALSE)
+    }
+
+  # 2. Internal constants/helpers (keep behavior, improve readability)
+    VALUE_LABELS_AUTO_UNIQUE_CUTOFF <- 30
+    
+    # Emit the standard message shown when value.labels="auto" and the plot has
+    # more unique values than the auto cutoff.
+    warn_value_labels_auto_many <- function() {
+      message2("plot_freq() says: More than 30 unique values plotted, frequency printed only for the mode. Set  `value.labels` to modify this beahvior")
+    }
+    
+    # Return a logical mask selecting the bars that should receive frequency
+    # labels when value.labels is a positive integer k (top-k, including ties).
+    topk_with_ties_mask <- function(fs, k) {
+      # fs: numeric vector, k: positive integer
+      non_zero <- fs > 0
+      if (!any(non_zero)) return(rep(FALSE, length(fs)))
+      if (sum(non_zero) <= k) return(non_zero)
+      cutoff <- sort(fs[non_zero], decreasing = TRUE)[k]
+      non_zero & (fs >= cutoff)
+    }
+    
+    # Decide whether to draw x=<value> above the frequency labels.
+    # user_provided_xaxt is TRUE when the user directly controls x-axis ticks.
+    compute_show_x_value <- function(show_x_value, user_provided_xaxt, n_unique, ticks_max) {
+      if (is.character(show_x_value) && show_x_value == "auto") {
+        return((!user_provided_xaxt) && (n_unique > ticks_max))
+      }
+      if (isTRUE(show_x_value)) {
+        return((user_provided_xaxt) || (n_unique > ticks_max))
+      }
+      FALSE
+    }
+
+    # Shared drawing helper for grouped and non-grouped plots.
+    # Expects a common (n_unique x n_groups) representation plus per-group offsets.
+    draw_freq_bars_and_labels <- function(x_unique,
+                                          heights_by_group,
+                                          offsets,
+                                          width,
+                                          bar_cols,
+                                          label_masks_by_group,
+                                          label_text_by_group,
+                                          show_x_value,
+                                          col_text = NULL) {
+      n_groups <- ncol(heights_by_group)
+      # Draw bars
+        for (i in seq_len(n_groups)) {
+          fs_i <- heights_by_group[, i]
+          non_zero <- fs_i > 0
+          if (any(non_zero)) {
+            for (j in which(non_zero)) {
+              x_val <- x_unique[j]
+              freq_val <- fs_i[j]
+              x_center <- x_val + offsets[i]
+              x_left <- x_center - width/2
+              x_right <- x_center + width/2
+              
+              polygon(x = c(x_left, x_right, x_right, x_left),
+                      y = c(0, 0, freq_val, freq_val),
+                      col = bar_cols[i], border = bar_cols[i])
+            }
+          }
+        }
+      
+      # Draw labels
+        for (i in seq_len(n_groups)) {
+          mask_i <- label_masks_by_group[, i]
+          if (any(mask_i)) {
+            x_vals <- x_unique[mask_i] + offsets[i]
+            y_vals <- heights_by_group[mask_i, i]
+            
+            label_color <- if (!is.null(col_text)) col_text else bar_cols[i]
+            text(x = x_vals, y = y_vals, labels = label_text_by_group[mask_i, i],
+                 cex = 0.8, pos = 3, col = label_color)
+            
+            if (show_x_value) {
+              text(x = x_vals, y = y_vals,
+                   labels = paste0("x=", x_unique[mask_i]),
+                   cex = 0.7, pos = 3, offset = 1.2, col = "gray77")
+            }
+          }
+        }
+    }
+
+  # R's partial matching binds ylim= to formal y (since "ylim" begins with "y").
+  # Move it to dots so it reaches plot() correctly.
+  if (ylim_matched_to_y2 && !"ylim" %in% names(dots)) {
+    dots$ylim <- y2_before_resolved
+    y2 <- NULL
+  }
+
+  # Decide x-axis tick positions for plot_freq
+  # - If there are <= max_unique_ticks unique x values, we label them all.
+  # - Otherwise we use pretty() on the plotting x-range and then clip.
+    get_plot_freq_x_ticks <- function(x_values, dots, max_unique_ticks = 30) {
+      # Prefer user-supplied xlim (or computed dots$xlim) when available
+        xlim_used <- if ("xlim" %in% names(dots)) dots$xlim else range(x_values, finite = TRUE)
+        xlim_used <- as.numeric(xlim_used)
+        if (length(xlim_used) != 2 || any(!is.finite(xlim_used))) {
+          xlim_used <- range(x_values, finite = TRUE)
+        }
+
+      # If few unique values, label them all; otherwise use pretty() on the range
+        x_ticks <- if (length(x_values) <= max_unique_ticks) {
+          x_values
+        } else {
+          pretty(xlim_used, n = 10)
+        }
+
+      # Clip ticks to the plotting x-range (avoid drawing far outside)
+        x_ticks <- x_ticks[x_ticks >= min(xlim_used) & x_ticks <= max(xlim_used)]
+        x_ticks
+    }
+  
+  #----------------------------------
+  # Dispatch: two-vector vs formula mode ----
+  # Two-vector mode (plot_freq(y1, y2)) is implemented by converting to a grouped
+  # data.frame and delegating to the formula path to reuse the same plotting code.
+  #----------------------------------
   # Check if we're in two-vector comparison mode (formula is vector, y is vector)
-  if (!is.null(y) && !inherits(formula, "formula")) {
+  if (!is.null(y2) && !inherits(formula, "formula")) {
     # Two-vector comparison mode: plot_freq(y1, y2)
     
-    # Validate labels parameter
-    if (!is.null(labels)) {
-      if (!is.character(labels) || length(labels) != 2) {
-        stop("plot_freq(): 'labels' must be a character vector of length 2", call. = FALSE)
-      }
-      y1_name <- labels[1]
-      y2_name <- labels[2]
-    } else {
-      # Use resolved names
-      y1_name <- formula_resolved$name
-      y2_name <- y_resolved$name
-    }
+    y1_name <- formula_resolved$name
+    y2_name <- y2_resolved$name
     
     # Validate inputs
     if (!is.numeric(formula) || !is.vector(formula)) {
       stop(sprintf("plot_freq(): First argument must be a numeric vector"), call. = FALSE)
     }
-    if (!is.numeric(y) || !is.vector(y)) {
+    if (!is.numeric(y2) || !is.vector(y2)) {
       stop(sprintf("plot_freq(): Second argument must be a numeric vector"), call. = FALSE)
     }
     
     # Create a data frame and recursively call with grouped syntax
     df <- data.frame(
-      value = c(formula, y),
-      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      value = c(formula, y2),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y2))),
       stringsAsFactors = FALSE
     )
     
     # Forward all arguments to the grouped version
     return(plot_freq(value ~ group, data = df, freq = freq, order = order, 
                      col = col, lwd = lwd, width = width, 
-                     value.labels = value.labels, add = add, 
+                     value.labels = value.labels, ticks.max = ticks.max, show.x.value = show.x.value, 
                      show.legend = show.legend, legend.title = legend.title, 
                      col.text = col.text, ...))
   }
   
-  # Standard mode: formula syntax
+  #----------------------------------
+  # Standard mode: formula syntax ----
+  #----------------------------------
   # Validate formula early if it is one
   validate_formula(formula, data, func_name = "plot_freq", calling_env = parent.frame())
   
@@ -235,7 +434,9 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     if (n.nax>0) message2("plot_freq() says: dropped ",n.nax," observations with missing '",x_name_raw,"' values",col='red2')
   }
   
-  # Handle 'group' grouping if specified
+  #----------------------------------
+  # Grouped path (x ~ group) ----
+  #----------------------------------
   if (!is.null(group)) {
     # Validate group argument
     if (length(group) != length(x)) {
@@ -245,8 +446,8 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     # Determine group ordering
     unique_groups <- unique(group)
     n_groups <- length(unique_groups)
-    if (n_groups < 2 || n_groups > 3) {
-      stop("'group' must have 2 or 3 unique values")
+    if (n_groups < 2 || n_groups > 4) {
+      stop("'group' must have 2, 3, or 4 unique values")
     }
     
     # Check if order = -1 (reverse default order)
@@ -317,21 +518,10 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     for (i in seq_len(n_groups)) {
       # Extract frequencies for this group, ensuring all x values are included
       group_fs <- numeric(length(all_xs))
-      # Match table row names (x values) to all_xs
-      # Handle both numeric and character/factor x values
-      if (is.numeric(x)) {
-        # For numeric x, use the sorted unique values from x directly
-        # instead of converting from character rownames (which loses precision)
-        # Build frequency vector by matching x values to groups
-        x_in_group <- x[group == unique_by[i]]
-        for (val in all_xs) {
-          group_fs[which(all_xs == val)] <- sum(x_in_group == val)
-        }
-      } else {
-        table_xs <- rownames(freq_table)
-        idx <- match(table_xs, all_xs)
-        group_fs[idx] <- freq_table[, col_indices[i]]
-      }
+      x_in_group <- x[group == unique_by[i]]
+      counts <- table(x_in_group)
+      idx <- match(names(counts), all_xs)
+      group_fs[idx] <- as.numeric(counts)
       
       # Store original frequencies for return value
       group_freqs_original[[i]] <- list(xs = all_xs, fs = group_fs)
@@ -360,15 +550,22 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
       width_calc <- width
     }
     
-    # Only set up plot if not adding to existing plot
-    if (!add) {
+    # Default for overlay mode: treat x-axis labeling as user-controlled
+    user_provided_xaxt <- TRUE
+    
+    # Only set up plot if not overlaying on an existing frame
+    if (!overlay) {
       
       # Set default xlim if not set, with padding for bar width
       if (!"xlim" %in% names(dots)) {
-        # For 3 groups, bars extend width on each side of center
-        # For 2 groups, bars extend width/2 on each side
-        bar_extent <- if (n_groups == 3) width_calc else width_calc / 2
-        padding <- bar_extent * 1.1  # Add 10% extra padding
+        # Bars are drawn with group-specific center offsets, so the outer edge can extend
+        # beyond min/max(all_xs) by more than width/2.
+        #
+        # - 2 groups: outer edge at x ± 1.0*width
+        # - 3 groups: outer edge at x ± 1.5*width
+        # - 4 groups: outer edge at x ± 2.0*width
+        outer_extent <- (n_groups / 2) * width_calc
+        padding <- outer_extent * 1.1  # Add 10% extra padding
         dots$xlim <- c(min(all_xs) - padding, max(all_xs) + padding)
       }
       
@@ -387,10 +584,6 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
       # Set default ylim to start at 0 if not provided
       if (!"ylim" %in% names(dots)) {
         y_max <- max_fs
-        # Add extra space at top if value labels are shown
-        if (value.labels == TRUE && y_max > 0) {
-          y_max <- y_max + max(1, y_max * 0.15)  # Add 15% or at least 1 unit
-        }
         # Reserve top 20% for legend if legend will be shown
         if (show.legend) {
           y_max <- y_max * 1.25  # Increase by 25% to make room for legend
@@ -446,7 +639,8 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
       
       # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
-        axis(1, at = all_xs, las = 1)
+        existing_ticks <- get_plot_freq_x_ticks(all_xs, dots, max_unique_ticks = ticks.max)
+        axis(1, at = existing_ticks, las = 1)
       }
       
       # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
@@ -481,6 +675,9 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
         }
       }
     }
+
+    # Decide whether to show x=<value> labels above frequencies
+      do_show_x_value <- compute_show_x_value(show.x.value, user_provided_xaxt, length(all_xs), ticks.max)
     
     # Use the width calculated earlier (or user-provided width)
     if (is.null(width)) {
@@ -488,59 +685,57 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     }
     
     # Calculate offsets for each group so bars touch exactly
-    # For 2 groups: bars at -width/2 and +width/2 (touching at center)
-    # For 3 groups: bars at -width, 0, +width (each bar is width wide, touching)
-    if (n_groups == 2) {
-      offsets <- c(-width/2, width/2)
-    } else if (n_groups == 3) {
-      offsets <- c(-width, 0, width)
-    }
-    
-    # Draw polygons for each group (side by side, touching exactly)
-    for (i in seq_len(n_groups)) {
-      gf <- group_freqs[[i]]
-      non_zero <- gf$fs > 0
-      if (any(non_zero)) {
-        for (j in which(non_zero)) {
-          x_val <- gf$xs[j]
-          freq_val <- gf$fs[j]
-          x_center <- x_val + offsets[i]
-          x_left <- x_center - width/2
-          x_right <- x_center + width/2
-          
-          polygon(x = c(x_left, x_right, x_right, x_left),
-                  y = c(0, 0, freq_val, freq_val),
-                  col = group_cols[i], border = group_cols[i])
+    # Centers are equally spaced by `width`, symmetric around 0.
+    offsets <- (seq_len(n_groups) - (n_groups + 1) / 2) * width
+
+    # Prepare the common representation used by draw_freq_bars_and_labels():
+    # heights_by_group, label masks, and label text are all (n_unique x n_groups).
+      heights_by_group <- do.call(cbind, lapply(group_freqs, function(gf) gf$fs))
+
+    # Determine value-label masks and label text (n_unique x n_groups)
+      label_masks_by_group <- matrix(FALSE, nrow = length(all_xs), ncol = n_groups)
+      label_text_by_group <- matrix("", nrow = length(all_xs), ncol = n_groups)
+      if (value.labels != 0) {
+        value_labels_effective <- value.labels
+        if (isTRUE(value_labels_auto) && length(all_xs) <= VALUE_LABELS_AUTO_UNIQUE_CUTOFF) {
+          value_labels_effective <- -1
         }
-      }
-    }
-    
-    # Add value labels with frequencies (colored by group)
-    if (value.labels) {
-      # For each x value and group, add label if frequency > 0
-      for (j in seq_along(all_xs)) {
-        x_val <- all_xs[j]
+        if (isTRUE(value_labels_auto) && length(all_xs) > VALUE_LABELS_AUTO_UNIQUE_CUTOFF) {
+          warn_value_labels_auto_many()
+        }
+
         for (i in seq_len(n_groups)) {
-          freq_val <- group_freqs[[i]]$fs[j]
-          if (freq_val > 0) {
-            x_label_pos <- x_val + offsets[i]
-            # Format label based on freq parameter
+          fs_i <- heights_by_group[, i]
+          if (value_labels_effective == -1) {
+            label_masks_by_group[, i] <- fs_i > 0
+          } else if (value_labels_effective > 0) {
+            label_masks_by_group[, i] <- topk_with_ties_mask(fs_i, value_labels_effective)
+          }
+          if (any(label_masks_by_group[, i])) {
             if (freq == FALSE) {
-              label_text <- paste0(round(freq_val, 0), "%")
+              label_text_by_group[label_masks_by_group[, i], i] <- paste0(round(fs_i[label_masks_by_group[, i]], 0), "%")
             } else {
-              label_text <- freq_val
+              label_text_by_group[label_masks_by_group[, i], i] <- as.character(fs_i[label_masks_by_group[, i]])
             }
-            # Use col.text if provided, otherwise use group color
-            label_color <- if (!is.null(col.text)) col.text else group_cols[i]
-            text(x = x_label_pos, y = freq_val, labels = label_text, 
-                 cex = 0.8, pos = 3, col = label_color)
           }
         }
       }
-    }
+
+    # Draw bars and labels
+      draw_freq_bars_and_labels(
+        x_unique = all_xs,
+        heights_by_group = heights_by_group,
+        offsets = offsets,
+        width = width,
+        bar_cols = group_cols,
+        label_masks_by_group = label_masks_by_group,
+        label_text_by_group = label_text_by_group,
+        show_x_value = do_show_x_value,
+        col_text = col.text
+      )
     
     # Add legend showing groups and colors
-    if (!add && show.legend) {
+    if (!overlay && show.legend) {
       # Calculate sample sizes for each group
       group_ns <- sapply(seq_len(n_groups), function(i) {
         length(x[group == unique_by[i]])
@@ -596,7 +791,10 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     return(invisible(result_df))
   }
   
-  # Calculate frequencies for each unique value (only if group is not used)
+  #----------------------------------
+  # Non-grouped path (x only) ----
+  #----------------------------------
+  # Calculate frequencies for each unique value
   freq_table <- table(x)
   xs <- as.numeric(names(freq_table))
   fs <- as.numeric(freq_table)
@@ -623,8 +821,11 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
     width_calc <- width
   }
     
-  # Only set up plot if not adding to existing plot
-  if (!add) {
+  # Default for overlay mode: treat x-axis labeling as user-controlled
+  user_provided_xaxt <- TRUE
+  
+  # Only set up plot if not overlaying on an existing frame
+  if (!overlay) {
     #########################################################
     #Default figure parameters if not set
       
@@ -648,9 +849,9 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
       # Set default ylim to start at 0 if not provided
           if (!"ylim" %in% names(dots)) {
             y_max <- max(fs, na.rm = TRUE)
-            # Add extra space at top if value labels are shown
-            if (value.labels == TRUE && y_max > 0) {
-              y_max <- y_max + max(1, y_max * 0.15)  # Add 15% or at least 1 unit
+            # Add a small buffer so the tallest bar doesn't touch the top border
+            if (is.finite(y_max) && y_max > 0) {
+              y_max <- y_max + max(1, y_max * 0.10)
             }
             dots$ylim <- c(0, y_max)
           }
@@ -705,7 +906,8 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
         
     # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
-        axis(1, at = xs, las = 1)
+        existing_ticks <- get_plot_freq_x_ticks(xs, dots, max_unique_ticks = ticks.max)
+        axis(1, at = existing_ticks, las = 1)
       }
             
     # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
@@ -742,36 +944,57 @@ plot_freq <- function(formula, y=NULL, data=NULL, labels=NULL, freq=TRUE, order=
         }
       }
   }
+
+  # Decide whether to show x=<value> labels above frequencies
+    do_show_x_value <- compute_show_x_value(show.x.value, user_provided_xaxt, length(xs), ticks.max)
     
   # Use the width calculated earlier (or user-provided width)
   if (is.null(width)) {
     width <- width_calc
   }
   
-  # Identify non-zero frequencies (only draw polygons and labels for these)
-    non_zero <- fs > 0
-  
-  # Draw polygons for each value (only non-zero frequencies)
-    if (any(non_zero)) {
-      for (j in which(non_zero)) {
-        x_val <- xs[j]
-        freq_val <- fs[j]
-        x_left <- x_val - width/2
-        x_right <- x_val + width/2
-        
-        polygon(x = c(x_left, x_right, x_right, x_left),
-                y = c(0, 0, freq_val, freq_val),
-                col = col, border = col)
+  # Prepare (n_unique x 1) matrix for shared drawing
+    heights_by_group <- matrix(fs, ncol = 1)
+    bar_cols <- rep(col, 1)
+    offsets <- 0
+
+  # Determine value-label mask and label text (n_unique x 1)
+    label_masks_by_group <- matrix(FALSE, nrow = length(xs), ncol = 1)
+    label_text_by_group <- matrix("", nrow = length(xs), ncol = 1)
+    if (value.labels != 0) {
+      value_labels_effective <- value.labels
+      if (isTRUE(value_labels_auto) && length(xs) <= VALUE_LABELS_AUTO_UNIQUE_CUTOFF) {
+        value_labels_effective <- -1
+      }
+      if (isTRUE(value_labels_auto) && length(xs) > VALUE_LABELS_AUTO_UNIQUE_CUTOFF) {
+        warn_value_labels_auto_many()
+      }
+
+      if (value_labels_effective == -1) {
+        label_masks_by_group[, 1] <- fs > 0
+      } else if (value_labels_effective > 0) {
+        # Use fs_rank for selection (percent vs counts), but show fsp as the label
+        fs_rank <- if (freq == FALSE) fs else fs_original
+        label_masks_by_group[, 1] <- topk_with_ties_mask(fs_rank, value_labels_effective)
+      }
+
+      if (any(label_masks_by_group[, 1])) {
+        label_text_by_group[label_masks_by_group[, 1], 1] <- as.character(fsp[label_masks_by_group[, 1]])
       }
     }
-    
-  # Add value labels if requested
-    if (value.labels == TRUE && any(non_zero)) {
-      # Use col.text if provided, otherwise use col
-      label_color <- if (!is.null(col.text)) col.text else col
-      text(x = xs[non_zero], y = fs[non_zero], labels = fsp[non_zero], 
-           cex = 0.7, pos = 3, col = label_color)
-    }
+
+  # Draw bars and labels
+    draw_freq_bars_and_labels(
+      x_unique = xs,
+      heights_by_group = heights_by_group,
+      offsets = offsets,
+      width = width,
+      bar_cols = bar_cols,
+      label_masks_by_group = label_masks_by_group,
+      label_text_by_group = label_text_by_group,
+      show_x_value = do_show_x_value,
+      col_text = col.text
+    )
     
   # Return frequencies or percentages invisibly
   if (freq == FALSE) {

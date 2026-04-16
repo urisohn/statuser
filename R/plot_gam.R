@@ -263,9 +263,17 @@ plot_gam <- function(model, predictor, quantile.others = 50,
     }
   }
   
-  # Save current par settings and restore on exit
-  old_par <- par(no.readonly = TRUE)
-  on.exit(par(old_par), add = TRUE)
+  # Save/restore only what we change in par(); restoring full `par()` can reset `mfg`
+  # and break multi-panel plotting via `par(mfrow=...)` in the caller.
+  old_mar <- par("mar")
+  old_mfrow <- par("mfrow")
+  old_mfcol <- par("mfcol")
+  on.exit({
+    par(mar = old_mar)
+    # plot_gam() may use layout() internally; clear it so caller's mfrow can work again
+    layout(1)
+    par(mfrow = old_mfrow, mfcol = old_mfcol)
+  }, add = TRUE)
   
   # Set up layout for two panels if distribution plotting is requested
   if (plot_distribution) {
@@ -278,8 +286,8 @@ plot_gam <- function(model, predictor, quantile.others = 50,
     par(mar = c(0, 4.1, 5.1, 2.1))  # Top plot: no bottom margin, extra top margin for title
   } else {
     # When no bottom plot, ensure we have enough top margin for title and subtitle
-    if (old_par$mar[3] < 5) {
-      par(mar = c(old_par$mar[1], old_par$mar[2], 5.1, old_par$mar[4]))
+    if (old_mar[3] < 5) {
+      par(mar = c(old_mar[1], old_mar[2], 5.1, old_mar[4]))
     }
   }
   
@@ -355,19 +363,19 @@ plot_gam <- function(model, predictor, quantile.others = 50,
                        bg = bg2, 
                        cex.lab = ylab_cex)
       
-      # Use plot_freq() with add=TRUE to overlay on the background
+      # Use plot_freq() with .overlay=TRUE to draw on the background
       # Set col2 if provided, otherwise use plot_freq default
       plot_freq_args <- list(formula = predictor_data, 
                              xlab = predictor,  # Predictor variable name
                              main = "",
                              xlim = xlim_dist,
-                             add = TRUE)
+                             .overlay = TRUE)
       if (!is.null(col2)) {
         plot_freq_args$col <- col2
       }
       do.call(plot_freq, plot_freq_args)
       
-      # Draw axes after plot_freq (since add=TRUE doesn't draw axes)
+      # Draw axes after plot_freq (since .overlay=TRUE doesn't draw axes)
       axis(1)  # x-axis
       axis(2, las = 1)  # y-axis on left side
       

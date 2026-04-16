@@ -6,7 +6,7 @@
 \usage{
 plot_cdf(
   formula,
-  y = NULL,
+  y2 = NULL,
   data = NULL,
   order = NULL,
   show.ks = TRUE,
@@ -15,13 +15,13 @@ plot_cdf(
 )
 }
 \arguments{
-\item{formula}{A formula of the form \code{y ~ group} where \code{y} is the
-response variable and \code{group} is the grouping variable. Alternatively,
-can be just \code{y} (without a grouping variable) to plot a single ECDF.}
+\item{formula}{Two possible uses (similar to \code{t.test()}):
+\itemize{
+  \item {Single Variable (possibly by subgroup)}: \code{plot_cdf(y)} or \code{plot_cdf(y~x)}
+  \item {Contrast Two Variables}: \code{plot_cdf(y1, y2)}
+}}
 
-\item{y}{An optional second vector to compare with \code{formula}. When provided,
-creates a comparison plot of two variables. This allows syntax like 
-\code{plot_cdf(y1, y2)} to compare two vectors.}
+\item{y2}{optional second variable when contrasting two variables \code{plot_cdf(y1,y2)}}
 
 \item{data}{An optional data frame containing the variables in the formula.
 If \code{data} is not provided, variables are evaluated from the calling environment.}

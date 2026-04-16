@@ -2,11 +2,12 @@
 #'
 #' Plots the distribution of a variable by group, simply: \code{plot_density(y ~ x)}
 #'
-#' @param formula Either the single variable name \code{y} or a formula like \code{y ~ x}.
-#'   Alternatively, pass a single vector for a simple density plot.
-#' @param y An optional second vector to compare with \code{formula}. When provided,
-#'   creates a comparison plot of two variables. This allows syntax like 
-#'   \code{plot_density(y1, y2)} to compare two vectors.
+#' @param formula Two possible uses (similar to \code{t.test()}):
+#'   \itemize{
+#'     \item {Single Variable (possibly by subgroup)}: \code{plot_density(y)} or \code{plot_density(y~x)}
+#'     \item {Contrast Two Variables}: \code{plot_density(y1, y2)}
+#'   }
+#' @param y2 optional second variable when contrasting two variables \code{plot_density(y1,y2)}
 #' @param data An optional data frame containing the variables in the formula.
 #' @param order Controls the order in which groups appear in the plot and legend. 
 #'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
@@ -67,7 +68,7 @@
 #'   The function is primarily called for its side effect of creating a plot.
 #'
 #' @export
-plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_means = TRUE, ...) {
+plot_density <- function(formula, y2 = NULL, data = NULL, order = NULL, show_means = TRUE, ...) {
   #OUTLINE
   #1. Capture variable names for labels
   #2. Extract and handle parameters
@@ -105,10 +106,10 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
   )
   
   # Resolve second argument if present (for two-vector mode)
-  y_resolved <- if (!is.null(mc$y)) {
+  y2_resolved <- if (!is.null(mc$y2)) {
     evaluate_variable_arguments(
-      arg_expr = mc$y,
-      arg_name = "y",
+      arg_expr = mc$y2,
+      arg_name = "y2",
       data = data,
       calling_env = parent.frame(),
       func_name = "plot_density",
@@ -120,31 +121,31 @@ plot_density <- function(formula, y = NULL, data = NULL, order = NULL, show_mean
   
   # Now overwrite the arguments with resolved values
   formula <- formula_resolved$value
-  y <- y_resolved$value
+  y2 <- y2_resolved$value
   
   #1. Extract and handle parameters
   # Extract plotting parameters from ...
     dots <- list(...)
     
   # Check if we're in two-vector comparison mode (formula is vector, y is vector)
-  if (!is.null(y) && !inherits(formula, "formula")) {
+  if (!is.null(y2) && !inherits(formula, "formula")) {
     # Two-vector comparison mode: plot_density(y1, y2)
     # Use resolved names
     y1_name <- formula_resolved$name
-    y2_name <- y_resolved$name
+    y2_name <- y2_resolved$name
     
     # Validate inputs
     if (!is.numeric(formula) || !is.vector(formula)) {
       stop(sprintf("plot_density(): First argument '%s' must be a numeric vector", y1_name), call. = FALSE)
     }
-    if (!is.numeric(y) || !is.vector(y)) {
+    if (!is.numeric(y2) || !is.vector(y2)) {
       stop(sprintf("plot_density(): Second argument '%s' must be a numeric vector", y2_name), call. = FALSE)
     }
     
     # Create a data frame and recursively call with grouped syntax
     df <- data.frame(
-      value = c(formula, y),
-      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      value = c(formula, y2),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y2))),
       stringsAsFactors = FALSE
     )
     

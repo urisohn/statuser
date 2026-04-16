@@ -1,4 +1,9 @@
-* text=auto
+* text=auto eol=lf
 *.R text eol=lf
+*.Rmd text eol=lf
 *.Rd text eol=lf
 *.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+DESCRIPTION text eol=lf
+NAMESPACE text eol=lf
