@@ -6,7 +6,7 @@
 \usage{
 plot_density(
   formula,
-  y = NULL,
+  y2 = NULL,
   data = NULL,
   order = NULL,
   show_means = TRUE,
@@ -14,12 +14,13 @@ plot_density(
 )
 }
 \arguments{
-\item{formula}{Either the single variable name \code{y} or a formula like \code{y ~ x}.
-Alternatively, pass a single vector for a simple density plot.}
+\item{formula}{Two possible uses (similar to \code{t.test()}):
+\itemize{
+  \item {Single Variable (possibly by subgroup)}: \code{plot_density(y)} or \code{plot_density(y~x)}
+  \item {Contrast Two Variables}: \code{plot_density(y1, y2)}
+}}
 
-\item{y}{An optional second vector to compare with \code{formula}. When provided,
-creates a comparison plot of two variables. This allows syntax like 
-\code{plot_density(y1, y2)} to compare two vectors.}
+\item{y2}{optional second variable when contrasting two variables \code{plot_density(y1,y2)}}
 
 \item{data}{An optional data frame containing the variables in the formula.}
 

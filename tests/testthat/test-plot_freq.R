@@ -401,6 +401,15 @@ test_that("plot_freq two-vector uses deduced variable names", {
   expect_true("y2" %in% names(result))
 })
 
+test_that("plot_freq two-vector can resolve columns from data", {
+  set.seed(1)
+  y1 <- sample(100, replace = TRUE)
+  y2 <- sample(100, replace = TRUE)
+  df1 <- data.frame(a = y1, b = y2)
+  
+  expect_error(plot_freq(a, b, data = df1), NA)
+})
+
 test_that("plot_freq two-vector order parameter works", {
   y1 <- c(1, 1, 2, 2, 2)
   y2 <- c(2, 3, 3, 3)

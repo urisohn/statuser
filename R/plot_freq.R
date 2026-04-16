@@ -3,8 +3,12 @@
 #' Creates a frequency plot showing the frequency of every observed value, optionaly by group. 
 #' Most frequent values are labeled by default.
 #'
-#' @param formula the variable whose distribution will be plotted, optionally y~x to plot bygrouping variable x
-#' @param y2 An optional second vector to plot as in plot_freq(y1,y2)
+#' @param formula Two possible uses (similar to \code{t.test()}):
+#'   \itemize{
+#'     \item {Single Variable (possibly by subgroup)}: \code{plot_freq(y)} or \code{plot_freq(y~x)}
+#'     \item {Contrast Two Variables}: \code{plot_freq(y1, y2)}
+#'   }
+#' @param y2 optional second variable when contrasting two variables \code{plot_freq(y1,y2)}
 #' @param data An optional data frame containing the variables in the formula.
 #' @param freq Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.
 #' @param order Controls the order in which groups appear in the plot and legend. 
@@ -77,21 +81,21 @@
 #: 7 non-grouped path: build single-group matrices, then draw via helper
 #----------------------------------
 # plot_freq (exported) ----
-plot_freq <- function(formula, y=NULL, data=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels='auto', ticks.max=30, show.x.value="auto", show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels='auto', ticks.max=30, show.x.value="auto", show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   # 0. Capture the call before any evaluation (NSE-safe)
   # We intentionally use sys.call() in addition to match.call(): match.call() will
   # rename partial matches to formal argument names, which breaks detection of
-  # user-supplied argument names (notably: ylim= can partially match y=).
+  # user-supplied argument names (notably: ylim= can partially match y2=).
   mc <- match.call()
   # sys.call() preserves original supplied names; match.call() renames partial
-  # matches to the formal name (e.g. ylim= becomes y= in mc, never ylim=).
+  # matches to the formal name (e.g. ylim= becomes y2= in mc, never ylim=).
   sc <- sys.call()
   sc_names <- names(as.list(sc))[-1]
-  # If the user wrote ylim= and did not explicitly pass y=, R may have already
-  # bound ylim's value to formal y via partial matching. We detect that case so
-  # we can (a) avoid evaluating mc$y as an NSE variable and (b) forward ylim to
+  # If the user wrote ylim= and did not explicitly pass y2=, R may have already
+  # bound ylim's value to formal y2 via partial matching. We detect that case so
+  # we can (a) avoid evaluating mc$y2 as an NSE variable and (b) forward ylim to
   # plot() via dots later.
-  ylim_matched_to_y <- "ylim" %in% sc_names && !"y" %in% sc_names
+  ylim_matched_to_y2 <- "ylim" %in% sc_names && !"y2" %in% sc_names
   
   # Resolve first argument (formula or first vector)
   formula_resolved <- evaluate_variable_arguments(
@@ -104,12 +108,12 @@ plot_freq <- function(formula, y=NULL, data=NULL, freq=TRUE, order=NULL, col='do
   )
   
   # Resolve second argument if present (for two-vector mode).
-  # Skip when ylim_matched_to_y: mc$y holds a ..N symbol in wrapper contexts
+  # Skip when ylim_matched_to_y2: mc$y2 holds a ..N symbol in wrapper contexts
   # which must not be evaluated as a column name.
-  y_resolved <- if (!is.null(mc$y) && !ylim_matched_to_y) {
+  y2_resolved <- if (!is.null(mc$y2) && !ylim_matched_to_y2) {
     evaluate_variable_arguments(
-      arg_expr = mc$y,
-      arg_name = "y",
+      arg_expr = mc$y2,
+      arg_name = "y2",
       data = data,
       calling_env = parent.frame(),
       func_name = "plot_freq",
@@ -120,11 +124,12 @@ plot_freq <- function(formula, y=NULL, data=NULL, freq=TRUE, order=NULL, col='do
   }
   
   # Now overwrite the arguments with resolved values.
-  # Capture the original formal y first: when ylim_matched_to_y, R already
-  # bound the ylim value to formal y before we had a chance to intercept it.
-  y_before_resolved <- y
+  # IMPORTANT: Do not force evaluation of y2 unless we are in the special case
+  # where R partially matched ylim= into y2. In normal two-vector usage with
+  # data=, y2 may be a bare symbol that must be resolved from data.
+  y2_before_resolved <- if (isTRUE(ylim_matched_to_y2)) y2 else NULL
   formula <- formula_resolved$value
-  y <- y_resolved$value
+  y2 <- y2_resolved$value
 
   # Extract additional arguments
   dots <- list(...)
@@ -274,9 +279,9 @@ plot_freq <- function(formula, y=NULL, data=NULL, freq=TRUE, order=NULL, col='do
 
   # R's partial matching binds ylim= to formal y (since "ylim" begins with "y").
   # Move it to dots so it reaches plot() correctly.
-  if (ylim_matched_to_y && !"ylim" %in% names(dots)) {
-    dots$ylim <- y_before_resolved
-    y <- NULL
+  if (ylim_matched_to_y2 && !"ylim" %in% names(dots)) {
+    dots$ylim <- y2_before_resolved
+    y2 <- NULL
   }
 
   # Decide x-axis tick positions for plot_freq
@@ -308,24 +313,24 @@ plot_freq <- function(formula, y=NULL, data=NULL, freq=TRUE, order=NULL, col='do
   # data.frame and delegating to the formula path to reuse the same plotting code.
   #----------------------------------
   # Check if we're in two-vector comparison mode (formula is vector, y is vector)
-  if (!is.null(y) && !inherits(formula, "formula")) {
+  if (!is.null(y2) && !inherits(formula, "formula")) {
     # Two-vector comparison mode: plot_freq(y1, y2)
     
     y1_name <- formula_resolved$name
-    y2_name <- y_resolved$name
+    y2_name <- y2_resolved$name
     
     # Validate inputs
     if (!is.numeric(formula) || !is.vector(formula)) {
       stop(sprintf("plot_freq(): First argument must be a numeric vector"), call. = FALSE)
     }
-    if (!is.numeric(y) || !is.vector(y)) {
+    if (!is.numeric(y2) || !is.vector(y2)) {
       stop(sprintf("plot_freq(): Second argument must be a numeric vector"), call. = FALSE)
     }
     
     # Create a data frame and recursively call with grouped syntax
     df <- data.frame(
-      value = c(formula, y),
-      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y))),
+      value = c(formula, y2),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y2))),
       stringsAsFactors = FALSE
     )
     

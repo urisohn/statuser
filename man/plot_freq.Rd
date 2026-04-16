@@ -6,7 +6,7 @@
 \usage{
 plot_freq(
   formula,
-  y = NULL,
+  y2 = NULL,
   data = NULL,
   freq = TRUE,
   order = NULL,
@@ -23,14 +23,13 @@ plot_freq(
 )
 }
 \arguments{
-\item{formula}{A formula of the form \code{x ~ group} where \code{x} is the
-variable to plot frequencies for and \code{group} is an optional grouping variable
-(with up to 4 unique values). 
-Alternatively, pass a single vector \code{x} for a simple frequency plot.}
+\item{formula}{Two possible uses (similar to \code{t.test()}):
+\itemize{
+  \item {Single Variable (possibly by subgroup)}: \code{plot_freq(y)} or \code{plot_freq(y~x)}
+  \item {Contrast Two Variables}: \code{plot_freq(y1, y2)}
+}}
 
-\item{y}{An optional second vector to compare with \code{formula}. When provided,
-creates a comparison plot of two variables (like grouped plot but with separate variables).
-This allows syntax like \code{plot_freq(y1, y2)} to compare two vectors.}
+\item{y2}{optional second variable when contrasting two variables \code{plot_freq(y1,y2)}}
 
 \item{data}{An optional data frame containing the variables in the formula.}
 
