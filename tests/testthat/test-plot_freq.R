@@ -391,50 +391,27 @@ test_that("plot_freq two-vector comparison validates inputs", {
   )
 })
 
-test_that("plot_freq two-vector with custom labels", {
+test_that("plot_freq two-vector uses deduced variable names", {
   y1 <- c(1, 1, 2, 2, 2)
   y2 <- c(2, 3, 3, 3)
   
-  # Custom labels
-  result <- plot_freq(y1, y2, labels = c("men", "women"))
+  result <- plot_freq(y1, y2)
   expect_true(is.data.frame(result))
-  expect_true("men" %in% names(result))
-  expect_true("women" %in% names(result))
+  expect_true("y1" %in% names(result))
+  expect_true("y2" %in% names(result))
 })
 
-test_that("plot_freq validates labels parameter", {
+test_that("plot_freq two-vector order parameter works", {
   y1 <- c(1, 1, 2, 2, 2)
   y2 <- c(2, 3, 3, 3)
   
-  # Wrong length
-  expect_error(
-    plot_freq(y1, y2, labels = c("men")),
-    "labels.*must be.*length 2"
-  )
+  # Reversed order
+  result <- plot_freq(y1, y2, order = -1)
+  expect_equal(names(result), c("value", "y2", "y1"))
   
-  expect_error(
-    plot_freq(y1, y2, labels = c("men", "women", "other")),
-    "labels.*must be.*length 2"
-  )
-  
-  # Wrong type
-  expect_error(
-    plot_freq(y1, y2, labels = c(1, 2)),
-    "labels.*must be.*character"
-  )
-})
-
-test_that("plot_freq custom labels work with order parameter", {
-  y1 <- c(1, 1, 2, 2, 2)
-  y2 <- c(2, 3, 3, 3)
-  
-  # Custom labels with reversed order
-  result <- plot_freq(y1, y2, labels = c("men", "women"), order = -1)
-  expect_equal(names(result), c("value", "women", "men"))
-  
-  # Custom labels with explicit order
-  result2 <- plot_freq(y1, y2, labels = c("men", "women"), order = c("women", "men"))
-  expect_equal(names(result2), c("value", "women", "men"))
+  # Explicit order
+  result2 <- plot_freq(y1, y2, order = c("y2", "y1"))
+  expect_equal(names(result2), c("value", "y2", "y1"))
 })
 
 test_that("plot_freq two-vector handles continuous data", {
@@ -484,57 +461,14 @@ test_that("plot_freq reserves space for legend", {
   expect_error(plot_freq(y1, y2, show.legend = FALSE), NA)
 })
 
-test_that("plot_freq labels parameter works correctly", {
+test_that("plot_freq two-vector supports col and freq args", {
   y1 <- c(1, 1, 2, 2, 2)
   y2 <- c(2, 3, 3, 3)
   
-  # Test with custom labels
-  result <- plot_freq(y1, y2, labels = c("before", "after"))
-  expect_true("before" %in% names(result))
-  expect_true("after" %in% names(result))
+  # col argument works
+  expect_error(plot_freq(y1, y2, col = c("blue", "pink")), NA)
   
-  # Test labels with colors
-  expect_error(plot_freq(y1, y2, labels = c("men", "women"), 
-                         col = c("blue", "pink")), NA)
-  
-  # Test labels with percentages
-  result_pct <- plot_freq(y1, y2, labels = c("group A", "group B"), freq = FALSE)
-  expect_true("group A" %in% names(result_pct))
-  expect_true("group B" %in% names(result_pct))
-})
-
-test_that("plot_freq labels validation works", {
-  y1 <- c(1, 1, 2)
-  y2 <- c(2, 3, 3)
-  
-  # Labels must be character
-  expect_error(
-    plot_freq(y1, y2, labels = c(1, 2)),
-    "character vector"
-  )
-  
-  # Labels must be length 2
-  expect_error(
-    plot_freq(y1, y2, labels = c("one")),
-    "length 2"
-  )
-  
-  expect_error(
-    plot_freq(y1, y2, labels = c("one", "two", "three")),
-    "length 2"
-  )
-})
-
-test_that("plot_freq labels work with order parameter", {
-  y1 <- c(1, 1, 2)
-  y2 <- c(2, 3, 3)
-  
-  # Custom labels with custom order
-  result <- plot_freq(y1, y2, labels = c("first", "second"), 
-                      order = c("second", "first"))
-  expect_equal(names(result), c("value", "second", "first"))
-  
-  # Custom labels with reversed order
-  result2 <- plot_freq(y1, y2, labels = c("A", "B"), order = -1)
-  expect_equal(names(result2), c("value", "B", "A"))
+  # Percentages work
+  result_pct <- plot_freq(y1, y2, freq = FALSE)
+  expect_true(is.data.frame(result_pct))
 })
