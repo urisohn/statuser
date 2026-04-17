@@ -1294,6 +1294,49 @@ plot_means_draw <- function(v,
       tiers
     }
     
+    assign_overlap_tier_in_order <- function(x0, x1) {
+      # Greedy tier assignment in input order (stable), checking overlap against
+      # all intervals already assigned to each tier.
+      n <- length(x0)
+      if (!n) return(integer(0))
+      left <- pmin(x0, x1)
+      right <- pmax(x0, x1)
+      tiers <- integer(n)
+      
+      tier_lefts <- list()
+      tier_rights <- list()
+      
+      overlaps_any <- function(l, r, L, R) {
+        if (!length(L)) return(FALSE)
+        any(!(r < L | l > R))
+      }
+      
+      for (i in seq_len(n)) {
+        l <- left[i]
+        r <- right[i]
+        if (!is.finite(l) || !is.finite(r)) next
+        
+        placed <- FALSE
+        if (length(tier_lefts)) {
+          for (t in seq_along(tier_lefts)) {
+            if (!isTRUE(overlaps_any(l, r, tier_lefts[[t]], tier_rights[[t]]))) {
+              tiers[i] <- t
+              tier_lefts[[t]] <- c(tier_lefts[[t]], l)
+              tier_rights[[t]] <- c(tier_rights[[t]], r)
+              placed <- TRUE
+              break
+            }
+          }
+        }
+        if (!placed) {
+          tiers[i] <- length(tier_lefts) + 1L
+          tier_lefts[[length(tier_lefts) + 1L]] <- l
+          tier_rights[[length(tier_rights) + 1L]] <- r
+        }
+      }
+      tiers
+    }
+    
     if (all(c("col1", "col2") %in% names(means_comparisons))) {
       simple_rows <- means_comparisons[is.na(means_comparisons$col3) & is.finite(means_comparisons$p.value), , drop = FALSE]
       
@@ -1624,7 +1667,7 @@ plot_means_draw <- function(v,
         
         x0_all <- c(x0, x0_int)
         x1_all <- c(x1, x1_int)
-        tiers_all <- assign_overlap_tier(x0_all, x1_all)
+        tiers_all <- assign_overlap_tier_in_order(x0_all, x1_all)
         step <- 0.05 * y_span
         
       # 3) Draw simple/pooled tests at y determined solely by tier.
