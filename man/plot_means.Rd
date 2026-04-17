@@ -9,17 +9,18 @@ plot_means(
   data = NULL,
   cluster = NULL,
   tests = "auto",
-  save.as = "plot_means.svg",
+  save.as = NULL,
   quiet = FALSE,
   order = NULL,
   legend.title = NULL,
   col = NULL,
   col.text = NULL,
   values.cex = 1,
-  values.pos = "top",
+  values.align = "top",
   values.round = 1,
   pvalue.cex = 0.9,
   pvalue.col = "gray50",
+  ci.level = 95,
   buffer.top = "auto",
   ...
 )
@@ -35,9 +36,8 @@ The formula can include up to three grouping variables. The plot will
 \item{cluster}{Optional clustering variable when there are repeated 
 observations per cluster 
 e.g., \code{cluster="participant_ID"}. 
-When provided, inference is based on regressions with clustered standard errors.
-  When \code{NULL}, simple-effect p-values (difference in means) are computed
-  using Welch \code{t.test()}.}
+When provided, inference for reported tests is based on regressions with
+clustered standard errors (via \code{lm2(..., clusters=...)}).}
 
 \item{tests}{specifies which comparisons of means to report. Syntax involves 
 putting column numbers in a character string, with a - to symbolize a 
@@ -49,9 +49,8 @@ Main effects can be specified using `+`, for example (1+2)-(3+4) compares
 all observations in the first two columns with all observations in 
 the next two columns.}
 
-\item{save.as}{File path to save plot (\code{.png} or \code{.svg}). Default
-is \code{"plot_means.svg"}. If no folder is provided, the file is saved in
-\code{tempdir()}.}
+\item{save.as}{Optional file path to save plot (\code{.png} or \code{.svg}).
+When \code{NULL} (default), the plot is not saved.}
 
 \item{quiet}{Logical. When \code{TRUE}, suppresses console messages from \code{plot_means()}.}
 
@@ -70,7 +69,7 @@ If \code{NULL}, defaults to a dark gray.}
 \item{values.cex}{Numeric scalar controlling text size for mean value labels
 (and related annotations).}
 
-\item{values.pos}{Where to draw mean value labels: \code{"top"}, \code{"middle"},
+\item{values.align}{Where within the bars to put the mean value labels: \code{"top"}, \code{"middle"},
 \code{"bottom"}, or \code{"none"}.}
 
 \item{values.round}{Non-negative integer. Number of decimal places for mean
@@ -79,6 +78,9 @@ value labels.}
 \item{pvalue.cex}{Numeric scalar controlling p-value label size.}
 
 \item{pvalue.col}{Color for p-value brackets/labels.}
+
+\item{ci.level}{Confidence interval level for \code{ciL}/\code{ciH} in \code{$means}.
+Default is \code{95}. You can also pass a proportion (e.g., \code{0.95}).}
 
 \item{buffer.top}{Either \code{"auto"} (default) or a numeric value. Extra
 vertical headroom (as a fraction of the data y-range) added above the
@@ -93,12 +95,37 @@ A minimal list returned invisibly with two elements:
 \describe{
   \item{\code{means}}{A data frame of means (and, when available, confidence intervals)
     aligned to the plotting grid.}
-  \item{\code{means_comparisons}}{A data frame of comparisons used for p-value
+  \item{\code{tests}}{A data frame of comparisons used for p-value
     annotation (or \code{NULL} if not applicable).}
 }
 }
 \description{
 Plots means, with confidence intervals, and (optionally) p-values for differences of means and interactions
+}
+\details{
+When \code{tests="auto"}, the function reports a small default set of
+differences-of-means tests (when applicable) and, in 2x2 designs, an
+interaction test:
+\describe{
+  \item{Differences in means}{If \code{cluster} is \code{NULL}, these are Welch
+    two-sample t-tests computed with \code{t.test(..., var.equal=FALSE)}. If
+    \code{cluster} is provided, these comparisons are computed from a
+    regression using \code{lm2()} with clustered standard errors.}
+  \item{Interaction}{The interaction is tested using a linear regression fit
+    with \code{lm2()}, even when \code{cluster} is \code{NULL}; when
+    \code{cluster} is provided, the interaction test uses clustered standard
+    errors.}
+}
+The regression-based tests use heteroskedasticity-robust inference (HC3) when
+\code{cluster} is \code{NULL}. HC3 is a common small-sample adjustment to
+White-type robust standard errors and is used to reduce sensitivity to
+heteroskedasticity. When \code{cluster} is provided, \code{plot_means()}
+instead uses clustered standard errors (robust to within-cluster correlation).
+
+In the returned \code{$means} table, \code{ciL} and \code{ciH} are the lower and
+upper bounds of a \code{ci.level}\% confidence interval for the mean (when
+available). The same confidence level is used for the confidence-interval
+whiskers drawn in the figure.
 }
 \examples{
 df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
