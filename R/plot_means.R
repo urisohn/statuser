@@ -1308,7 +1308,8 @@ plot_means_draw <- function(v,
       
       overlaps_any <- function(l, r, L, R) {
         if (!length(L)) return(FALSE)
-        any(!(r < L | l > R))
+        # Treat touching endpoints as non-overlap so adjacent brackets can share a tier.
+        any(!(r <= L | l >= R))
       }
       
       for (i in seq_len(n)) {
