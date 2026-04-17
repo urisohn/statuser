@@ -205,13 +205,38 @@ evaluate_variable_arguments <- function(arg_expr,
       stop(sprintf("%s(): Error evaluating '%s': %s", func_name, expr_str, e$message), call. = FALSE)
     })
     
-    # Extract clean name if it's df$col format
-    var_name <- if (grepl("\\$", expr_str)) {
-      parts <- strsplit(expr_str, "\\$")[[1]]
-      parts[length(parts)]
-    } else {
-      expr_str
-    }
+    # Extract a clean name for labels.
+    # - df$col            -> "col"
+    # - df$col[df$col<k]  -> "col<k"   (avoid trailing ']' in plot titles)
+      if (grepl("\\[", expr_str, fixed = FALSE)) {
+        base_part <- sub("\\[.*$", "", expr_str)
+        cond_part <- sub("^.*\\[", "", expr_str)
+        cond_part <- sub("\\]$", "", cond_part)
+        
+        # Base name: last token after $, otherwise the full base_part.
+          base_name <- if (grepl("\\$", base_part)) {
+            parts <- strsplit(base_part, "\\$")[[1]]
+            parts[length(parts)]
+          } else {
+            base_part
+          }
+        
+        # Condition: remove whitespace and drop repeated LHS like "df$col" or "col".
+          cond_compact <- gsub("\\s+", "", cond_part)
+          base_compact <- gsub("\\s+", "", base_part)
+          base_name_compact <- gsub("\\s+", "", base_name)
+          
+          cond_clean <- cond_compact
+          cond_clean <- gsub(base_compact, "", cond_clean, fixed = TRUE)
+          cond_clean <- gsub(base_name_compact, "", cond_clean, fixed = TRUE)
+          
+          var_name <- paste0(base_name, cond_clean)
+      } else if (grepl("\\$", expr_str)) {
+        parts <- strsplit(expr_str, "\\$")[[1]]
+        var_name <- parts[length(parts)]
+      } else {
+        var_name <- expr_str
+      }
     var_name_raw <- expr_str
   }
   

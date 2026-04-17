@@ -53,6 +53,15 @@ test_that("t.test2 handles formula syntax with and without data", {
   expect_true("Y" %in% names(result2))
 })
 
+test_that("t.test2 accepts df$col ~ df$col2 without bare column names in env", {
+  df1 <- data.frame(y1 = rnorm(100), x1 = rep(c("A", "B"), 50))
+  expect_error(t.test2(df1$y1 ~ df1$x1), NA)
+  result <- t.test2(df1$y1 ~ df1$x1)
+  expect_s3_class(result, "t.test2")
+  expect_true("A" %in% names(result))
+  expect_true("B" %in% names(result))
+})
+
 test_that("t.test2 handles two-vector syntax", {
   x1 <- rnorm(50, mean = 5)
   x2 <- rnorm(50, mean = 4.8)

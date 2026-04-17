@@ -43,6 +43,16 @@ test_that("plot_freq handles group with data frame", {
   expect_true(is.data.frame(result))
 })
 
+test_that("plot_freq accepts df$col ~ df$col2 without bare column names in env", {
+  df1 <- data.frame(
+    value = c(1, 1, 2, 2, 2, 5, 5),
+    grp = c("A", "A", "A", "B", "B", "A", "B")
+  )
+  expect_error(plot_freq(df1$value ~ df1$grp), NA)
+  result <- plot_freq(df1$value ~ df1$grp)
+  expect_true(is.data.frame(result))
+})
+
 test_that("plot_freq handles freq parameter", {
   x <- c(1, 1, 2, 2, 2)
   

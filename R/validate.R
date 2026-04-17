@@ -14,6 +14,47 @@
 #' @return Returns NULL invisibly. Stops with an error if validation fails.
 #'
 #' @keywords internal
+#
+# Helpers: `all.vars()` lists RHS of `$` (column names) as if they were free
+# variables — they must not be required to exist as bindings (see t.test2).
+.collect_dollar_rhs_symbols <- function(expr) {
+  acc <- character()
+  walk <- function(e) {
+    if (is.call(e)) {
+      op <- e[[1L]]
+      if (identical(op, quote(`$`)) || identical(op, as.name("$"))) {
+        if (length(e) >= 3L) {
+          rh <- e[[3L]]
+          if (is.symbol(rh) || is.name(rh)) {
+            acc <<- c(acc, as.character(rh))
+          }
+        }
+      }
+      if (length(e) >= 2L) {
+        for (i in 2L:length(e)) walk(e[[i]])
+      }
+    }
+  }
+  walk(expr)
+  unique(acc)
+}
+
+formula_symbols_required_in_env <- function(formula) {
+  av <- all.vars(formula)
+  setdiff(av, .collect_dollar_rhs_symbols(formula))
+}
+
+.extract_formula_side_label <- function(expr) {
+  if (is.symbol(expr) || is.name(expr)) {
+    return(as.character(expr))
+  }
+  es <- deparse(expr, width.cutoff = 500L)
+  if (grepl("\\$", es)) {
+    return(trimws(sub(".*\\$", "", es)))
+  }
+  trimws(es)
+}
+
 validate_formula <- function(formula, data = NULL, func_name = "function", calling_env = parent.frame()) {
   # Capture the call to get the actual expression passed (for better error messages)
   parent_call <- sys.call(-1)
@@ -62,17 +103,17 @@ validate_formula <- function(formula, data = NULL, func_name = "function", calli
   # From here on, use obj_result$obj instead of formula
   formula <- obj_result$obj
   
-  # Extract all variable names from formula
-  formula_vars <- all.vars(formula)
+  formula_env <- environment(formula)
+  if (is.null(formula_env)) {
+    formula_env <- calling_env
+  }
   
-  # If data is provided, check variables exist in data
+  # With data=: verify by evaluation in data context (supports df$col ~ df$col2).
+  # With env only: require bindings only for symbols that are not `$` column names.
   if (!is.null(data)) {
-    # Verify data is a data frame
     if (!is.data.frame(data)) {
       stop(sprintf("%s(): 'data' must be a data frame", func_name), call. = FALSE)
     }
-    
-    # Get data name from the calling context if possible
     parent_call <- sys.call(-1)
     data_name <- if (!is.null(parent_call) && "data" %in% names(parent_call)) {
       deparse(parent_call$data)
@@ -80,37 +121,40 @@ validate_formula <- function(formula, data = NULL, func_name = "function", calli
       "data"
     }
     data_name <- gsub('^"|"$', '', data_name)
-    
-    # Check which variables are missing from data
-    missing_vars <- formula_vars[!formula_vars %in% names(data)]
-    
-    if (length(missing_vars) > 0) {
-      # Match existing error format: Variable "x" not found in dataset "y"
-      if (length(missing_vars) == 1) {
-        stop(sprintf('%s(): Variable "%s" not found in dataset "%s"', func_name, missing_vars[1], data_name), call. = FALSE)
-      } else {
-        missing_list <- paste0('"', missing_vars, '"', collapse = ", ")
-        stop(sprintf('%s(): Variables %s not found in dataset "%s"', func_name, missing_list, data_name), call. = FALSE)
+    tmp_env <- list2env(as.list(data, use.names = TRUE), parent = calling_env)
+    # Prefer evaluation (handles df$col). If evaluation fails (e.g. x1+x2 with factors),
+    # fall back to: bare symbols in the expression must be columns of data.
+    eval_formula_side <- function(expr) {
+      ev <- tryCatch(
+        list(ok = TRUE, val = suppressWarnings(eval(expr, envir = tmp_env))),
+        error = function(e) list(ok = FALSE, err = e)
+      )
+      if (isTRUE(ev$ok)) {
+        return(invisible(ev$val))
       }
+      vars_in <- all.vars(expr)
+      miss <- character(0)
+      for (v in vars_in) {
+        if (!v %in% names(data) && !exists(v, envir = calling_env, inherits = TRUE)) {
+          miss <- c(miss, v)
+        }
+      }
+      if (length(miss) > 0) {
+        stop(sprintf('%s(): Variable "%s" not found in dataset "%s"', func_name, miss[1], data_name), call. = FALSE)
+      }
+      invisible(NULL)
     }
+    if (length(formula) >= 2L) eval_formula_side(formula[[2L]])
+    if (length(formula) >= 3L) eval_formula_side(formula[[3L]])
   } else {
-    # No data provided - check variables exist in environment
-    # Get formula environment or use calling environment
-    formula_env <- environment(formula)
-    if (is.null(formula_env)) {
-      formula_env <- calling_env
-    }
-    
-    # Check which variables are missing from environment
+    must_exist <- formula_symbols_required_in_env(formula)
     missing_vars <- character(0)
-    for (var in formula_vars) {
+    for (var in must_exist) {
       if (!exists(var, envir = formula_env, inherits = TRUE)) {
         missing_vars <- c(missing_vars, var)
       }
     }
-    
     if (length(missing_vars) > 0) {
-      # Match format for environment errors
       if (length(missing_vars) == 1) {
         stop(sprintf("%s(): Could not find variable '%s'", func_name, missing_vars[1]), call. = FALSE)
       } else {
@@ -181,82 +225,92 @@ validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", requ
   is_formula <- tryCatch(inherits(y, "formula"), error = function(e) FALSE)
   
   if (is_formula) {
-    # Formula syntax: y ~ group
-    # Extract variable names from formula
-    formula_vars <- all.vars(y)
-    
-    # Check if group is required
-    if (require_group) {
-      if (length(formula_vars) != 2) {
-        stop(sprintf("%s(): Formula must have exactly two variables: response ~ group", func_name), call. = FALSE)
-      }
-    } else {
-      if (length(formula_vars) < 1 || length(formula_vars) > 2) {
-        stop(sprintf("%s(): Formula must have one or two variables: response or response ~ group", func_name), call. = FALSE)
-      }
+    # Formula syntax: evaluate lhs/rhs (supports df$col ~ df$col2).
+    fo <- y
+    if (length(fo) < 2L || !identical(fo[[1L]], quote(`~`))) {
+      stop(sprintf("%s(): Invalid formula", func_name), call. = FALSE)
     }
-    
-    y_var_name <- formula_vars[1]
-    group_var_name <- if (length(formula_vars) >= 2) formula_vars[2] else NULL
-    
-    # Get environment for evaluating variables
-    # Use the formula's environment if available (where the formula was created),
-    # otherwise fall back to parent.frame() (the calling function's environment)
-    formula_env <- environment(y)
+    if (require_group && length(fo) < 3L) {
+      stop(sprintf("%s(): Formula must have exactly two variables: response ~ group", func_name), call. = FALSE)
+    }
+    formula_env <- environment(fo)
     if (is.null(formula_env)) {
-      calling_env <- parent.frame()
-    } else {
-      calling_env <- formula_env
+      formula_env <- parent.frame()
     }
-    
-    if (!is.null(data)) {
-      # Data provided: extract from data frame
-      if (!is.data.frame(data)) {
-        stop(sprintf("%s(): 'data' must be a data frame", func_name), call. = FALSE)
-      }
-      
-      # Check if variables exist in data
-      if (!y_var_name %in% names(data)) {
-        stop(sprintf("%s(): Variable \"%s\" not found in dataset \"%s\"", func_name, y_var_name, data_name), call. = FALSE)
-      }
-      if (!is.null(group_var_name) && !group_var_name %in% names(data)) {
-        stop(sprintf("%s(): Variable \"%s\" not found in dataset \"%s\"", func_name, group_var_name, data_name), call. = FALSE)
-      }
-      
-      # Extract variables from data
-      y <- data[[y_var_name]]
-      if (!is.null(group_var_name)) {
-        group <- data[[group_var_name]]
-      } else {
-        group <- NULL
-      }
-    } else {
-      # No data: check if variables exist before evaluating
-      y_exists <- exists(y_var_name, envir = calling_env, inherits = TRUE)
-      
-      if (!y_exists) {
-        stop(sprintf("%s(): Could not find variable '%s'", func_name, y_var_name), call. = FALSE)
-      }
-      
-      if (!is.null(group_var_name)) {
-        group_exists <- exists(group_var_name, envir = calling_env, inherits = TRUE)
-        if (!group_exists) {
-          stop(sprintf("%s(): Could not find variable '%s'", func_name, group_var_name), call. = FALSE)
+    enc <- parent.frame()
+    if (length(fo) == 2L) {
+      lhs_expr <- fo[[2L]]
+      y_name_raw <- deparse(lhs_expr, width.cutoff = 500L)
+      y_name <- .extract_formula_side_label(lhs_expr)
+      group <- NULL
+      group_name_raw <- NULL
+      group_name <- NULL
+      if (!is.null(data)) {
+        if (!is.data.frame(data)) {
+          stop(sprintf("%s(): 'data' must be a data frame", func_name), call. = FALSE)
         }
-        group <- eval(as.name(group_var_name), envir = calling_env)
+        y <- tryCatch(
+          eval(lhs_expr, envir = data, enclos = enc),
+          error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+        )
       } else {
-        group <- NULL
+        y <- tryCatch(
+          eval(lhs_expr, envir = formula_env),
+          error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+        )
       }
-      
-      # Variables exist, now evaluate y
-      y <- eval(as.name(y_var_name), envir = calling_env)
+    } else {
+      lhs_expr <- fo[[2L]]
+      rhs_expr <- fo[[3L]]
+      y_name_raw <- deparse(lhs_expr, width.cutoff = 500L)
+      y_name <- .extract_formula_side_label(lhs_expr)
+      rhs_is_intercept_only <- is.numeric(rhs_expr) && length(rhs_expr) == 1L &&
+        !is.na(rhs_expr[1]) && rhs_expr[1] == 1
+      if (!require_group && rhs_is_intercept_only) {
+        group <- NULL
+        group_name_raw <- NULL
+        group_name <- NULL
+        if (!is.null(data)) {
+          if (!is.data.frame(data)) {
+            stop(sprintf("%s(): 'data' must be a data frame", func_name), call. = FALSE)
+          }
+          y <- tryCatch(
+            eval(lhs_expr, envir = data, enclos = enc),
+            error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+          )
+        } else {
+          y <- tryCatch(
+            eval(lhs_expr, envir = formula_env),
+            error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+          )
+        }
+      } else {
+        group_name_raw <- deparse(rhs_expr, width.cutoff = 500L)
+        group_name <- .extract_formula_side_label(rhs_expr)
+        if (!is.null(data)) {
+          if (!is.data.frame(data)) {
+            stop(sprintf("%s(): 'data' must be a data frame", func_name), call. = FALSE)
+          }
+          y <- tryCatch(
+            eval(lhs_expr, envir = data, enclos = enc),
+            error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+          )
+          group <- tryCatch(
+            eval(rhs_expr, envir = data, enclos = enc),
+            error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+          )
+        } else {
+          y <- tryCatch(
+            eval(lhs_expr, envir = formula_env),
+            error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+          )
+          group <- tryCatch(
+            eval(rhs_expr, envir = formula_env),
+            error = function(e) stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+          )
+        }
+      }
     }
-    
-    # Set names for labels and raw names (used in error messages)
-    y_name <- y_var_name
-    group_name <- group_var_name
-    y_name_raw <- y_var_name
-    group_name_raw <- group_var_name
   } else {
     # Standard syntax: y, group
     # Use match.call() to capture the actual expressions passed, not parameter names
@@ -610,14 +664,15 @@ validate_lm2 <- function(formula, data = NULL, se_type = "HC3", se_type_missing 
   
   # If data is not provided, try to construct it from vectors in the environment
   if (is.null(data)) {
-    # Extract variable names from formula
+    # Extract variable names from formula (omit `$` RHS column names; see t.test2 / validate_formula)
     formula_vars <- all.vars(formula)
+    must_exist <- formula_symbols_required_in_env(formula)
     
-    # Check if all variables exist in the calling environment
-    all_exist <- all(sapply(formula_vars, function(v) exists(v, envir = calling_env, inherits = TRUE)))
+    # Check if all required bindings exist in the calling environment
+    all_exist <- all(sapply(must_exist, function(v) exists(v, envir = calling_env, inherits = TRUE)))
     
     if (!all_exist) {
-      missing_vars <- formula_vars[!sapply(formula_vars, function(v) exists(v, envir = calling_env, inherits = TRUE))]
+      missing_vars <- must_exist[!sapply(must_exist, function(v) exists(v, envir = calling_env, inherits = TRUE))]
       message2(paste0("lm2() says: Could not find variable(s): ", paste(missing_vars, collapse = ", "), 
            ". Either provide a 'data' argument or ensure variables exist in the environment."), col = "red")
       invokeRestart("abort")

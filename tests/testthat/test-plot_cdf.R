@@ -24,6 +24,16 @@ test_that("plot_cdf handles data frame input", {
   expect_equal(length(result$ecdfs), 2)
 })
 
+test_that("plot_cdf accepts df$col ~ df$col2 without bare column names in env", {
+  df1 <- data.frame(
+    y1 = rnorm(60),
+    x1 = rep(c("A", "B", "C"), each = 20)
+  )
+  expect_error(plot_cdf(df1$y1 ~ df1$x1), NA)
+  result <- plot_cdf(df1$y1 ~ df1$x1)
+  expect_equal(length(result$ecdfs), 3)
+})
+
 test_that("plot_cdf handles formula syntax", {
   df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
   

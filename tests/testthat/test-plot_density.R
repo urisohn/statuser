@@ -24,6 +24,16 @@ test_that("plot_density handles data frame input", {
   expect_equal(length(result$densities), 2)
 })
 
+test_that("plot_density accepts df$col ~ df$col2 without bare column names in env", {
+  df1 <- data.frame(
+    y1 = rnorm(60),
+    x1 = rep(c("A", "B", "C"), each = 20)
+  )
+  expect_error(plot_density(df1$y1 ~ df1$x1), NA)
+  result <- plot_density(df1$y1 ~ df1$x1)
+  expect_equal(length(result$densities), 3)
+})
+
 test_that("plot_density handles missing values", {
   y <- c(rnorm(90), rep(NA, 10))
   group <- rep(c("A", "B"), 50)

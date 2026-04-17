@@ -65,6 +65,19 @@ test_that("text2 handles additional arguments", {
   expect_error(text2(5, 7, "Bold text", font = 2, bg = "yellow"), NA)
 })
 
+test_that("text2 applies vector col per label (not only col[1])", {
+  plot(1:10, 1:10, type = "n")
+  expect_error(
+    text2(
+      c(2, 4, 6, 8), c(3, 5, 7, 9),
+      c("a", "b", "c", "d"),
+      bg = c("orange", "gray90", "gray20", "black"),
+      col = c("black", "black", "white", "white")
+    ),
+    NA
+  )
+})
+
 test_that("text2 handles multiple labels", {
   plot(1:10, 1:10, type = "n")
   

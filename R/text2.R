@@ -51,6 +51,9 @@
 #' @export
 text2 <- function(x, y, labels, align="center", bg="papayawhip", cex=1, pad=0.03, pad_v=0.25,  ...) {
 
+  dots <- list(...)
+  n <- length(x)
+
   # Validate and recycle align argument
   valid_aligns <- c("left", "center", "right")
   if (length(align) == 1) {
@@ -99,9 +102,29 @@ text2 <- function(x, y, labels, align="center", bg="papayawhip", cex=1, pad=0.03
          col = bg_i, border = NA)
 
     # draw text with appropriate alignment
-    text(x[i], y[i], labels[i],
-         cex = cex,
-         adj = c(adj_x, 0.5),
-         ...)
+    # Per-point `text()` calls: vector args in ... must be subset (else only
+    # `col[1]` etc. apply to every label — wrong for plot_means value colors).
+    text_args <- list(
+      x = x[i],
+      y = y[i],
+      labels = labels[i],
+      cex = cex,
+      adj = c(adj_x, 0.5)
+    )
+    if (length(dots)) {
+      for (nm in names(dots)) {
+        v <- dots[[nm]]
+        lv <- length(v)
+        if (!lv) next
+        if (lv == n) {
+          text_args[[nm]] <- v[i]
+        } else if (lv == 1L) {
+          text_args[[nm]] <- v
+        } else {
+          text_args[[nm]] <- v[((i - 1L) %% lv) + 1L]
+        }
+      }
+    }
+    do.call(graphics::text, text_args)
   }
 }

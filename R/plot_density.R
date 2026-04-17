@@ -175,22 +175,22 @@ plot_density <- function(formula, y2 = NULL, data = NULL, order = NULL, show_mea
   
   # Capture original group before validation (to preserve factor levels)
   group_original_before_validation <- NULL
-  if (is_formula_input) {
-    formula_vars <- all.vars(formula)
-    if (length(formula_vars) >= 2) {
-      group_var_name <- formula_vars[2]
-      if (!is.null(data)) {
-        # Extract from data frame
-        if (group_var_name %in% names(data)) {
-          group_original_before_validation <- data[[group_var_name]]
-        }
-      } else {
-        # Extract from environment
-        tryCatch({
-          group_original_before_validation <- eval(as.name(group_var_name), envir = parent.frame())
-        }, error = function(e) {
-          # If we can't find it, that's ok - validation will handle the error
-        })
+  if (is_formula_input && inherits(formula, "formula")) {
+    f <- formula
+    if (length(f) >= 3L && identical(f[[1L]], quote(`~`))) {
+      rhs <- f[[3L]]
+      rhs_is_intercept_only <- is.numeric(rhs) && length(rhs) == 1L &&
+        !is.na(rhs[1]) && rhs[1] == 1
+      if (!rhs_is_intercept_only) {
+        group_original_before_validation <- tryCatch({
+          if (!is.null(data)) {
+            eval(rhs, envir = data, enclos = parent.frame())
+          } else {
+            fe <- environment(f)
+            if (is.null(fe)) fe <- parent.frame()
+            eval(rhs, envir = fe)
+          }
+        }, error = function(e) NULL)
       }
     }
   }
