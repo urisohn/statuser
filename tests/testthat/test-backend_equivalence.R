@@ -1,5 +1,6 @@
 # Backend equivalence battery: compare statuser outputs to underlying engines.
 
+#t.test2_027
 test_that("backend: t.test2 matches stats::t.test across core scenarios", {
   set.seed(101)
   
@@ -32,6 +33,7 @@ test_that("backend: t.test2 matches stats::t.test across core scenarios", {
   }
 })
 
+#t.test2_028
 test_that("backend: t.test2 formula interface matches stats::t.test", {
   set.seed(102)
   
@@ -50,6 +52,7 @@ test_that("backend: t.test2 formula interface matches stats::t.test", {
   be_expect_equal_num(tt2$ci.H, tt_ref$conf.int[2], tol = 1e-10)
 })
 
+#lm2_051
 test_that("backend: lm2 matches estimatr::lm_robust coefficients and inference", {
   testthat::skip_if_not_installed("estimatr")
   
@@ -70,6 +73,7 @@ test_that("backend: lm2 matches estimatr::lm_robust coefficients and inference",
   be_expect_equal_num(unname(m2$df), unname(ref$df), tol = 1e-10)
 })
 
+#interprobe_012
 test_that("backend: interprobe JN output matches marginaleffects slopes and regions of significance", {
   testthat::skip_if_not_installed("marginaleffects")
   testthat::skip_if_not_installed("mgcv")
@@ -124,6 +128,7 @@ test_that("backend: interprobe JN output matches marginaleffects slopes and regi
   testthat::expect_identical(sig_stat, sig_ref)
 })
 
+#interprobe_013
 test_that("backend: interprobe internal interaction test p-values match returned testing models (binary x)", {
   testthat::skip_if_not_installed("marginaleffects")
   testthat::skip_if_not_installed("mgcv")

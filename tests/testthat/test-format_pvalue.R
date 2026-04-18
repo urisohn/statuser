@@ -1,3 +1,4 @@
+#format_pvalue_001
 test_that("format_pvalue formats basic p-values correctly", {
   # Note: format_pvalue uses format() with nsmall=digits, so it always shows full decimal places
   expect_equal(format_pvalue(0.05), "= .0500")
@@ -6,6 +7,7 @@ test_that("format_pvalue formats basic p-values correctly", {
   expect_equal(format_pvalue(0.1234), "= .1234")
 })
 
+#format_pvalue_002
 test_that("format_pvalue handles edge cases", {
   expect_equal(format_pvalue(0.00001), "< .0001")
   expect_equal(format_pvalue(0.99999), "> .9999")
@@ -15,6 +17,7 @@ test_that("format_pvalue handles edge cases", {
   expect_equal(format_pvalue(0.9999), "= .9999")
 })
 
+#format_pvalue_003
 test_that("format_pvalue handles NA values", {
   result <- format_pvalue(c(0.05, NA, 0.01))
   expect_equal(result[1], "= .0500")
@@ -26,6 +29,7 @@ test_that("format_pvalue handles NA values", {
   expect_true(all(is.na(result)))
 })
 
+#format_pvalue_004
 test_that("format_pvalue works with include_p parameter", {
   expect_equal(format_pvalue(0.05, include_p = TRUE), "p = .0500")
   expect_equal(format_pvalue(0.001, include_p = TRUE), "p = .0010")
@@ -33,6 +37,7 @@ test_that("format_pvalue works with include_p parameter", {
   expect_equal(format_pvalue(0.99999, include_p = TRUE), "p > .9999")
 })
 
+#format_pvalue_005
 test_that("format_pvalue handles vector input", {
   result <- format_pvalue(c(0.05, 0.001, 0.00001))
   expect_equal(length(result), 3)
@@ -41,6 +46,7 @@ test_that("format_pvalue handles vector input", {
   expect_equal(result[3], "< .0001")
 })
 
+#format_pvalue_006
 test_that("format_pvalue respects digits parameter", {
   expect_equal(format_pvalue(0.12345, digits = 2), "= .12")
   expect_equal(format_pvalue(0.12345, digits = 3), "= .123")
@@ -48,6 +54,7 @@ test_that("format_pvalue respects digits parameter", {
   expect_equal(format_pvalue(0.1, digits = 1), "= .1")
 })
 
+#format_pvalue_007
 test_that("format_pvalue handles boundary values correctly", {
   # Test values just above and below thresholds
   expect_equal(format_pvalue(0.00009, digits = 4), "< .0001")
@@ -57,6 +64,7 @@ test_that("format_pvalue handles boundary values correctly", {
   expect_equal(format_pvalue(0.99991, digits = 4), "> .9999")
 })
 
+#format_pvalue_008
 test_that("format_pvalue threshold adapts to digits parameter", {
   # Very small p-value should use threshold based on digits
   expect_equal(format_pvalue(0.0000001, digits = 2), "< .01")
@@ -77,6 +85,7 @@ test_that("format_pvalue threshold adapts to digits parameter", {
 # ADDITIONAL EDGE CASES
 # ============================================================================
 
+#format_pvalue_009
 test_that("format_pvalue handles negative values", {
   # Negative p-values are invalid but function should handle gracefully
   # (or throw appropriate error)
@@ -88,6 +97,7 @@ test_that("format_pvalue handles negative values", {
   expect_true(!is.null(result))
 })
 
+#format_pvalue_010
 test_that("format_pvalue handles values > 1", {
   # p-values > 1 are invalid but function should handle gracefully
   result <- tryCatch(
@@ -97,16 +107,19 @@ test_that("format_pvalue handles values > 1", {
   expect_true(!is.null(result))
 })
 
+#format_pvalue_011
 test_that("format_pvalue handles empty vector", {
   result <- format_pvalue(numeric(0))
   expect_equal(length(result), 0)
 })
 
+#format_pvalue_012
 test_that("format_pvalue handles single NA", {
   result <- format_pvalue(NA_real_)
   expect_true(is.na(result))
 })
 
+#format_pvalue_013
 test_that("format_pvalue includes_p works with vectors", {
   result <- format_pvalue(c(0.05, 0.001), include_p = TRUE)
   expect_true(all(grepl("^p", result)))

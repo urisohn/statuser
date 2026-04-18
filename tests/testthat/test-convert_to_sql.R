@@ -1,3 +1,4 @@
+#convert_to_sql_001
 test_that("convert_to_sql creates SQL file", {
   # Create temporary CSV file
   temp_csv <- tempfile(fileext = ".csv")
@@ -27,6 +28,7 @@ test_that("convert_to_sql creates SQL file", {
   unlink(temp_sql)
 })
 
+#convert_to_sql_002
 test_that("convert_to_sql creates INSERT statements", {
   temp_csv <- tempfile(fileext = ".csv")
   temp_sql <- tempfile(fileext = ".sql")
@@ -50,6 +52,7 @@ test_that("convert_to_sql creates INSERT statements", {
   unlink(temp_sql)
 })
 
+#convert_to_sql_003
 test_that("convert_to_sql handles create_table parameter", {
   temp_csv <- tempfile(fileext = ".csv")
   temp_sql <- tempfile(fileext = ".sql")
@@ -74,6 +77,7 @@ test_that("convert_to_sql handles create_table parameter", {
   unlink(temp_sql)
 })
 
+#convert_to_sql_004
 test_that("convert_to_sql handles date columns", {
   temp_csv <- tempfile(fileext = ".csv")
   temp_sql <- tempfile(fileext = ".sql")
@@ -97,6 +101,7 @@ test_that("convert_to_sql handles date columns", {
   unlink(temp_sql)
 })
 
+#convert_to_sql_005
 test_that("convert_to_sql handles numeric columns", {
   temp_csv <- tempfile(fileext = ".csv")
   temp_sql <- tempfile(fileext = ".sql")
@@ -120,6 +125,7 @@ test_that("convert_to_sql handles numeric columns", {
   unlink(temp_sql)
 })
 
+#convert_to_sql_006
 test_that("convert_to_sql escapes single quotes", {
   temp_csv <- tempfile(fileext = ".csv")
   temp_sql <- tempfile(fileext = ".sql")
@@ -143,6 +149,7 @@ test_that("convert_to_sql escapes single quotes", {
   unlink(temp_sql)
 })
 
+#convert_to_sql_007
 test_that("convert_to_sql returns invisibly", {
   temp_csv <- tempfile(fileext = ".csv")
   temp_sql <- tempfile(fileext = ".sql")

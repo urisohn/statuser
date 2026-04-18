@@ -1,3 +1,4 @@
+#plot_means_001
 test_that("plot_means runs with formula + data and returns desc_var object", {
   df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 
@@ -7,6 +8,7 @@ test_that("plot_means runs with formula + data and returns desc_var object", {
   expect_true(is.data.frame(result$means))
 })
 
+#plot_means_002
 test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
   df <- data.frame(
     y = rnorm(200),
@@ -20,6 +22,7 @@ test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
   expect_true(is.data.frame(result$means))
 })
 
+#plot_means_003
 test_that("plot_means order reorders groups for single grouping variable", {
   df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 
@@ -33,6 +36,7 @@ test_that("plot_means order reorders groups for single grouping variable", {
   expect_true(is.list(result_custom))
 })
 
+#plot_means_004
 test_that("plot_means works with three grouping variables and missing combinations", {
   set.seed(1)
   df <- data.frame(
@@ -49,11 +53,13 @@ test_that("plot_means works with three grouping variables and missing combinatio
   expect_true(is.list(result))
 })
 
+#plot_means_005
 test_that("plot_means tests=auto works for scenario 1 (binary x1 only)", {
   df <- data.frame(y = rnorm(60), x1 = rep(c("A", "B"), each = 30))
   expect_error(plot_means(y ~ x1, data = df, tests = "auto", save.as = NULL), NA)
 })
 
+#plot_means_006
 test_that("plot_means tests=auto works for scenario 2 (binary x1 and x2)", {
   df <- data.frame(
     y = rnorm(120),
@@ -63,6 +69,7 @@ test_that("plot_means tests=auto works for scenario 2 (binary x1 and x2)", {
   expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto", save.as = NULL), NA)
 })
 
+#plot_means_007
 test_that("plot_means tests=auto works for scenario 3 (binary x1, x2 has >2 levels)", {
   df <- expand.grid(
     x1 = c("A", "B"),
@@ -75,6 +82,7 @@ test_that("plot_means tests=auto works for scenario 3 (binary x1, x2 has >2 leve
   expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto", save.as = NULL), NA)
 })
 
+#plot_means_008
 test_that("plot_means save.as saves png", {
   df <- data.frame(y = rnorm(80), x1 = rep(c("A", "B"), each = 40))
   out <- tempfile(fileext = ".png")
@@ -90,6 +98,7 @@ test_that("plot_means save.as saves png", {
   expect_gt(file.info(out)$size, 0)
 })
 
+#plot_means_009
 test_that("plot_means means + per-cell CIs match t.test() when cluster=NULL", {
   set.seed(123)
   df <- data.frame(
@@ -125,6 +134,7 @@ test_that("plot_means means + per-cell CIs match t.test() when cluster=NULL", {
   }
 })
 
+#plot_means_010
 test_that("plot_means tests=auto (scenario 1) matches Welch t.test()", {
   set.seed(1)
   df <- data.frame(y = rnorm(80), x1 = rep(c("A", "B"), each = 40))
@@ -146,6 +156,7 @@ test_that("plot_means tests=auto (scenario 1) matches Welch t.test()", {
   expect_equal(as.numeric(row$diff), as.numeric(row$mean2 - row$mean1), tolerance = 1e-12)
 })
 
+#plot_means_011
 test_that("plot_means 2x2 interaction p-value matches estimatr::lm_robust(HC3)", {
   skip_if_not_installed("estimatr")
   
@@ -175,6 +186,7 @@ test_that("plot_means 2x2 interaction p-value matches estimatr::lm_robust(HC3)",
   expect_equal(as.numeric(int_row$df), as.numeric(sm$df.residual), tolerance = 1e-10)
 })
 
+#plot_means_012
 test_that("plot_means clustered CI uses regression-based intervals governed by ci.level", {
   skip_if_not_installed("estimatr")
   

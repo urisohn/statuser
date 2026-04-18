@@ -1,5 +1,6 @@
 # Tests for interprobe()
 
+#interprobe_001
 test_that("interprobe works with lm() model input and returns expected structure", {
   skip_if_not_installed("marginaleffects")
 
@@ -46,6 +47,7 @@ test_that("interprobe works with lm() model input and returns expected structure
   expect_equal(unname(eff_by_x[[2]]), unname(eff_by_x[[3]]), tolerance = 1e-8)
 })
 
+#interprobe_002
 test_that("interprobe returns fitted model when estimating internally", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("mgcv")
@@ -81,6 +83,7 @@ test_that("interprobe returns fitted model when estimating internally", {
   expect_equal(call_txt, "lm2(y ~ x * z)")
 })
 
+#interprobe_003
 test_that("binary x returns gam_results_testing (ti-based testing GAM)", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("mgcv")
@@ -109,6 +112,7 @@ test_that("binary x returns gam_results_testing (ti-based testing GAM)", {
   expect_s3_class(res$gam_results_testing, "gam")
 })
 
+#interprobe_004
 test_that("quiet=TRUE suppresses interaction APA printing", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("mgcv")
@@ -136,6 +140,7 @@ test_that("quiet=TRUE suppresses interaction APA printing", {
   expect_false(any(grepl("p-value for the interaction", out, fixed = TRUE)))
 })
 
+#interprobe_005
 test_that("interprobe works with lm2() model input", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("estimatr")
@@ -175,6 +180,7 @@ test_that("interprobe works with lm2() model input", {
   expect_equal(unname(eff_by_x[[2]]), unname(eff_by_x[[3]]), tolerance = 1e-8)
 })
 
+#interprobe_006
 test_that("interprobe with data fits lm2 when model = linear or lm sentinel", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("estimatr")
@@ -229,6 +235,7 @@ test_that("interprobe with data fits lm2 when model = linear or lm sentinel", {
   expect_equal(nrow(res_lm_sentinel$johnson.neyman), nrow(res_linear$johnson.neyman))
 })
 
+#interprobe_007
 test_that("interprobe(x, z, y vectors) works with model = linear", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("estimatr")
@@ -258,6 +265,7 @@ test_that("interprobe(x, z, y vectors) works with model = linear", {
   expect_true(nrow(res$johnson.neyman) > 0)
 })
 
+#interprobe_008
 test_that("bare model = linear is keyword when linear not in calling env", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("estimatr")
@@ -289,6 +297,7 @@ test_that("bare model = linear is keyword when linear not in calling env", {
   expect_true(nrow(res$johnson.neyman) > 0)
 })
 
+#interprobe_009
 test_that("bare model = linear uses fitted object when linear exists", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("estimatr")
@@ -322,6 +331,7 @@ test_that("bare model = linear uses fitted object when linear exists", {
   expect_true(nrow(res$johnson.neyman) > 0)
 })
 
+#interprobe_010
 test_that("bare model = lm on vectors uses stats::lm as keyword", {
   skip_if_not_installed("marginaleffects")
   skip_if_not_installed("estimatr")
@@ -349,6 +359,7 @@ test_that("bare model = lm on vectors uses stats::lm as keyword", {
   expect_true(nrow(res$johnson.neyman) > 0)
 })
 
+#interprobe_011
 test_that("error message shows original model name (linear)", {
   set.seed(123)
   x <- rnorm(200)

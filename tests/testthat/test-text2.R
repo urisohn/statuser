@@ -1,3 +1,4 @@
+#text2_001
 test_that("text2 runs without errors", {
   # Create a simple plot first
   plot(1:10, 1:10, type = "n")
@@ -7,6 +8,7 @@ test_that("text2 runs without errors", {
   expect_error(text2(c(2, 8), c(3, 7), c("Left", "Right")), NA)
 })
 
+#text2_002
 test_that("text2 handles different alignments", {
   plot(1:10, 1:10, type = "n")
   
@@ -20,6 +22,7 @@ test_that("text2 handles different alignments", {
   expect_error(text2(8, 8, "Right", align = "right"), NA)
 })
 
+#text2_003
 test_that("text2 handles vectorized alignments", {
   plot(1:10, 1:10, type = "n")
   
@@ -29,6 +32,7 @@ test_that("text2 handles vectorized alignments", {
                       align = c("left", "center", "right")), NA)
 })
 
+#text2_004
 test_that("text2 handles custom background colors", {
   plot(1:10, 1:10, type = "n")
   
@@ -39,6 +43,7 @@ test_that("text2 handles custom background colors", {
   expect_error(text2(c(2, 8), c(5, 5), c("A", "B"), bg = c("red", "blue")), NA)
 })
 
+#text2_005
 test_that("text2 handles cex parameter", {
   plot(1:10, 1:10, type = "n")
   
@@ -47,6 +52,7 @@ test_that("text2 handles cex parameter", {
   expect_error(text2(5, 7, "Large", cex = 2), NA)
 })
 
+#text2_006
 test_that("text2 handles pad parameters", {
   plot(1:10, 1:10, type = "n")
   
@@ -55,6 +61,7 @@ test_that("text2 handles pad parameters", {
   expect_error(text2(5, 7, "Test", pad_v = 0.5), NA)
 })
 
+#text2_007
 test_that("text2 handles additional arguments", {
   plot(1:10, 1:10, type = "n")
   
@@ -65,6 +72,7 @@ test_that("text2 handles additional arguments", {
   expect_error(text2(5, 7, "Bold text", font = 2, bg = "yellow"), NA)
 })
 
+#text2_008
 test_that("text2 applies vector col per label (not only col[1])", {
   plot(1:10, 1:10, type = "n")
   expect_error(
@@ -78,6 +86,7 @@ test_that("text2 applies vector col per label (not only col[1])", {
   )
 })
 
+#text2_009
 test_that("text2 handles multiple labels", {
   plot(1:10, 1:10, type = "n")
   
@@ -86,6 +95,7 @@ test_that("text2 handles multiple labels", {
                       labels = c("Label1", "Label2", "Label3")), NA)
 })
 
+#text2_010
 test_that("text2 recycles bg color", {
   plot(1:10, 1:10, type = "n")
   
@@ -95,6 +105,7 @@ test_that("text2 recycles bg color", {
                       bg = "yellow"), NA)
 })
 
+#text2_011
 test_that("text2 handles edge cases", {
   plot(1:10, 1:10, type = "n")
   

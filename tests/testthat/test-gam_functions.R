@@ -1,6 +1,7 @@
 # Tests for GAM-related functions: twolines, plot_gam, scatter.gam
 # These require mgcv package and GAM models
 
+#scatter.gam_001
 test_that("scatter.gam runs without errors", {
   skip_if_not_installed("mgcv")
   
@@ -15,6 +16,7 @@ test_that("scatter.gam runs without errors", {
   expect_true(inherits(result, "gam"))
 })
 
+#scatter.gam_002
 test_that("scatter.gam handles data frame input", {
   skip_if_not_installed("mgcv")
   
@@ -23,6 +25,7 @@ test_that("scatter.gam handles data frame input", {
   expect_error(scatter.gam(x, y, data = df), NA)
 })
 
+#scatter.gam_003
 test_that("scatter.gam handles data.dots parameter", {
   skip_if_not_installed("mgcv")
   
@@ -33,6 +36,7 @@ test_that("scatter.gam handles data.dots parameter", {
   expect_error(scatter.gam(x, y, data.dots = FALSE), NA)
 })
 
+#scatter.gam_004
 test_that("scatter.gam handles three.dots parameter", {
   skip_if_not_installed("mgcv")
   
@@ -43,6 +47,7 @@ test_that("scatter.gam handles three.dots parameter", {
   expect_error(scatter.gam(x, y, three.dots = FALSE), NA)
 })
 
+#scatter.gam_005
 test_that("scatter.gam handles k parameter", {
   skip_if_not_installed("mgcv")
   
@@ -53,6 +58,7 @@ test_that("scatter.gam handles k parameter", {
   expect_error(scatter.gam(x, y, k = 10), NA)
 })
 
+#scatter.gam_006
 test_that("scatter.gam throws error for invalid data", {
   skip_if_not_installed("mgcv")
   
@@ -64,6 +70,7 @@ test_that("scatter.gam throws error for invalid data", {
   expect_error(scatter.gam(x, y, data = df))
 })
 
+#scatter.gam_007
 test_that("scatter.gam accepts formula syntax with and without data", {
   skip_if_not_installed("mgcv")
   
@@ -75,6 +82,7 @@ test_that("scatter.gam accepts formula syntax with and without data", {
   expect_error(scatter.gam(df$y ~ df$x), NA)
 })
 
+#scatter.gam_008
 test_that("scatter.gam accepts ylim via ... without duplicate-argument error", {
   skip_if_not_installed("mgcv")
   
@@ -83,12 +91,14 @@ test_that("scatter.gam accepts ylim via ... without duplicate-argument error", {
   expect_error(scatter.gam(x, y, ylim = c(-5, 5)), NA)
 })
 
+#plot_gam_001
 test_that("plot_gam throws error for non-GAM model", {
   # Should error if model is not a GAM
   expect_error(plot_gam(lm(mpg ~ hp, data = mtcars), "hp"), 
                "must be a GAM model")
 })
 
+#plot_gam_002
 test_that("plot_gam validates predictor parameter", {
   skip_if_not_installed("mgcv")
   pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
@@ -109,6 +119,7 @@ test_that("plot_gam validates predictor parameter", {
   expect_error(plot_gam(model, "nonexistent"), "not found")
 })
 
+#plot_gam_003
 test_that("plot_gam validates quantile.others parameter", {
   skip_if_not_installed("mgcv")
   pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
@@ -128,6 +139,7 @@ test_that("plot_gam validates quantile.others parameter", {
   expect_error(plot_gam(model, "x", quantile.others = 100), "between 1 and 99")
 })
 
+#plot_gam_004
 test_that("plot_gam returns correct structure", {
   skip_if_not_installed("mgcv")
   pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
@@ -147,6 +159,7 @@ test_that("plot_gam returns correct structure", {
   expect_true("upper" %in% names(result))
 })
 
+#twolines_001
 test_that("twolines runs without errors", {
   skip_if_not_installed("mgcv")
   
@@ -164,6 +177,7 @@ test_that("twolines runs without errors", {
   expect_true(is.list(result))
 })
 
+#twolines_002
 test_that("twolines handles graph parameter", {
   skip_if_not_installed("mgcv")
   
@@ -178,6 +192,7 @@ test_that("twolines handles graph parameter", {
   expect_error(twolines(y ~ x, data = data, graph = 1), NA)
 })
 
+#twolines_003
 test_that("twolines handles quiet parameter", {
   skip_if_not_installed("mgcv")
   
@@ -189,6 +204,7 @@ test_that("twolines handles quiet parameter", {
   expect_error(twolines(y ~ x, data = data, quiet = FALSE, graph = 0), NA)
 })
 
+#twolines_004
 test_that("twolines handles covariates", {
   skip_if_not_installed("mgcv")
   
@@ -200,6 +216,7 @@ test_that("twolines handles covariates", {
   expect_error(twolines(y ~ x + z, data = data, graph = 0), NA)
 })
 
+#twolines_005
 test_that("twolines returns correct structure", {
   skip_if_not_installed("mgcv")
   
@@ -222,6 +239,7 @@ test_that("twolines returns correct structure", {
 # ADDITIONAL GAM TESTS
 # ============================================================================
 
+#scatter.gam_009
 test_that("scatter.gam returns sensible fitted values", {
   skip_if_not_installed("mgcv")
   
@@ -238,6 +256,7 @@ test_that("scatter.gam returns sensible fitted values", {
   expect_true(cor(result$fitted.values, y) > 0.8)
 })
 
+#plot_gam_005
 test_that("plot_gam predicted values are reasonable", {
   skip_if_not_installed("mgcv")
   pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
@@ -260,6 +279,7 @@ test_that("plot_gam predicted values are reasonable", {
   expect_true(all(result$lower < result$upper))
 })
 
+#plot_gam_006
 test_that("plot_gam works with multiple predictors", {
   skip_if_not_installed("mgcv")
   pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
@@ -279,6 +299,7 @@ test_that("plot_gam works with multiple predictors", {
   expect_true(is.list(result2))
 })
 
+#twolines_006
 test_that("twolines detects U-shaped relationship", {
   skip_if_not_installed("mgcv")
   
@@ -295,6 +316,7 @@ test_that("twolines detects U-shaped relationship", {
   expect_true(result$b1 < 0 || result$b2 > 0)
 })
 
+#twolines_007
 test_that("twolines detects inverted U-shaped relationship", {
   skip_if_not_installed("mgcv")
   

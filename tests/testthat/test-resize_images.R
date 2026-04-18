@@ -1,9 +1,11 @@
+#resize_images_001
 test_that("resize_images handles non-existent folder gracefully", {
   # Non-existent folder should error or handle gracefully
   expect_error(resize_images("nonexistent_folder_12345", width = 800), 
                class = "error")
 })
 
+#resize_images_002
 test_that("resize_images handles empty folder", {
   # Create temporary empty folder
   temp_dir <- tempfile()
@@ -22,6 +24,7 @@ test_that("resize_images handles empty folder", {
 # which is complex in a test environment. These tests cover basic
 # error handling and edge cases.
 
+#resize_images_003
 test_that("resize_images accepts width parameter", {
   # Test that function signature accepts width
   # Full functionality requires image files

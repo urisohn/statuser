@@ -4,6 +4,7 @@
 # BASIC FUNCTIONALITY
 # ============================================================================
 
+#t.test2_001
 test_that("t.test2 is exported and returns correct class", {
   x <- rnorm(50)
   y <- rnorm(50)
@@ -14,6 +15,7 @@ test_that("t.test2 is exported and returns correct class", {
   expect_equal(nrow(result), 1)
 })
 
+#t.test2_002
 test_that("t.test2 returns all expected columns", {
   y <- rnorm(100)
   group <- rep(c("A", "B"), 50)
@@ -37,6 +39,7 @@ test_that("t.test2 returns all expected columns", {
 # INPUT SYNTAX VARIATIONS
 # ============================================================================
 
+#t.test2_003
 test_that("t.test2 handles formula syntax with and without data", {
   # With data argument
   df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
@@ -53,6 +56,7 @@ test_that("t.test2 handles formula syntax with and without data", {
   expect_true("Y" %in% names(result2))
 })
 
+#t.test2_004
 test_that("t.test2 accepts df$col ~ df$col2 without bare column names in env", {
   df1 <- data.frame(y1 = rnorm(100), x1 = rep(c("A", "B"), 50))
   expect_error(t.test2(df1$y1 ~ df1$x1), NA)
@@ -62,6 +66,7 @@ test_that("t.test2 accepts df$col ~ df$col2 without bare column names in env", {
   expect_true("B" %in% names(result))
 })
 
+#t.test2_005
 test_that("t.test2 handles two-vector syntax", {
   x1 <- rnorm(50, mean = 5)
   x2 <- rnorm(50, mean = 4.8)
@@ -75,6 +80,7 @@ test_that("t.test2 handles two-vector syntax", {
   expect_true("N(y2)" %in% names(result) || "N(x2)" %in% names(result))
 })
 
+#t.test2_006
 test_that("t.test2 handles paired tests", {
   set.seed(12)
   y1 <- rnorm(100)
@@ -87,6 +93,7 @@ test_that("t.test2 handles paired tests", {
   expect_true("r(y1,y2)" %in% names(result))  # Correlation
 })
 
+#t.test2_007
 test_that("t.test2 handles one-sample test", {
   x <- rnorm(50, mean = 5)
   
@@ -105,6 +112,7 @@ test_that("t.test2 handles one-sample test", {
 # COLUMN NAMING CONVENTIONS
 # ============================================================================
 
+#t.test2_008
 test_that("t.test2 uses group values as column names for short names", {
   set.seed(12)
   y <- rnorm(100)
@@ -119,6 +127,7 @@ test_that("t.test2 uses group values as column names for short names", {
   expect_true("N(B)" %in% names(result))
 })
 
+#t.test2_009
 test_that("t.test2 uses Group 1/2 format for long group names", {
   set.seed(12)
   y <- rnorm(100)
@@ -139,6 +148,7 @@ test_that("t.test2 uses Group 1/2 format for long group names", {
   expect_true(grepl("Group 2:", output_text))
 })
 
+#t.test2_010
 test_that("t.test2 formats 0/1 grouping as varname=value", {
   set.seed(12)
   y <- rnorm(100)
@@ -153,6 +163,7 @@ test_that("t.test2 formats 0/1 grouping as varname=value", {
   expect_true("N(x4=1)" %in% names(result))
 })
 
+#t.test2_011
 test_that("t.test2 uses Group 1/2 for long variable names with 0/1", {
   set.seed(12)
   y <- rnorm(100)
@@ -173,6 +184,7 @@ test_that("t.test2 uses Group 1/2 for long variable names with 0/1", {
 # MISSING DATA HANDLING
 # ============================================================================
 
+#t.test2_012
 test_that("t.test2 reports missing data for two-sample tests", {
   set.seed(12)
   y <- rnorm(100)
@@ -188,6 +200,7 @@ test_that("t.test2 reports missing data for two-sample tests", {
   expect_true(grepl("missing", output_text, ignore.case = TRUE))
 })
 
+#t.test2_013
 test_that("t.test2 reports missing data for paired tests", {
   set.seed(12)
   y1 <- rnorm(100)
@@ -207,6 +220,7 @@ test_that("t.test2 reports missing data for paired tests", {
 # CONSISTENCY WITH BASE t.test()
 # ============================================================================
 
+#t.test2_014
 test_that("t.test2 produces identical results to t.test", {
   set.seed(100)
   x <- rnorm(50, mean = 5)
@@ -222,6 +236,7 @@ test_that("t.test2 produces identical results to t.test", {
   expect_equal(tt2$ci.H, tt1$conf.int[2], tolerance = 1e-10)
 })
 
+#t.test2_015
 test_that("t.test2 matches t.test for paired and one-sample", {
   set.seed(104)
   
@@ -240,6 +255,7 @@ test_that("t.test2 matches t.test for paired and one-sample", {
   expect_equal(tt2_one$p.value, tt1_one$p.value, tolerance = 1e-10)
 })
 
+#t.test2_016
 test_that("t.test2 matches t.test with formula syntax", {
   df <- data.frame(
     value = c(rnorm(30, mean = 5), rnorm(30, mean = 5.5)),
@@ -256,6 +272,7 @@ test_that("t.test2 matches t.test with formula syntax", {
 # EDGE CASES
 # ============================================================================
 
+#t.test2_017
 test_that("t.test2 handles small samples", {
   # Very small (n=3)
   result1 <- t.test2(c(1, 2, 3), c(4, 5, 6))
@@ -268,6 +285,7 @@ test_that("t.test2 handles small samples", {
   expect_true(!is.na(result2$p.value))
 })
 
+#t.test2_018
 test_that("t.test2 handles extreme cases", {
   set.seed(107)
   
@@ -290,6 +308,7 @@ test_that("t.test2 handles extreme cases", {
   expect_s3_class(result_zero, "t.test2")
 })
 
+#t.test2_019
 test_that("t.test2 handles different grouping variable types", {
   set.seed(108)
   y <- rnorm(40)
@@ -311,6 +330,7 @@ test_that("t.test2 handles different grouping variable types", {
 # REGRESSION TESTS
 # ============================================================================
 
+#t.test2_020
 test_that("t.test2 uses environment variables when data= not specified", {
   # Test that t.test2 can use environment variables without data=
   set.seed(12)
@@ -336,6 +356,7 @@ test_that("t.test2 uses environment variables when data= not specified", {
 # SNAPSHOT TESTS FOR OUTPUT FORMAT
 # ============================================================================
 
+#t.test2_021
 test_that("t.test2 print output for two-sample test is stable", {
   # Use fixed seed for reproducible output
   set.seed(42)
@@ -347,6 +368,7 @@ test_that("t.test2 print output for two-sample test is stable", {
   expect_snapshot(print(result))
 })
 
+#t.test2_022
 test_that("t.test2 print output for formula syntax is stable", {
   set.seed(42)
   df <- data.frame(
@@ -359,6 +381,7 @@ test_that("t.test2 print output for formula syntax is stable", {
   expect_snapshot(print(result))
 })
 
+#t.test2_023
 test_that("t.test2 print output for paired test is stable", {
   set.seed(42)
   before <- round(rnorm(20, mean = 100, sd = 10), 1)
@@ -369,6 +392,7 @@ test_that("t.test2 print output for paired test is stable", {
   expect_snapshot(print(result))
 })
 
+#t.test2_024
 test_that("t.test2 print output for one-sample test is stable", {
   set.seed(42)
   x <- round(rnorm(30, mean = 100, sd = 15), 1)
@@ -378,6 +402,7 @@ test_that("t.test2 print output for one-sample test is stable", {
   expect_snapshot(print(result))
 })
 
+#t.test2_025
 test_that("t.test2 print output with missing data is stable", {
   set.seed(42)
   x <- round(rnorm(30, mean = 100, sd = 15), 1)
@@ -389,6 +414,7 @@ test_that("t.test2 print output with missing data is stable", {
   expect_snapshot(print(result))
 })
 
+#t.test2_026
 test_that("t.test2 print output with long group names is stable", {
   set.seed(42)
   df <- data.frame(

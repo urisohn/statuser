@@ -1,3 +1,4 @@
+#list2_001
 test_that("list2 creates list with object names", {
   x <- 1:5
   y <- letters[1:3]
@@ -13,6 +14,7 @@ test_that("list2 creates list with object names", {
   expect_equal(result$z, z)
 })
 
+#list2_002
 test_that("list2 works with explicit names", {
   x <- 1:5
   y <- letters[1:3]
@@ -24,6 +26,7 @@ test_that("list2 works with explicit names", {
   expect_equal(result$b, y)
 })
 
+#list2_003
 test_that("list2 works with mixed named and unnamed", {
   x <- 1:5
   y <- letters[1:3]
@@ -37,6 +40,7 @@ test_that("list2 works with mixed named and unnamed", {
   expect_equal(result$z, z)
 })
 
+#list2_004
 test_that("list2 handles single object", {
   x <- 1:5
   
@@ -47,6 +51,7 @@ test_that("list2 handles single object", {
   expect_equal(result$x, x)
 })
 
+#list2_005
 test_that("list2 handles empty call", {
   result <- list2()
   
@@ -54,6 +59,7 @@ test_that("list2 handles empty call", {
   expect_equal(length(result), 0)
 })
 
+#list2_006
 test_that("list2 preserves object values", {
   x <- c(1, 2, 3)
   y <- list(a = 1, b = 2)
@@ -66,6 +72,7 @@ test_that("list2 preserves object values", {
   expect_equal(result$z, z)
 })
 
+#list2_007
 test_that("list2 works with complex expressions", {
   x <- 1:5
   

@@ -1,3 +1,4 @@
+#message2_001
 test_that("message2 prints messages without errors", {
   # Should not throw errors
   expect_error(message2("Test message"), NA)
@@ -5,6 +6,7 @@ test_that("message2 prints messages without errors", {
 })
 
 
+#message2_002
 test_that("message2 handles different colors", {
   # Test various color options
   expect_error(message2("Red message", col = "red"), NA)
@@ -14,6 +16,7 @@ test_that("message2 handles different colors", {
   expect_error(message2("Custom color", col = "dodgerblue"), NA)
 })
 
+#message2_003
 test_that("message2 handles font parameter", {
   # Font 1 (plain)
   expect_error(message2("Plain text", font = 1), NA)
@@ -22,6 +25,7 @@ test_that("message2 handles font parameter", {
   expect_error(message2("Bold text", font = 2), NA)
 })
 
+#message2_004
 test_that("message2 handles stop parameter", {
   # When stop=TRUE, should stop execution
   expect_error(message2("This stops", stop = TRUE), class = "simpleError")
@@ -31,6 +35,7 @@ test_that("message2 handles stop parameter", {
 })
 
 
+#message2_005
 test_that("message2 handles multiple message parts", {
   # Multiple arguments should be combined
   expect_error(message2("Part", "1", "and", "Part", "2"), NA)
@@ -42,6 +47,7 @@ test_that("message2 handles multiple message parts", {
   expect_error(message2("Count:", 5, "items"), NA)
 })
 
+#message2_006
 test_that("message2 returns invisibly", {
   result <- message2("Test")
   expect_null(result)

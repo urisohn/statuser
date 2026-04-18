@@ -1,5 +1,6 @@
 # Tests for lm2() function
 
+#lm2_001
 test_that("lm2 returns statuser output by default", {
   skip_if_not_installed("estimatr")
   
@@ -22,6 +23,7 @@ test_that("lm2 returns statuser output by default", {
   expect_equal(tbl$term, c("(Intercept)", "wt", "hp"))
 })
 
+#lm2_002
 test_that("lm2 uses HC3 standard errors by default", {
   skip_if_not_installed("estimatr")
   
@@ -31,6 +33,7 @@ test_that("lm2 uses HC3 standard errors by default", {
   expect_equal(result$se_type, "HC3")
 })
 
+#lm2_003
 test_that("lm2 standardized coefficients are calculated correctly", {
   skip_if_not_installed("estimatr")
   
@@ -53,6 +56,7 @@ test_that("lm2 standardized coefficients are calculated correctly", {
   expect_equal(tbl$B[tbl$term == "wt"], expected_B_wt, tolerance = 1e-10)
 })
 
+#lm2_004
 test_that("lm2 robust and classical SEs differ", {
   skip_if_not_installed("estimatr")
   
@@ -64,6 +68,7 @@ test_that("lm2 robust and classical SEs differ", {
   expect_false(all(tbl$SE.robust == tbl$SE.classical))
 })
 
+#lm2_005
 test_that("lm2 passes additional arguments to lm_robust", {
   skip_if_not_installed("estimatr")
   
@@ -78,6 +83,7 @@ test_that("lm2 passes additional arguments to lm_robust", {
   expect_false(all(tbl_hc2$SE.robust == tbl_hc3$SE.robust))
 })
 
+#lm2_006
 test_that("lm2 stores model attributes", {
   skip_if_not_installed("estimatr")
   
@@ -93,6 +99,7 @@ test_that("lm2 stores model attributes", {
   expect_true(!is.null(attr(result, "classical_fit")))
 })
 
+#lm2_007
 test_that("lm2 predict matches lm_robust predict with clustering", {
   skip_if_not_installed("estimatr")
   
@@ -118,6 +125,7 @@ test_that("lm2 predict matches lm_robust predict with clustering", {
   expect_equal(mean(yh1$se.fit == yh2$se.fit), 1)
 })
 
+#lm2_008
 test_that("lm2 predict matches lm_robust predict without clustering", {
   skip_if_not_installed("estimatr")
   
@@ -136,6 +144,7 @@ test_that("lm2 predict matches lm_robust predict without clustering", {
   expect_equal(mean(yh1$se.fit == yh2$se.fit), 1)
 })
 
+#lm2_009
 test_that("lm2 predict without newdata matches lm predict", {
   skip_if_not_installed("estimatr")
   
@@ -151,6 +160,7 @@ test_that("lm2 predict without newdata matches lm predict", {
   expect_equal(unname(yh1), unname(yh2), tolerance = 1e-10)
 })
 
+#lm2_010
 test_that("lm2 predict without newdata matches lm_robust predict with newdata", {
   skip_if_not_installed("estimatr")
   
@@ -166,6 +176,7 @@ test_that("lm2 predict without newdata matches lm_robust predict with newdata", 
   expect_equal(unname(yh1), unname(yh2), tolerance = 1e-10)
 })
 
+#lm2_011
 test_that("lm2 predict with se.fit=TRUE works without newdata", {
   skip_if_not_installed("estimatr")
   
@@ -184,6 +195,7 @@ test_that("lm2 predict with se.fit=TRUE works without newdata", {
   expect_equal(unname(yh1$se.fit), unname(yh2$se.fit), tolerance = 1e-10)
 })
 
+#lm2_012
 test_that("lm2 is compatible with marginaleffects", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("marginaleffects")
@@ -206,6 +218,7 @@ test_that("lm2 is compatible with marginaleffects", {
 # RED FLAG DETECTION TESTS
 # ============================================================================
 
+#lm2_013
 test_that("lm2 shows red flag (!) when SE differs by >25%", {
   skip_if_not_installed("estimatr")
   
@@ -226,6 +239,7 @@ test_that("lm2 shows red flag (!) when SE differs by >25%", {
   )
 })
 
+#lm2_014
 test_that("lm2 shows severe red flag (!!!) for extreme heteroskedasticity", {
   skip_if_not_installed("estimatr")
   
@@ -246,6 +260,7 @@ test_that("lm2 shows severe red flag (!!!) for extreme heteroskedasticity", {
   )
 })
 
+#lm2_015
 test_that("lm2 shows X flag for significantly correlated interaction terms", {
   skip_if_not_installed("estimatr")
   
@@ -274,6 +289,7 @@ test_that("lm2 shows X flag for significantly correlated interaction terms", {
   )
 })
 
+#lm2_016
 test_that("lm2 shows X flag for moderately correlated interaction terms", {
   skip_if_not_installed("estimatr")
   
@@ -300,6 +316,7 @@ test_that("lm2 shows X flag for moderately correlated interaction terms", {
   )
 })
 
+#lm2_017
 test_that("lm2 does not show interaction flags for uncorrelated terms", {
   skip_if_not_installed("estimatr")
   
@@ -333,6 +350,7 @@ test_that("lm2 does not show interaction flags for uncorrelated terms", {
 # CLUSTERED STANDARD ERRORS TESTS
 # ============================================================================
 
+#lm2_018
 test_that("lm2 with clusters shows SE.cluster column", {
   skip_if_not_installed("estimatr")
   
@@ -354,6 +372,7 @@ test_that("lm2 with clusters shows SE.cluster column", {
   expect_false(all(tbl$SE.cluster == tbl$SE.robust))
 })
 
+#lm2_019
 test_that("lm2 with clusters prints cluster info", {
   skip_if_not_installed("estimatr")
   
@@ -380,6 +399,7 @@ test_that("lm2 with clusters prints cluster info", {
   )
 })
 
+#lm2_020
 test_that("lm2 clustered SE is larger than robust SE when there's clustering", {
   skip_if_not_installed("estimatr")
   
@@ -407,6 +427,7 @@ test_that("lm2 clustered SE is larger than robust SE when there's clustering", {
 # PRINT METHOD TESTS
 # ============================================================================
 
+#lm2_021
 test_that("print.lm2 shows notes by default", {
   skip_if_not_installed("estimatr")
   
@@ -419,6 +440,7 @@ test_that("print.lm2 shows notes by default", {
   expect_true(grepl("red.flag", output_text))
 })
 
+#lm2_022
 test_that("print.lm2 respects notes=FALSE", {
   skip_if_not_installed("estimatr")
   
@@ -429,6 +451,7 @@ test_that("print.lm2 respects notes=FALSE", {
   expect_false(grepl("Notes:", output_text))
 })
 
+#lm2_023
 test_that("print.lm2 respects notes=FALSE from lm2 call", {
   skip_if_not_installed("estimatr")
   
@@ -439,6 +462,7 @@ test_that("print.lm2 respects notes=FALSE from lm2 call", {
   expect_false(grepl("Notes:", output_text))
 })
 
+#lm2_024
 test_that("print.lm2 shows Call correctly", {
   skip_if_not_installed("estimatr")
   
@@ -450,6 +474,7 @@ test_that("print.lm2 shows Call correctly", {
   expect_true(grepl("lm2", output_text))
 })
 
+#lm2_025
 test_that("print.lm2 shows model summary statistics", {
   skip_if_not_installed("estimatr")
   
@@ -462,6 +487,7 @@ test_that("print.lm2 shows model summary statistics", {
   expect_true(grepl("missing", output_text))
 })
 
+#lm2_026
 test_that("print.lm2 shows interaction notes when model has interactions", {
   skip_if_not_installed("estimatr")
   
@@ -480,6 +506,7 @@ test_that("print.lm2 shows interaction notes when model has interactions", {
 # COEFFICIENT CONSISTENCY TESTS
 # ============================================================================
 
+#lm2_027
 test_that("lm2 produces same coefficients as lm", {
   skip_if_not_installed("estimatr")
   
@@ -493,6 +520,7 @@ test_that("lm2 produces same coefficients as lm", {
   )
 })
 
+#lm2_028
 test_that("lm2 produces same estimates as lm_robust", {
   skip_if_not_installed("estimatr")
   
@@ -515,6 +543,7 @@ test_that("lm2 produces same estimates as lm_robust", {
   )
 })
 
+#lm2_029
 test_that("lm2 produces same R-squared as lm", {
   skip_if_not_installed("estimatr")
   
@@ -528,6 +557,7 @@ test_that("lm2 produces same R-squared as lm", {
   )
 })
 
+#lm2_030
 test_that("lm2 classical SE matches lm SE", {
   skip_if_not_installed("estimatr")
   
@@ -544,6 +574,7 @@ test_that("lm2 classical SE matches lm SE", {
   )
 })
 
+#lm2_031
 test_that("lm2 mean column shows mean for numeric, % for factor levels", {
   skip_if_not_installed("estimatr")
 
@@ -572,6 +603,7 @@ test_that("lm2 mean column shows mean for numeric, % for factor levels", {
 # EDGE CASES
 # ============================================================================
 
+#lm2_032
 test_that("lm2 handles missing values correctly", {
   skip_if_not_installed("estimatr")
   
@@ -591,6 +623,7 @@ test_that("lm2 handles missing values correctly", {
   expect_true(grepl("missing", output_text))
 })
 
+#lm2_033
 test_that("lm2 handles single predictor", {
   skip_if_not_installed("estimatr")
   
@@ -600,6 +633,7 @@ test_that("lm2 handles single predictor", {
   expect_equal(nrow(tbl), 2)  # intercept + 1 predictor
 })
 
+#lm2_034
 test_that("lm2 handles many predictors", {
   skip_if_not_installed("estimatr")
   
@@ -613,6 +647,7 @@ test_that("lm2 handles many predictors", {
 # SNAPSHOT TESTS FOR OUTPUT FORMAT
 # ============================================================================
 
+#lm2_035
 test_that("lm2 print output format is stable", {
   skip_if_not_installed("estimatr")
   
@@ -622,6 +657,7 @@ test_that("lm2 print output format is stable", {
   expect_snapshot(print(result))
 })
 
+#lm2_036
 test_that("lm2 print output with notes is stable", {
   skip_if_not_installed("estimatr")
   
@@ -630,6 +666,7 @@ test_that("lm2 print output with notes is stable", {
   expect_snapshot(print(result))
 })
 
+#lm2_037
 test_that("lm2 print output with interaction is stable", {
   skip_if_not_installed("estimatr")
   
@@ -642,6 +679,7 @@ test_that("lm2 print output with interaction is stable", {
 # TESTS WITHOUT DATA ARGUMENT (VARIABLES FROM ENVIRONMENT)
 # ============================================================================
 
+#lm2_038
 test_that("lm2 works without data argument (variables from environment)", {
   skip_if_not_installed("estimatr")
   
@@ -663,6 +701,7 @@ test_that("lm2 works without data argument (variables from environment)", {
   expect_equal(tbl$term, c("(Intercept)", "x1", "x2"))
 })
 
+#lm2_039
 test_that("lm2 without data matches estimatr::lm_robust without data", {
   skip_if_not_installed("estimatr")
   
@@ -684,6 +723,7 @@ test_that("lm2 without data matches estimatr::lm_robust without data", {
 # MARGINALEFFECTS COMPATIBILITY TESTS
 # ============================================================================
 
+#lm2_040
 test_that("lm2 slopes match lm_robust slopes with data argument", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("marginaleffects")
@@ -701,6 +741,7 @@ test_that("lm2 slopes match lm_robust slopes with data argument", {
   expect_equal(slopes1$std.error, slopes2$std.error, tolerance = 1e-10)
 })
 
+#lm2_041
 test_that("lm2 slopes match lm_robust slopes without data argument", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("marginaleffects")
@@ -722,6 +763,7 @@ test_that("lm2 slopes match lm_robust slopes without data argument", {
   expect_equal(slopes1$std.error, slopes2$std.error, tolerance = 1e-10)
 })
 
+#lm2_042
 test_that("lm2 comparisons work with marginaleffects", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("marginaleffects")
@@ -734,6 +776,7 @@ test_that("lm2 comparisons work with marginaleffects", {
   expect_true(nrow(comp_result) > 0)
 })
 
+#lm2_043
 test_that("lm2 avg_slopes works with marginaleffects", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("marginaleffects")
@@ -750,6 +793,7 @@ test_that("lm2 avg_slopes works with marginaleffects", {
 # BROOM COMPATIBILITY TESTS
 # ============================================================================
 
+#lm2_044
 test_that("lm2 works with broom::tidy", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("broom")
@@ -766,6 +810,7 @@ test_that("lm2 works with broom::tidy", {
   expect_equal(nrow(tidy_result), 3)  # intercept + 2 predictors
 })
 
+#lm2_045
 test_that("lm2 works with broom::glance", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("broom")
@@ -781,6 +826,7 @@ test_that("lm2 works with broom::glance", {
   expect_true("nobs" %in% names(glance_result))
 })
 
+#lm2_046
 test_that("lm2 works with broom::augment", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("broom")
@@ -797,6 +843,7 @@ test_that("lm2 works with broom::augment", {
 # MODELSUMMARY COMPATIBILITY TESTS
 # ============================================================================
 
+#lm2_047
 test_that("lm2 works with modelsummary", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("modelsummary")
@@ -815,6 +862,7 @@ test_that("lm2 works with modelsummary", {
   expect_true(grepl("wt", output_text, ignore.case = TRUE))
 })
 
+#lm2_048
 test_that("modelsummary can compare lm2 and lm_robust models", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("modelsummary")
@@ -830,6 +878,7 @@ test_that("modelsummary can compare lm2 and lm_robust models", {
   expect_true(length(output) > 0)
 })
 
+#lm2_049
 test_that("modelsummary can compare multiple lm2 models", {
   skip_if_not_installed("estimatr")
   skip_if_not_installed("modelsummary")
@@ -859,6 +908,7 @@ test_that("modelsummary can compare multiple lm2 models", {
 # COEFFICIENT EXTRACTION COMPATIBILITY TESTS
 # ============================================================================
 
+#lm2_050
 test_that("lm2 coef extraction works like lm_robust", {
   skip_if_not_installed("estimatr")
   

@@ -1,3 +1,4 @@
+#table2_001
 test_that("table2 creates basic table", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -21,6 +22,7 @@ test_that("table2 creates basic table", {
   expect_null(result$chisq)
 })
 
+#table2_002
 test_that("table2 handles data frame column references", {
   df <- data.frame(
     group = c("A", "A", "B", "B", "A"),
@@ -39,6 +41,7 @@ test_that("table2 handles data frame column references", {
   expect_equal(length(dim_names), 2)
 })
 
+#table2_003
 test_that("table2 handles three-way table", {
   df <- data.frame(
     x = c("A", "A", "B", "B"),
@@ -54,6 +57,7 @@ test_that("table2 handles three-way table", {
   expect_equal(dim(result$freq), c(2, 2, 2))
 })
 
+#table2_004
 test_that("table2 handles prop parameter", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -83,6 +87,7 @@ test_that("table2 handles prop parameter", {
   expect_true(!is.null(result_col$prop))
 })
 
+#table2_005
 test_that("table2 prop prints with decimal formatting", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -99,6 +104,7 @@ test_that("table2 prop prints with decimal formatting", {
               info = "Proportions should print with decimal formatting")
 })
 
+#table2_006
 test_that("table2 handles digits parameter", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -110,6 +116,7 @@ test_that("table2 handles digits parameter", {
   expect_true(is.numeric(result$prop))
 })
 
+#table2_007
 test_that("table2 handles useNA parameter", {
   x <- c("A", "A", NA, "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -134,6 +141,7 @@ test_that("table2 handles useNA parameter", {
   expect_true(any(is.na(dimnames_x_always)) || "<NA>" %in% dimnames_x_always)
 })
 
+#table2_008
 test_that("table2 handles exclude parameter", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -144,6 +152,7 @@ test_that("table2 handles exclude parameter", {
   expect_true(inherits(result$freq, "table"))
 })
 
+#table2_009
 test_that("table2 returns correct structure", {
   x <- c("A", "A", "B", "B")
   y <- c("X", "Y", "X", "Y")
@@ -159,6 +168,7 @@ test_that("table2 returns correct structure", {
   expect_equal(sum(result$freq), length(x))
 })
 
+#table2_010
 test_that("table2 handles single vector", {
   x <- c("A", "A", "B", "B", "A")
   
@@ -170,6 +180,7 @@ test_that("table2 handles single vector", {
   expect_equal(sum(result$freq), length(x))
 })
 
+#table2_011
 test_that("table2 single vector prints without error", {
   # Regression test: table2() with one variable used to produce
   # "Error in NextMethod() : generic function not specified"
@@ -186,6 +197,7 @@ test_that("table2 single vector prints without error", {
   expect_true(any(grepl("B", output)))
 })
 
+#table2_012
 test_that("table2 single vector with prop and chi prints chi-square only once", {
   # Regression test: chi-square was being printed twice for 1D tables with prop
   x <- c("A", "A", "A", "B", "B")
@@ -204,6 +216,7 @@ test_that("table2 single vector with prop and chi prints chi-square only once", 
               info = "Chi-square statistic should be in output")
 })
 
+#table2_013
 test_that("table2 prop='ALL' Total row sums to 1.0", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -231,6 +244,7 @@ test_that("table2 prop='ALL' Total row sums to 1.0", {
   expect_equal(total_row_sum0, 1.0, tolerance = 0.001)
 })
 
+#table2_014
 test_that("table2 chi parameter returns chi-square test", {
   # Use larger sample to avoid chi-squared approximation warning
   set.seed(123)
@@ -257,6 +271,7 @@ test_that("table2 chi parameter returns chi-square test", {
 # EDGE CASES AND ADDITIONAL TESTS
 # ============================================================================
 
+#table2_015
 test_that("table2 handles factors", {
   x <- factor(c("A", "A", "B", "B"))
   y <- factor(c("X", "Y", "X", "Y"))
@@ -267,6 +282,7 @@ test_that("table2 handles factors", {
   expect_equal(dim(result$freq), c(2, 2))
 })
 
+#table2_016
 test_that("table2 handles numeric variables", {
   x <- c(1, 1, 2, 2)
   y <- c(10, 20, 10, 20)
@@ -277,6 +293,7 @@ test_that("table2 handles numeric variables", {
   expect_true(inherits(result$freq, "table"))
 })
 
+#table2_017
 test_that("table2 handles many categories", {
   x <- sample(LETTERS[1:5], 100, replace = TRUE)
   y <- sample(letters[1:4], 100, replace = TRUE)
@@ -286,6 +303,7 @@ test_that("table2 handles many categories", {
   expect_equal(dim(result$freq), c(5, 4))
 })
 
+#table2_018
 test_that("table2 chi-square test produces valid statistics", {
   set.seed(456)
   # Create data with known association
@@ -302,6 +320,7 @@ test_that("table2 chi-square test produces valid statistics", {
   expect_true(result$chisq$p.value >= 0 && result$chisq$p.value <= 1)
 })
 
+#table2_019
 test_that("table2 prop values sum correctly for row proportions", {
   x <- c("A", "A", "A", "B", "B")
   y <- c("X", "X", "Y", "X", "Y")
@@ -318,6 +337,7 @@ test_that("table2 prop values sum correctly for row proportions", {
   expect_equal(row1_sum, 1.0, tolerance = 0.001)
 })
 
+#table2_020
 test_that("table2 prop values sum correctly for column proportions", {
   x <- c("A", "A", "A", "B", "B")
   y <- c("X", "X", "Y", "X", "Y")
@@ -338,6 +358,7 @@ test_that("table2 prop values sum correctly for column proportions", {
 # SNAPSHOT TESTS FOR OUTPUT FORMAT
 # ============================================================================
 
+#table2_021
 test_that("table2 print output for frequency table is stable", {
   set.seed(42)
   gender <- sample(c("Male", "Female"), 100, replace = TRUE)
@@ -348,6 +369,7 @@ test_that("table2 print output for frequency table is stable", {
   expect_snapshot(print(result))
 })
 
+#table2_022
 test_that("table2 print output with row proportions is stable", {
   set.seed(42)
   gender <- sample(c("Male", "Female"), 100, replace = TRUE)
@@ -358,6 +380,7 @@ test_that("table2 print output with row proportions is stable", {
   expect_snapshot(print(result))
 })
 
+#table2_023
 test_that("table2 print output with column proportions is stable", {
   set.seed(42)
   gender <- sample(c("Male", "Female"), 100, replace = TRUE)
@@ -368,6 +391,7 @@ test_that("table2 print output with column proportions is stable", {
   expect_snapshot(print(result))
 })
 
+#table2_024
 test_that("table2 print output with chi-square test is stable", {
   set.seed(42)
   gender <- sample(c("Male", "Female"), 100, replace = TRUE)
@@ -378,6 +402,7 @@ test_that("table2 print output with chi-square test is stable", {
   expect_snapshot(print(result))
 })
 
+#table2_025
 test_that("table2 print output for three-way table is stable", {
   set.seed(42)
   x <- sample(c("A", "B"), 60, replace = TRUE)
@@ -393,6 +418,7 @@ test_that("table2 print output for three-way table is stable", {
 # CONSISTENCY TESTS WITH BASE R FUNCTIONS
 # ============================================================================
 
+#table2_026
 test_that("table2 freq matches table() output", {
   set.seed(123)
   x <- sample(c("A", "B", "C"), 100, replace = TRUE)
@@ -409,6 +435,7 @@ test_that("table2 freq matches table() output", {
   expect_equal(dim(result$freq), dim(base_table))
 })
 
+#table2_027
 test_that("table2 freq matches table() for single variable", {
   set.seed(456)
   x <- sample(c("A", "B", "C"), 50, replace = TRUE)
@@ -420,6 +447,7 @@ test_that("table2 freq matches table() for single variable", {
   expect_equal(as.vector(result$freq), as.vector(base_table))
 })
 
+#table2_028
 test_that("table2 freq matches table() for three-way table", {
   set.seed(789)
   x <- sample(c("A", "B"), 80, replace = TRUE)
@@ -436,6 +464,7 @@ test_that("table2 freq matches table() for three-way table", {
   expect_equal(dim(result$freq), dim(base_table))
 })
 
+#table2_029
 test_that("table2 prop='all' matches prop.table() overall proportions", {
   set.seed(111)
   x <- sample(c("A", "B", "C"), 100, replace = TRUE)
@@ -465,6 +494,7 @@ test_that("table2 prop='all' matches prop.table() overall proportions", {
   }
 })
 
+#table2_030
 test_that("table2 prop=1 matches prop.table(margin=1) row proportions", {
   set.seed(222)
   x <- sample(c("A", "B", "C"), 100, replace = TRUE)
@@ -491,6 +521,7 @@ test_that("table2 prop=1 matches prop.table(margin=1) row proportions", {
   }
 })
 
+#table2_031
 test_that("table2 prop=2 matches prop.table(margin=2) column proportions", {
   set.seed(333)
   x <- sample(c("A", "B", "C"), 100, replace = TRUE)
@@ -517,6 +548,7 @@ test_that("table2 prop=2 matches prop.table(margin=2) column proportions", {
   }
 })
 
+#table2_032
 test_that("table2 chi=TRUE matches chisq.test() results", {
   set.seed(444)
   x <- sample(c("A", "B", "C"), 150, replace = TRUE)
@@ -540,6 +572,7 @@ test_that("table2 chi=TRUE matches chisq.test() results", {
   expect_equal(result$chisq$p.value, base_chisq$p.value, tolerance = 1e-10)
 })
 
+#table2_033
 test_that("table2 chi=TRUE matches chisq.test() for 2x2 table", {
   set.seed(555)
   x <- sample(c("A", "B"), 100, replace = TRUE)
@@ -561,6 +594,7 @@ test_that("table2 chi=TRUE matches chisq.test() for 2x2 table", {
   expect_equal(result$chisq$p.value, base_chisq$p.value, tolerance = 1e-10)
 })
 
+#table2_034
 test_that("table2 correct parameter controls Yates continuity correction", {
   set.seed(556)
   x <- sample(c("A", "B"), 100, replace = TRUE)
@@ -597,6 +631,7 @@ test_that("table2 correct parameter controls Yates continuity correction", {
   )
 })
 
+#table2_035
 test_that("table2 chi-square matches prop.test for 2x2 tables", {
   set.seed(557)
   x <- sample(c("A", "B"), 100, replace = TRUE)
@@ -642,6 +677,7 @@ test_that("table2 chi-square matches prop.test for 2x2 tables", {
 })
 
 # Tests for comparison operators in table2
+#table2_036
 test_that("table2 handles comparison operators and shows full expression", {
   # Create test data
   df <- data.frame(
@@ -674,6 +710,7 @@ test_that("table2 handles comparison operators and shows full expression", {
   expect_true("y!=3" %in% names(dimnames(result_neq$freq)))
 })
 
+#table2_037
 test_that("table2 handles comparison operators in 2D tables", {
   # Create test data
   df <- data.frame(
@@ -694,6 +731,7 @@ test_that("table2 handles comparison operators in 2D tables", {
   expect_equal(dim(result$freq), c(2, 2))
 })
 
+#table2_038
 test_that("table2 truncates long comparison expressions", {
   # Create test data with a long variable name
   df <- data.frame(
@@ -709,6 +747,7 @@ test_that("table2 truncates long comparison expressions", {
   expect_true(grepl("\\.\\.\\.$", var_name))  # Should end with "..."
 })
 
+#table2_039
 test_that("table2 comparison operators work with proportions", {
   # Create test data
   df <- data.frame(
@@ -728,6 +767,7 @@ test_that("table2 comparison operators work with proportions", {
   expect_equal(sum(result$prop[1:2, 1:2]), 1, tolerance = 0.01)
 })
 
+#table2_040
 test_that("table2 comparison operators work with chi-square test", {
   # Create test data
   set.seed(123)

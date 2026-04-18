@@ -1,3 +1,4 @@
+#print.table2_001
 test_that("print.table2 runs without errors", {
   df <- data.frame(
     group = c("A", "A", "B", "B", "A"),
@@ -14,6 +15,7 @@ test_that("print.table2 runs without errors", {
   expect_equal(result, tbl)
 })
 
+#print.table2_002
 test_that("print.table2 handles proportion tables", {
   x <- c("A", "A", "B", "B", "A")
   y <- c("X", "Y", "X", "Y", "X")
@@ -23,6 +25,7 @@ test_that("print.table2 handles proportion tables", {
   expect_error(print(tbl), NA)
 })
 
+#print.table2_003
 test_that("print.table2 handles three-way tables", {
   df <- data.frame(
     x = c("A", "A", "B", "B"),
@@ -35,6 +38,7 @@ test_that("print.table2 handles three-way tables", {
   expect_error(print(tbl), NA)
 })
 
+#print.table2_004
 test_that("print.table2 handles tables without dimension names", {
   x <- c("A", "A", "B", "B")
   y <- c("X", "Y", "X", "Y")

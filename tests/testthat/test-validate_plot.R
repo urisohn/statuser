@@ -1,3 +1,4 @@
+#validate_plot_001
 test_that("validate_plot handles standard syntax correctly", {
   y <- rnorm(100)
   group <- rep(c("A", "B"), 50)
@@ -10,6 +11,7 @@ test_that("validate_plot handles standard syntax correctly", {
   expect_equal(result$group_name_raw, "group")
 })
 
+#validate_plot_002
 test_that("validate_plot handles data frame input", {
   df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
   
@@ -19,6 +21,7 @@ test_that("validate_plot handles data frame input", {
   expect_equal(result$group_name, "group")
 })
 
+#validate_plot_003
 test_that("validate_plot handles formula syntax", {
   df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
   
@@ -28,6 +31,7 @@ test_that("validate_plot handles formula syntax", {
   expect_equal(result$group_name, "group")
 })
 
+#validate_plot_004
 test_that("validate_plot handles formula syntax without data", {
   value <- rnorm(100)
   group <- rep(c("A", "B"), 50)
@@ -38,6 +42,7 @@ test_that("validate_plot handles formula syntax without data", {
   expect_equal(result$group_name, "group")
 })
 
+#validate_plot_005
 test_that("validate_plot throws error for invalid inputs", {
   y <- rnorm(100)
   group <- rep(c("A", "B"), 50)
@@ -59,6 +64,7 @@ test_that("validate_plot throws error for invalid inputs", {
   expect_error(validate_plot("value", "group", data = list(value = 1:10), require_group = TRUE))
 })
 
+#validate_plot_006
 test_that("validate_plot handles optional group", {
   y <- rnorm(100)
   
@@ -68,6 +74,7 @@ test_that("validate_plot handles optional group", {
   expect_null(result$group)
 })
 
+#validate_plot_007
 test_that("validate_plot handles df$var syntax", {
   df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
   
@@ -81,6 +88,7 @@ test_that("validate_plot handles df$var syntax", {
 # ERROR MESSAGE QUALITY TESTS
 # ============================================================================
 
+#validate_plot_008
 test_that("validate_plot error includes variable name", {
   df <- data.frame(value = rnorm(10))
   
@@ -90,6 +98,7 @@ test_that("validate_plot error includes variable name", {
   )
 })
 
+#validate_plot_009
 test_that("validate_plot error message includes function name", {
   y <- letters[1:10]  # Non-numeric
   
@@ -99,6 +108,7 @@ test_that("validate_plot error message includes function name", {
   )
 })
 
+#validate_plot_010
 test_that("validate_plot error for length mismatch includes lengths", {
   y <- rnorm(100)
   group <- rep(c("A", "B"), 25)  # Length 50
@@ -117,6 +127,7 @@ test_that("validate_plot error for length mismatch includes lengths", {
 # ADDITIONAL VALIDATION TESTS
 # ============================================================================
 
+#validate_plot_011
 test_that("validate_plot handles formula with no group (y ~ 1)", {
   df <- data.frame(value = rnorm(50))
   
@@ -126,6 +137,7 @@ test_that("validate_plot handles formula with no group (y ~ 1)", {
   expect_null(result$group)
 })
 
+#validate_plot_012
 test_that("validate_plot with explicit data_name parameter", {
   my_data <- data.frame(value = rnorm(50), group = rep("A", 50))
   
