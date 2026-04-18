@@ -1,22 +1,6 @@
-#' Validate Formula Variables
-#'
-#' Checks if the input is a formula and validates that all variables mentioned
-#' in the formula exist either in the provided data frame or in the environment.
-#' This is a lightweight validation function that should be called early in functions
-#' that accept formula syntax.
-#'
-#' @param formula A potential formula object to validate (can be any object).
-#' @param data An optional data frame containing the variables.
-#' @param func_name Character string. Name of the calling function (for error messages).
-#' @param calling_env The environment in which to look for variables if data is not provided.
-#'   Defaults to parent.frame().
-#'
-#' @return Returns NULL invisibly. Stops with an error if validation fails.
-#'
-#' @keywords internal
-#
 # Helpers: `all.vars()` lists RHS of `$` (column names) as if they were free
 # variables — they must not be required to exist as bindings (see t.test2).
+#' @noRd
 .collect_dollar_rhs_symbols <- function(expr) {
   acc <- character()
   walk <- function(e) {
@@ -39,6 +23,7 @@
   unique(acc)
 }
 
+#' @noRd
 formula_symbols_required_in_env <- function(formula) {
   av <- all.vars(formula)
   setdiff(av, .collect_dollar_rhs_symbols(formula))
@@ -55,6 +40,22 @@ formula_symbols_required_in_env <- function(formula) {
   trimws(es)
 }
 
+#' Validate Formula Variables
+#'
+#' Checks if the input is a formula and validates that all variables mentioned
+#' in the formula exist either in the provided data frame or in the environment.
+#' This is a lightweight validation function that should be called early in functions
+#' that accept formula syntax.
+#'
+#' @param formula A potential formula object to validate (can be any object).
+#' @param data An optional data frame containing the variables.
+#' @param func_name Character string. Name of the calling function (for error messages).
+#' @param calling_env The environment in which to look for variables if data is not provided.
+#'   Defaults to parent.frame().
+#'
+#' @return Returns NULL invisibly. Stops with an error if validation fails.
+#'
+#' @keywords internal
 validate_formula <- function(formula, data = NULL, func_name = "function", calling_env = parent.frame()) {
   # Capture the call to get the actual expression passed (for better error messages)
   parent_call <- sys.call(-1)
