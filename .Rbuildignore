@@ -14,3 +14,4 @@
 ^CHANGELOG\.md$
 ^examples/
 ^\\.editorconfig$
+^CRAN-SUBMISSION$
