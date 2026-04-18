@@ -211,21 +211,34 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
       y <- data[[y_name]]
     } else {
       # No data: evaluate from calling environment
-      y_exists <- exists(y_name, envir = calling_env, inherits = TRUE)
-      if (!y_exists) {
-        # y may be an expression like df$x; evaluate the original expression
-        # before deciding it is truly missing.
-        y_eval <- tryCatch(
+      # If the call was df$x (or other call), always eval that expression — do not
+      # use get("x"), which can pick up a wrong object when bare `x` exists.
+      if (is.call(y_expr)) {
+        y <- tryCatch(
           eval(y_expr, envir = calling_env),
-          error = function(e) NULL
+          error = function(e) {
+            message2(
+              format_msg(sprintf("'%s' could not be evaluated", y_name_raw)),
+              col = "red",
+              stop = TRUE
+            )
+          }
         )
-        if (is.null(y_eval)) {
-          message2(format_msg(sprintf("'%s' not found", y_name)), col = 'red', stop = TRUE)
-        } else {
-          y <- y_eval
-        }
       } else {
-        y <- get(y_name, envir = calling_env)
+        y_exists <- exists(y_name, envir = calling_env, inherits = TRUE)
+        if (!y_exists) {
+          y_eval <- tryCatch(
+            eval(y_expr, envir = calling_env),
+            error = function(e) NULL
+          )
+          if (is.null(y_eval)) {
+            message2(format_msg(sprintf("'%s' not found", y_name)), col = 'red', stop = TRUE)
+          } else {
+            y <- y_eval
+          }
+        } else {
+          y <- get(y_name, envir = calling_env)
+        }
       }
     }
     
@@ -240,17 +253,29 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
         }
         group <- data[[group_name]]
       } else {
-        # No data: evaluate from calling environment
-        group_exists <- exists(group_name, envir = calling_env, inherits = TRUE)
-        if (!group_exists) {
-          # group might already be a vector passed directly
-          if (is.vector(group)) {
-            # group is already evaluated, use it as-is
-          } else {
-            message2(format_msg(sprintf("'%s' not found", group_name)), col = 'red', stop = TRUE)
-          }
+        # No data: evaluate from calling environment (same rule as y: calls like df$g first)
+        if (is.call(group_expr)) {
+          group <- tryCatch(
+            eval(group_expr, envir = calling_env),
+            error = function(e) {
+              message2(
+                format_msg(sprintf("'%s' could not be evaluated", group_name_raw)),
+                col = "red",
+                stop = TRUE
+              )
+            }
+          )
         } else {
-          group <- get(group_name, envir = calling_env)
+          group_exists <- exists(group_name, envir = calling_env, inherits = TRUE)
+          if (!group_exists) {
+            if (is.vector(group)) {
+              # group is already evaluated, use it as-is
+            } else {
+              message2(format_msg(sprintf("'%s' not found", group_name)), col = 'red', stop = TRUE)
+            }
+          } else {
+            group <- get(group_name, envir = calling_env)
+          }
         }
       }
       
