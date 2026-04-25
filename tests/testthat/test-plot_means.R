@@ -2,7 +2,7 @@
 test_that("plot_means runs with formula + data and returns desc_var object", {
   df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 
-  result <- plot_means(y ~ group, data = df, save.as = NULL)
+  result <- plot_means(y ~ group, data = df)
 
   expect_true(is.list(result))
   expect_true(is.data.frame(result$means))
@@ -16,7 +16,7 @@ test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
     x2 = rep(c("X", "Y"), each = 100)
   )
 
-  result <- plot_means(y ~ x1 + x2, data = df, save.as = NULL)
+  result <- plot_means(y ~ x1 + x2, data = df)
 
   expect_true(is.list(result))
   expect_true(is.data.frame(result$means))
@@ -26,13 +26,13 @@ test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
 test_that("plot_means order reorders groups for single grouping variable", {
   df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 
-  result_default <- plot_means(y ~ group, data = df, save.as = NULL)
+  result_default <- plot_means(y ~ group, data = df)
   expect_true(is.list(result_default))
 
-  result_reversed <- plot_means(y ~ group, data = df, order = -1, save.as = NULL)
+  result_reversed <- plot_means(y ~ group, data = df, order = -1)
   expect_true(is.list(result_reversed))
 
-  result_custom <- plot_means(y ~ group, data = df, order = c("B", "A"), save.as = NULL)
+  result_custom <- plot_means(y ~ group, data = df, order = c("B", "A"))
   expect_true(is.list(result_custom))
 })
 
@@ -49,14 +49,14 @@ test_that("plot_means works with three grouping variables and missing combinatio
   # Remove one x1 level from one (x2,x3) block to create a missing combination
   df <- df[!(df$x1 == "B" & df$x2 == "Y" & df$x3 == "N"), , drop = FALSE]
 
-  result <- plot_means(y ~ x1 + x2 + x3, data = df, save.as = NULL)
+  result <- plot_means(y ~ x1 + x2 + x3, data = df)
   expect_true(is.list(result))
 })
 
 #plot_means_005
 test_that("plot_means tests=auto works for scenario 1 (binary x1 only)", {
   df <- data.frame(y = rnorm(60), x1 = rep(c("A", "B"), each = 30))
-  expect_error(plot_means(y ~ x1, data = df, tests = "auto", save.as = NULL), NA)
+  expect_error(plot_means(y ~ x1, data = df, tests = "auto"), NA)
 })
 
 #plot_means_006
@@ -66,7 +66,7 @@ test_that("plot_means tests=auto works for scenario 2 (binary x1 and x2)", {
     x1 = rep(c("A", "B"), 60),
     x2 = rep(rep(c("X", "Y"), each = 30), 2)
   )
-  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto", save.as = NULL), NA)
+  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto"), NA)
 })
 
 #plot_means_007
@@ -79,26 +79,10 @@ test_that("plot_means tests=auto works for scenario 3 (binary x1, x2 has >2 leve
   )
   df$y <- rnorm(nrow(df))
   
-  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto", save.as = NULL), NA)
+  expect_error(plot_means(y ~ x1 + x2, data = df, tests = "auto"), NA)
 })
 
 #plot_means_008
-test_that("plot_means save.as saves png", {
-  df <- data.frame(y = rnorm(80), x1 = rep(c("A", "B"), each = 40))
-  out <- tempfile(fileext = ".png")
-  on.exit(unlink(out), add = TRUE)
-  
-  grDevices::png(tempfile(fileext = ".png"), width = 800, height = 500, res = 100)
-  on.exit(grDevices::dev.off(), add = TRUE)
-  
-  result <- plot_means(y ~ x1, data = df, save.as = out)
-  expect_true(is.list(result))
-  
-  expect_true(file.exists(out))
-  expect_gt(file.info(out)$size, 0)
-})
-
-#plot_means_009
 test_that("plot_means means + per-cell CIs match t.test() when cluster=NULL", {
   set.seed(123)
   df <- data.frame(
@@ -108,7 +92,7 @@ test_that("plot_means means + per-cell CIs match t.test() when cluster=NULL", {
   )
   ci_level <- 90
   
-  pm <- plot_means(y ~ x1, data = df, tests = "none", ci.level = ci_level, save.as = NULL, quiet = TRUE)
+  pm <- plot_means(y ~ x1, data = df, tests = "none", ci.level = ci_level, quiet = TRUE)
   expect_true(is.data.frame(pm$means))
   
   # Means/sd/n should match base computations
@@ -139,7 +123,7 @@ test_that("plot_means tests=auto (scenario 1) matches Welch t.test()", {
   set.seed(1)
   df <- data.frame(y = rnorm(80), x1 = rep(c("A", "B"), each = 40))
   
-  pm <- plot_means(y ~ x1, data = df, tests = "auto", ci.level = 95, save.as = NULL, quiet = TRUE)
+  pm <- plot_means(y ~ x1, data = df, tests = "auto", ci.level = 95, quiet = TRUE)
   expect_true(is.data.frame(pm$means))
   expect_true(is.data.frame(pm$tests))
   expect_gt(nrow(pm$tests), 0)
@@ -168,7 +152,7 @@ test_that("plot_means 2x2 interaction p-value matches estimatr::lm_robust(HC3)",
     stringsAsFactors = FALSE
   )
   
-  pm <- plot_means(y ~ x1 + x2, data = df, tests = "auto", ci.level = 95, save.as = NULL, quiet = TRUE)
+  pm <- plot_means(y ~ x1 + x2, data = df, tests = "auto", ci.level = 95, quiet = TRUE)
   expect_true(is.data.frame(pm$tests))
   
   int_row <- pm$tests[grepl("^interaction\\(", as.character(pm$tests$group1)), , drop = FALSE]
@@ -202,7 +186,7 @@ test_that("plot_means clustered CI uses regression-based intervals governed by c
   )
   
   ci_level <- 90
-  pm <- plot_means(y ~ x1, data = df, cluster = df$cl, tests = "none", ci.level = ci_level, save.as = NULL, quiet = TRUE)
+  pm <- plot_means(y ~ x1, data = df, cluster = df$cl, tests = "none", ci.level = ci_level, quiet = TRUE)
   
   # Reconstruct the same cell_key as plot_means_compute() uses (x1|All|All)
   df2 <- df

@@ -6,6 +6,8 @@ S3method(print,lm2)
 S3method(print,t.test2)
 S3method(print,table2)
 S3method(summary,lm2)
+S3method(t,test2)
+
 export(clear)
 export(convert_to_sql)
 export(desc_var)

@@ -4,6 +4,9 @@
 \alias{t.test2}
 \title{Enhanced alternative to t.test()}
 \arguments{
+\item{x}{The first data argument passed to \code{\link[stats]{t.test}}. This can
+be a numeric vector or a formula.}
+
 \item{...}{Arguments passed to \code{\link[stats]{t.test}}}
 }
 \value{
@@ -35,6 +38,9 @@ The basic t-test function in R, \code{\link[stats]{t.test}}, does not report
  paragraph of text. \code{t.test2} improves on all those counts, and 
  in addition, it reports the number of observations per group and if any observations 
  are missing it issues a warning. It returns a dataframe instead of a list.
+ The function is also registered as \code{t.test2} for the \code{\link[base]{t}}
+ generic to satisfy S3 registration checks while keeping direct calls to
+ \code{t.test2(...)} unchanged.
 }
 \examples{
 # Two-sample t-test

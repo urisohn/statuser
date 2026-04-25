@@ -1,4 +1,9 @@
-# statuser 0.2.0
+# statuser 0.2.1
+### changes to pass CRAN inspection
+- `plot_means()`: removed the `save.as` argument (no longer saves plots to PNG/SVG).
+- `t.test2()`: documented S3 registration as `t.test2` for `base::t` to avoid recurring CRAN S3 consistency notes while keeping direct `t.test2(...)` usage unchanged.
+
+# statuser 0.2.0 (never on CRAN)
 
 ### New functions
 - Added `plot_means()` for barplots of group means with confidence intervals, optional comparisons and interaction-style contrasts, up to three grouping variables in the formula, optional clustered standard errors, and saving to PNG or SVG.

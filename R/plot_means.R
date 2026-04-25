@@ -21,8 +21,6 @@
 #' Main effects can be specified using `+`, for example (1+2)-(3+4) compares 
 #' all observations in the first two columns with all observations in 
 #' the next two columns.
-#' @param save.as Optional file path to save plot (\code{.png} or \code{.svg}).
-#'   When \code{NULL} (default), the plot is not saved.
 #' @param quiet Logical. When \code{TRUE}, suppresses console messages from \code{plot_means()}.
 #' @param order Controls the order of \code{x1} groups (bar order and colors).
 #'   Use \code{-1} to reverse the default order (e.g., if plot shows 'male' first and 'female' second, order=-1 will flip that).
@@ -119,7 +117,6 @@ plot_means <- function(formula,
                        data = NULL,
                        cluster = NULL,
                        tests = "auto",
-                       save.as = NULL,
                        quiet = FALSE,
                        order = NULL,
                        # Graphics / annotation options
@@ -168,7 +165,6 @@ plot_means <- function(formula,
       pvalue.col = pvalue.col,
       ci.level = ci.level,
       buffer.top = buffer.top,
-      save.as = save.as,
       calling_env = calling_env
     )
 
@@ -186,7 +182,6 @@ plot_means <- function(formula,
     pvalue.col <- v$pvalue.col
     ci.level <- v$ci.level
     buffer.top <- v$buffer.top
-    save.as <- v$save.as
 
   # 2. Compute descriptives (means) using statuser::desc_var()
     result <- eval(call("desc_var", v$mc$formula, data = v$data), envir = v$calling_env)
@@ -396,49 +391,6 @@ plot_means <- function(formula,
       tests = tests_out
     )
   
-  # 7.1 Optional export (plot is still shown on screen)
-    if (!is.null(save.as)) {
-      headless_dev <- (grDevices::dev.cur() == 1L)
-      tmp_dev_file <- NULL
-      if (headless_dev) {
-        tmp_dev_file <- tempfile(fileext = ".png")
-        grDevices::png(tmp_dev_file, width = 1200, height = 800, res = 120)
-        on.exit({
-          grDevices::dev.off()
-          unlink(tmp_dev_file)
-        }, add = TRUE)
-      }
-    # 7.1.1 Capture the current plot for replay on a file device.
-    #   recordPlot() can fail on some devices; in that case we skip saving and keep the on-screen plot.
-      p <- NULL
-      p_err <- NULL
-      p <- tryCatch(recordPlot(), error = function(e) { p_err <<- e; NULL })
-      if (is.null(p)) {
-        msg2("plot_means() says: could not record plot for export (skipping save): ", conditionMessage(p_err), col = "gray")
-      } else {
-        extension <- tools::file_ext(save.as)
-        
-        # Export sizing: base 6x6 for up to 4 bars; add 1 inch of width
-        # per additional pair of bars.
-          bars <- length(x_centers_drawn)
-          extra_pairs <- ceiling(max(bars - 4, 0) / 2)
-          w_in <- 6 + 1 * extra_pairs
-          h_in <- 6
-          w_px <- as.integer(round(w_in * 1000))
-          h_px <- as.integer(round(h_in * 1000))
-        if (extension == "svg") grDevices::svg(save.as, width = w_in, height = h_in)
-        if (extension == "png") grDevices::png(save.as, width = w_px, height = h_px, res = 1000)
-        on.exit(grDevices::dev.off(), add = TRUE)
-        replayPlot(p)
-        
-      # 7.1.2 Normalize path for user-facing message (platform-independent separators).
-        save_as_print <- save.as
-        save_as_print <- tryCatch(normalizePath(save_as_print, winslash = "/", mustWork = FALSE), error = function(e) save_as_print)
-        save_as_print <- gsub("\\\\", "/", save_as_print)
-        msg2("plot_means() says: The figure was saved to `", save_as_print,"`" ,col = "gray")
-      }
-    }
-    
     if (isTRUE(printed_any) && !isTRUE(quiet)) {
       msg2("\nSet `quiet=TRUE` to suppress this output.", col = "gray")
     }
@@ -464,7 +416,6 @@ plot_means_validate <- function(mc,
                                 pvalue.col,
                                 ci.level,
                                 buffer.top,
-                                save.as,
                                 calling_env) {
   # 1. Resolve and validate formula input (NSE-safe)
   #   \"Resolve\" here means: take what the user typed for `formula` (which may be a name in the
@@ -557,18 +508,6 @@ plot_means_validate <- function(mc,
       }
     }
   
-  # 3.7 Validate save.as argument
-    if (!is.null(save.as)) {
-      if (!is.character(save.as) || length(save.as) != 1 || is.na(save.as) || !nzchar(save.as)) {
-        stop("plot_means(): 'save.as' must be a single file path ('.png' or '.svg')", call. = FALSE)
-      }
-      
-      extension <- tools::file_ext(save.as)
-      if (!extension %in% c("svg", "png")) {
-        stop("plot_means(): 'save.as' must be either a .png or .svg format.", call. = FALSE)
-      }
-    }
-  
   # 4. Resolve cluster argument (optional; for lm2(..., clusters=))
   #   Accept both `cluster=` (documented) and `clusters=` (alias) in the user call.
   #   If both are provided, error to avoid ambiguity.
@@ -620,7 +559,6 @@ plot_means_validate <- function(mc,
     pvalue.col,
     ci.level,
     buffer.top,
-    save.as,
     calling_env
   )
 }

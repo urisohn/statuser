@@ -9,7 +9,6 @@ plot_means(
   data = NULL,
   cluster = NULL,
   tests = "auto",
-  save.as = NULL,
   quiet = FALSE,
   order = NULL,
   legend.title = NULL,
@@ -48,9 +47,6 @@ tests=\code{"(4-3)-(2-1)"} and can also be combined with simple tests.
 Main effects can be specified using `+`, for example (1+2)-(3+4) compares 
 all observations in the first two columns with all observations in 
 the next two columns.}
-
-\item{save.as}{Optional file path to save plot (\code{.png} or \code{.svg}).
-When \code{NULL} (default), the plot is not saved.}
 
 \item{quiet}{Logical. When \code{TRUE}, suppresses console messages from \code{plot_means()}.}
 

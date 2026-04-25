@@ -1,11 +1,13 @@
 Package: statuser
 Type: Package
 Title: Statistical Tools Designed for End Users
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: person(given = "Uri",
                   family = "Simonsohn",
                   role = c("aut", "cre"),
                   email = "urisohn@gmail.com")
+Author: Uri Simonsohn [aut, cre]
+Maintainer: Uri Simonsohn <urisohn@gmail.com>
 Description: The statistical tools in this package do one of four things:
     1) Enhance basic statistical functions with more 
     flexible inputs, smarter defaults, and richer, clearer, and ready-to-use 

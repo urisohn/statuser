@@ -159,7 +159,6 @@ Helper code: `tests/testthat/helper-backend_equivalence.R`.
 |--------|----------------|
 | **Integration** | Formula + `data` returns **`desc_var`**-like object; multi-way formulas (`+`); `order`; three-way grouping with sparse cells. |
 | **`tests = "auto"`** | Three scenarios (binary **x1** only; binary **x1** and **x2**; **x2** with &gt;2 levels). |
-| **Output** | `save.as` writes PNG. |
 | **Numerical agreement** | Cell means/CIs vs **`t.test`** (no clusters); **Welch** **t** in scenario 1; 2×2 interaction **p** vs **`lm_robust`** **HC3**; clustered CIs follow `ci.level`. |
 
 ---

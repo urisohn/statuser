@@ -7,7 +7,12 @@
 #'  paragraph of text. \code{t.test2} improves on all those counts, and 
 #'  in addition, it reports the number of observations per group and if any observations 
 #'  are missing it issues a warning. It returns a dataframe instead of a list.
+#'  The function is also registered as \code{t.test2} for the \code{\link[base]{t}}
+#'  generic to satisfy S3 registration checks while keeping direct calls to
+#'  \code{t.test2(...)} unchanged.
 #'
+#' @param x The first data argument passed to \code{\link[stats]{t.test}}. This can
+#'   be a numeric vector or a formula.
 #' @param ... Arguments passed to \code{\link[stats]{t.test}}
 #'
 #' @return A data frame with class \code{c("t.test2", "data.frame")} containing 
@@ -32,6 +37,7 @@
 #'
 #' @importFrom stats cor
 #' @usage NULL
+#' @rawNamespace S3method(t,test2)
 #'
 #' @examples
 #' # Two-sample t-test
@@ -53,21 +59,18 @@
 #' t.test2(y ~ group, data = data)
 #'
 #' @export t.test2
-t.test2 <- function(..., digits = NULL) {
-  
-  # Note: digits parameter is captured separately so it doesn't go into ...
-  # This allows us to pass ... directly to t.test without do.call
+t.test2 <- function(x, ...) {
   
   # Get dots_list for validation and later use (extracting group names, etc.)
   dots_list <- list(...)
   
   # Validate formula early if first argument is one
-  if (length(dots_list) > 0) {
-    validate_formula(dots_list[[1]], dots_list$data, func_name = "t.test2", calling_env = parent.frame())
+  if (!missing(x)) {
+    validate_formula(x, dots_list$data, func_name = "t.test2", calling_env = parent.frame())
   }
   
   # Run t.test with provided arguments (avoiding do.call to prevent expensive deparse)
-  tt_result <- stats::t.test(...)
+  tt_result <- stats::t.test(x, ...)
   
   # Determine test type
   is_paired <- grepl("Paired", tt_result$method, ignore.case = TRUE)
