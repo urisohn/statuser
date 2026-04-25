@@ -30,6 +30,8 @@
 #'     \item \code{n.missing}: Number of observations with missing (NA) values
 #'     \item \code{n.unique}: Number of unique values
 #'   }
+#'   Columns may also carry a \code{"label"} attribute, which provides a short
+#'   human-readable description of each column.
 #'
 #'
 #' @examples
@@ -64,7 +66,7 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
   # 3. Define helper function to compute statistics for a vector
   # 4. Compute statistics (either for full dataset or by group)
   # 5. Round numeric columns to specified decimal places
-  # 6. Add descriptive labels to columns using labelled package
+  # 6. Add descriptive labels to columns as attributes
   # 7. Return result dataframe
   
   # Helper function to format error messages with conditional newline
@@ -553,7 +555,7 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
     result_df$mode2 <- ifelse(is.na(result_df$mode2), "-", as.character(result_df$mode2))
     result_df$freq_mode2 <- ifelse(is.na(result_df$freq_mode2), "-", as.character(result_df$freq_mode2))
     
-  # 6. Add descriptive labels to columns using labelled package
+  # 6. Add descriptive labels to columns as attributes
     label_list <- list(
       group = "Group identifier",
       mean = "Mean",
@@ -581,7 +583,7 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
     }
   
   # Only include labels for columns that exist
-  labelled::var_label(result_df) <- label_list[names(result_df)]
+    var_labels(result_df) <- label_list
   
   rownames(result_df) <- NULL
   

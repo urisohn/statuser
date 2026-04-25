@@ -31,6 +31,7 @@
 #' @section Formatting:
 #' \itemize{
 #'   \item \code{\link{format_pvalue}}: Format p-values for display
+#'   \item \code{\link{var_labels}}: Get/set variable labels (as base-R \code{"label"} attributes)
 #'   \item \code{\link{message2}}: Print colored messages to console
 #'   \item \code{\link{resize_images}}: Resize images (SVG, PDF, EPS, JPG, PNG, etc.) to PNG with specified width
 #' }

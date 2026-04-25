@@ -1,0 +1,1251 @@
+
+R version 4.5.2 (2025-10-31 ucrt) -- "[Not] Part in a Rumble"
+Copyright (C) 2025 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> pkgname <- "statuser"
+> source(file.path(R.home("share"), "R", "examples-header.R"))
+> options(warn = 1)
+> options(pager = "console")
+> base::assign(".ExTimings", "statuser-Ex.timings", pos = 'CheckExEnv')
+> base::cat("name\tuser\tsystem\telapsed\n", file=base::get(".ExTimings", pos = 'CheckExEnv'))
+> base::assign(".format_ptime",
++ function(x) {
++   if(!is.na(x[4L])) x[1L] <- x[1L] + x[4L]
++   if(!is.na(x[5L])) x[2L] <- x[2L] + x[5L]
++   options(OutDec = '.')
++   format(x[1L:3L], digits = 7L)
++ },
++ pos = 'CheckExEnv')
+> 
+> ### * </HEADER>
+> library('statuser')
+> 
+> base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
+> cleanEx()
+> nameEx("clear")
+> ### * clear
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: clear
+> ### Title: Clear Plot, Global Environment, and Console
+> ### Aliases: clear
+> 
+> ### ** Examples
+> 
+> ## No test: 
+> # Interactive use: clear workspace, console, and plots
+> # First run may prompt; once you type "yes", your preference is saved.
+> clear()
+
+statuser::clear()
+Cleared plot, global environment, and console> ## End(No test)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("clear", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("convert_to_sql")
+> ### * convert_to_sql
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: convert_to_sql
+> ### Title: Convert CSV file to SQL INSERT statements
+> ### Aliases: convert_to_sql
+> 
+> ### ** Examples
+> 
+> # Convert a CSV file to SQL (INSERT statements only)
+> tmp_csv <- tempfile(fileext = ".csv")
+> tmp_sql <- tempfile(fileext = ".sql")
+> write.csv(
++   data.frame(id = 1:2, value = c("a", "b"), date = c("2024-01-01", "2024-02-02")),
++   tmp_csv,
++   row.names = FALSE
++ )
+> convert_to_sql(tmp_csv, tmp_sql)
+> 
+> # Convert a CSV file to SQL with CREATE TABLE statement
+> convert_to_sql(tmp_csv, tmp_sql, create_table = TRUE)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("convert_to_sql", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("desc_var")
+> ### * desc_var
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: desc_var
+> ### Title: Describe a variable, optionally by groups
+> ### Aliases: desc_var
+> 
+> ### ** Examples
+> 
+> # With grouping
+> df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+> desc_var(y, group, data = df)
+  group  mean    sd    se median    min   max mode freq_mode mode2 freq_mode2
+1     A 0.196 0.883 0.125  0.353 -1.805 2.402    -         -     -          -
+2     B 0.022 0.914 0.129 -0.042 -2.215 2.173    -         -     -          -
+  n.total n.missing n.unique
+1      50         0       50
+2      50         0       50
+
+Note: mode not reported because all values of y are unique
+> 
+> # Without grouping (full dataset)
+> desc_var(y, data = df)
+  group  mean    sd   se median    min   max mode freq_mode mode2 freq_mode2
+1   All 0.109 0.898 0.09  0.114 -2.215 2.402    -         -     -          -
+  n.total n.missing n.unique
+1     100         0      100
+
+Note: mode not reported because all values of y are unique
+> 
+> # Direct vectors
+> y <- rnorm(100)
+> group <- rep(c("A", "B"), 50)
+> desc_var(y, group)
+  group   mean    sd    se median    min   max mode freq_mode mode2 freq_mode2
+1     A -0.052 0.941 0.133 -0.192 -1.914 2.308    -         -     -          -
+2     B -0.024 0.984 0.139 -0.168 -1.641 2.206    -         -     -          -
+  n.total n.missing n.unique
+1      50         0       50
+2      50         0       50
+
+Note: mode not reported because all values of y are unique
+> 
+> # With custom decimal places
+> desc_var(y, group, data = df, digits = 2)
+  group mean   sd   se median   min  max mode freq_mode mode2 freq_mode2
+1     A 0.20 0.88 0.12   0.35 -1.80 2.40    -         -     -          -
+2     B 0.02 0.91 0.13  -0.04 -2.21 2.17    -         -     -          -
+  n.total n.missing n.unique
+1      50         0       50
+2      50         0       50
+
+Note: mode not reported because all values of y are unique
+> 
+> # Using formula syntax: y ~ x
+> desc_var(y ~ group, data = df)
+  group  mean    sd    se median    min   max mode freq_mode mode2 freq_mode2
+1     A 0.196 0.883 0.125  0.353 -1.805 2.402    -         -     -          -
+2     B 0.022 0.914 0.129 -0.042 -2.215 2.173    -         -     -          -
+  n.total n.missing n.unique
+1      50         0       50
+2      50         0       50
+
+Note: mode not reported because all values of y are unique
+> 
+> # Using formula syntax with multiple grouping variables: y ~ x1 + x2
+> df2 <- data.frame(y = rnorm(200), x1 = rep(c("A", "B"), 100), x2 = rep(c("X", "Y"), each = 100))
+> desc_var(y ~ x1 + x2, data = df2)
+  x1 x2   mean    sd    se median    min   max mode freq_mode mode2 freq_mode2
+1  A  X -0.042 0.961 0.136 -0.055 -2.403 1.778    -         -     -          -
+2  B  X  0.102 1.108 0.157  0.199 -2.889 2.649    -         -     -          -
+3  A  Y -0.030 1.113 0.157 -0.137 -2.592 1.971    -         -     -          -
+4  B  Y  0.133 0.857 0.121  0.132 -1.870 1.887    -         -     -          -
+  n.total n.missing n.unique
+1      50         0       50
+2      50         0       50
+3      50         0       50
+4      50         0       50
+
+Note: mode not reported because all values of y are unique
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("desc_var", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("format_pvalue")
+> ### * format_pvalue
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: format_pvalue
+> ### Title: Format P-Values for Display
+> ### Aliases: format_pvalue
+> 
+> ### ** Examples
+> 
+> # Basic usage
+> format_pvalue(0.05)
+[1] "= .0500"
+> format_pvalue(0.0001)
+[1] "= .0001"
+> 
+> # More rounding
+> format_pvalue(0.0001,digits=2)
+[1] "< .01"
+> 
+> # Vector input
+> format_pvalue(c(0.05, 0.001, 0.00001, 0.99))
+[1] "= .0500" "= .0010" "< .0001" "= .9900"
+> 
+> # With p prefix
+> format_pvalue(0.05, include_p = TRUE)
+[1] "p = .0500"
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("format_pvalue", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("list2")
+> ### * list2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: list2
+> ### Title: Enhanced alternative to list()
+> ### Aliases: list2
+> 
+> ### ** Examples
+> 
+> x <- 1:5
+> y <- letters[1:3]
+> z <- matrix(1:4, nrow = 2)
+> 
+> # Create named list from objects
+> my_list <- list2(x, y, z)
+> names(my_list)  # "x" "y" "z"
+[1] "x" "y" "z"
+> 
+> # Works with explicit names too
+> my_list2 <- list2(a = x, b = y)
+> names(my_list2)  # "a" "b"
+[1] "a" "b"
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("list2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("lm2")
+> ### * lm2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: lm2
+> ### Title: Enhanced alternative to lm()
+> ### Aliases: lm2
+> 
+> ### ** Examples
+> 
+> # Basic usage with data argument
+> lm2(mpg ~ wt + hp, data = mtcars)
+Call: lm2(formula = mpg ~ wt + hp, data = mtcars)
+
+            estimate  SE.robust SE.classical t.value p.value std.estimate
+intercept    37.23**    2.230      1.599      16.70   <.0001        --   
+wt          -3.878**    0.769      0.633     -5.046   <.0001    -0.630   
+hp          -0.032**    .0094      .0090     -3.385    .0021    -0.361   
+              mean missing red.flag
+intercept      --    --        !   
+wt          3.217    0         --  
+hp          146.7    0         --  
+
+N = 32  | missing = 0  | df = 29  | R² = 0.827  | SE type: HC3 
+
+Notes:
+  - ** p<.01 (based on SE.robust)
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag:
+     !: robust & classical SE differ by more than 25%
+     - Suggestion 1: to evaluate possible extreme skew or outliers:
+       plot_density() or plot_freq() for mpg and for flagged variable(s)
+     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(mpg ~ flagged variable(s))
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> # Without data argument (variables from environment)
+> y <- mtcars$mpg
+> x1 <- mtcars$wt
+> x2 <- mtcars$hp
+> lm2(y ~ x1 + x2)
+Call: lm2(formula = y ~ x1 + x2)
+
+            estimate  SE.robust SE.classical t.value p.value std.estimate
+intercept    37.23**    2.230      1.599      16.70   <.0001        --   
+x1          -3.878**    0.769      0.633     -5.046   <.0001    -0.630   
+x2          -0.032**    .0094      .0090     -3.385    .0021    -0.361   
+              mean missing red.flag
+intercept      --    --        !   
+x1          3.217    0         --  
+x2          146.7    0         --  
+
+N = 32  | missing = 0  | df = 29  | R² = 0.827  | SE type: HC3 
+
+Notes:
+  - ** p<.01 (based on SE.robust)
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag:
+     !: robust & classical SE differ by more than 25%
+     - Suggestion 1: to evaluate possible extreme skew or outliers:
+       plot_density() or plot_freq() for y and for flagged variable(s)
+     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ flagged variable(s))
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> # RED FLAG EXAMPLES
+> 
+> # Example 1: red flag catches a nonlinearity
+> # True model is quadratic: y = x^2
+> set.seed(123)
+> x <- runif(200, -3, 3)
+> y <- x^2 + rnorm(200, sd = 2)
+> 
+> # lm2() shows red flag due to misspecification
+> lm2(y ~ x)
+Call: lm2(formula = y ~ x)
+
+            estimate SE.robust SE.classical t.value p.value std.estimate   mean
+intercept   2.698**    0.228      0.226     11.81    <.0001       --        -- 
+x           0.151      0.175      0.138     0.862     .3895    0.078     0.038 
+            missing red.flag
+intercept     --        --  
+x             0         !   
+
+N = 200  | missing = 0  | df = 198  | R² = 0.006  | SE type: HC3 
+
+Notes:
+  - ** p<.01 (based on SE.robust)
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag:
+     !: robust & classical SE differ by more than 25%
+     - Suggestion 1: to evaluate possible extreme skew or outliers:
+       plot_density() or plot_freq() for y and for x
+     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ x)
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> # Follow up with scatter.gam() to diagnose it
+> scatter.gam(x, y)
+> 
+> # Example 2: red flag catches an outlier in y
+> # True model is y = x, but one observation has a very large y value
+> set.seed(123)
+> x <- sort(rnorm(200))
+> y <- round(x + rnorm(200, sd = 2), 1)
+> y[200] <- 100  # Outlier
+> 
+> # lm2() flags x
+> lm2(y ~ x)
+Call: lm2(formula = y ~ x)
+
+            estimate SE.robust SE.classical t.value p.value std.estimate
+intercept   0.585      0.535      0.493     1.092     .2760       --    
+x           2.628      1.804      0.524     1.457     .1468    0.336    
+              mean  missing red.flag
+intercept       --    --        --  
+x           -.0086    0         !!! 
+
+N = 200  | missing = 0  | df = 198  | R² = 0.113  | SE type: HC3 
+
+Notes:
+  - All estimates are p>.1 (based on SE.robust)
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag:
+     !!!: robust & classical SE differ by more than 100%
+     - Suggestion 1: to evaluate possible extreme skew or outliers:
+       plot_density() or plot_freq() for y and for x
+     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ x)
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> # Look at distribution of y to spot the outlier
+> plot_freq(y)
+
+plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior> 
+> # Example 3: red flag catches an outlier in one predictor
+> # True model is y = x1 + x2, but x2 has an extreme value
+> set.seed(123)
+> x1 <- round(rnorm(200),.1)
+> x2 <- round(rnorm(200),.1)
+> y <- x1 + x2 + rnorm(200, sd = 0.5)
+> x2[200] <- 50  # Outlier in x2
+> 
+> # lm2() flags x2 (but not x1)
+> lm2(y ~ x1 + x2)
+Call: lm2(formula = y ~ x1 + x2)
+
+            estimate SE.robust SE.classical t.value p.value std.estimate   mean
+intercept   0.028      0.076      0.076     0.375     .7084       --        -- 
+x1          1.009**    0.080      0.078     12.57    <.0001    0.667     0.010 
+x2          0.095      0.877      0.021     0.108     .9142    0.236     0.290 
+            missing red.flag
+intercept     --        --  
+x1            0         --  
+x2            0         !!! 
+
+N = 200  | missing = 0  | df = 197  | R² = 0.478  | SE type: HC3 
+
+Notes:
+  - ** p<.01 (based on SE.robust)
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag:
+     !!!: robust & classical SE differ by more than 100%
+     - Suggestion 1: to evaluate possible extreme skew or outliers:
+       plot_density() or plot_freq() for y and for x2
+     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ x2)
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> # Look at distribution of x2 to spot the outlier
+> plot_freq(x2)
+> 
+> # CLUSTERED STANDARD ERRORS
+> # When observations are grouped (e.g., students within schools),
+> # use clusters to account for within-group correlation
+> set.seed(123)
+> n_clusters <- 20
+> n_per_cluster <- 15
+> cluster_id <- rep(1:n_clusters, each = n_per_cluster)
+> cluster_effect <- rnorm(n_clusters, sd = 2)[cluster_id]
+> x <- rnorm(n_clusters * n_per_cluster)
+> y <- 1 + 0.5 * x + cluster_effect + rnorm(n_clusters * n_per_cluster)
+> mydata <- data.frame(y = y, x = x, cluster_id = cluster_id)
+> 
+> # Clustered SE (CR2) - note the SE.cluster column in output
+> lm2(y ~ x, data = mydata, clusters = cluster_id)
+Call: lm2(formula = y ~ x, data = mydata, clusters = cluster_id)
+
+            estimate SE.cluster SE.robust SE.classical t.value df    p.value
+intercept   1.279**    0.442      0.125      0.125     2.893    19.0   .0093
+x           0.396**    0.083      0.132      0.131     4.776    17.5   .0002
+            std.estimate   mean missing red.flag
+intercept         --        --    --        --  
+x              0.173     0.022    0         --  
+
+N = 300  | missing = 0  | R² = 0.030  | SE type: CR2 (cluster)
+
+Notes:
+  - ** p<.01 (based on SE.cluster)
+  - SE.robust (HC3) used only to contrast with SE.classical to flag observations
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag: none (robust and classical SE are similar)
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> # FIXED EFFECTS
+> # Use fixed_effects to absorb group-level variation (e.g., firm or year effects)
+> # This is useful for panel data or when you have many fixed effect levels
+> set.seed(456)
+> n_firms <- 30
+> n_years <- 5
+> firm_id <- rep(1:n_firms, each = n_years)
+> year <- rep(2018:2022, times = n_firms)
+> firm_effect <- rnorm(n_firms, sd = 3)[firm_id]
+> x <- rnorm(n_firms * n_years)
+> y <- 2 + 0.8 * x + firm_effect + rnorm(n_firms * n_years)
+> panel <- data.frame(y = y, x = x, firm_id = factor(firm_id), year = factor(year))
+> 
+> # Absorb firm fixed effects (coefficient on x is estimated, firm dummies are not shown)
+> lm2(y ~ x, data = panel, fixed_effects = ~ firm_id)
+Call: lm2(formula = y ~ x, data = panel, fixed_effects = ~firm_id)
+
+            estimate  SE.robust SE.classical t.value p.value std.estimate
+intercept   [dropped]   --         --        --       --        --       
+x           0.727**     0.085      0.082     8.527    <.0001    0.191    
+firm_id     df=30       --         --        --       --        --       
+              mean  missing red.flag
+intercept   --        --        --  
+x           -0.066    0         --  
+firm_id     --        0         --  
+
+N = 150  | missing = 0  | df = 119  | R² = 0.951  | SE type: HC3 
+
+Notes:
+  - ** p<.01 (based on SE.robust)
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag: none (robust and classical SE are similar)
+  - firm_id were entered as absorbed fixed effects; df is the number of unique values.
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> # Two-way fixed effects (firm and year)
+> lm2(y ~ x, data = panel, fixed_effects = ~ firm_id + year)
+Call: lm2(formula = y ~ x, data = panel, fixed_effects = ~firm_id + 
+    year)
+
+            estimate  SE.robust SE.classical t.value p.value std.estimate
+intercept   [dropped]   --         --        --       --        --       
+x           0.724**     0.087      0.083     8.286    <.0001    0.191    
+firm_id     df=30       --         --        --       --        --       
+year        df=5        --         --        --       --        --       
+              mean  missing red.flag
+intercept   --        --        --  
+x           -0.066    0         --  
+firm_id     --        0         --  
+year        --        0         --  
+
+N = 150  | missing = 0  | df = 115  | R² = 0.952  | SE type: HC3 
+
+Notes:
+  - ** p<.01 (based on SE.robust)
+  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
+  - mean: for numeric variables, mean of x; for factors, % of observations
+  - missing: number of observations excluded due to missing values
+  - red.flag: none (robust and classical SE are similar)
+  - firm_id, year were entered as absorbed fixed effects; df is the number of unique values.
+  - To avoid these notes, lm2(..., notes=FALSE)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("lm2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("message2")
+> ### * message2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: message2
+> ### Title: Enhanced alternative to message()
+> ### Aliases: message2
+> 
+> ### ** Examples
+> 
+> message2("This is a plain cyan message", col = "cyan", font = 1)
+
+This is a plain cyan message> message2("This is a bold cyan message", col = "cyan", font = 2)
+
+This is a bold cyan message> message2("This is a bold red message", col = "red", font = 2)
+
+This is a bold red message> ## No test: 
+> cat("this will be shown")
+this will be shown> try(message2("This stops execution", stop = TRUE), silent = TRUE)
+
+This stops execution> cat("this will be shown after the try")
+this will be shown after the try> ## End(No test)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("message2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("plot_cdf")
+> ### * plot_cdf
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: plot_cdf
+> ### Title: Plot Empirical Cumulative Distribution Functions by Group
+> ### Aliases: plot_cdf
+> 
+> ### ** Examples
+> 
+> # Basic usage with single variable (no grouping)
+> y <- rnorm(100)
+> plot_cdf(y)
+> 
+> # Basic usage with formula syntax and grouping
+> group <- rep(c("A", "B", "C"), c(30, 40, 30))
+> plot_cdf(y ~ group)
+> 
+> # With custom colors (scalar - same for all)
+> plot_cdf(y ~ group, col = "blue")
+> 
+> # With custom colors (vector - different for each group)
+> plot_cdf(y ~ group, col = c("red", "green", "blue"))
+> 
+> # Multiple parameters
+> plot_cdf(y ~ group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+> 
+> # With line type and point character
+> plot_cdf(y ~ group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+> 
+> # Using data frame
+> df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+> plot_cdf(value ~ group, data = df)
+
+The p-values are based on quantile regressions that assume all observations are independent> plot_cdf(value ~ group, data = df, col = c("red", "blue"))
+> 
+> # Compare two vectors
+> y1 <- rnorm(50)
+> y2 <- rnorm(50, mean = 1)
+> plot_cdf(y1, y2)
+> 
+> # Formula syntax without data (variables evaluated from environment)
+> widgetness <- rnorm(100)
+> gender <- rep(c("M", "F"), 50)
+> plot_cdf(widgetness ~ gender)
+> 
+> # Using the returned object
+> df <- data.frame(value = c(rnorm(50, 0), rnorm(50, 1)), group = rep(c("A", "B"), each = 50))
+> result <- plot_cdf(value ~ group, data = df)
+> 
+> # Use ECDF to find P(X <= 0.5) for group A
+> result$ecdfs[[1]](0.5)
+[1] 0.66
+> 
+> # Access KS test p-value
+> result$ks_test$p.value
+[1] 0.000246024
+> 
+> # Summarize median quantile regression
+> summary(result$quantile_regression_50)
+Warning in rq.fit.br(x, y, tau = tau, ci = TRUE, ...) :
+  Solution may be nonunique
+
+Call: quantreg::rq(formula = y ~ x_group, tau = tau, data = df_qr)
+
+tau: [1] 0.5
+
+Coefficients:
+            coefficients lower bd upper bd
+(Intercept) -0.25116     -0.41295 -0.01913
+x_group      1.22325      0.66348  1.66794
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("plot_cdf", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("plot_density")
+> ### * plot_density
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: plot_density
+> ### Title: Plot density of a variable, optionally by another variable
+> ### Aliases: plot_density
+> 
+> ### ** Examples
+> 
+> # Basic usage with formula syntax (no grouping)
+> y <- rnorm(100)
+> plot_density(y)
+> 
+> # With grouping variable
+> group <- rep(c("A", "B", "C"), c(30, 40, 30))
+> plot_density(y ~ group)
+> 
+> # With custom colors (scalar - same for all)
+> plot_density(y ~ group, col = "blue")
+> 
+> # With custom colors (vector - different for each group)
+> plot_density(y ~ group, col = c("red", "green", "blue"))
+> 
+> # Multiple parameters
+> plot_density(y ~ group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+> 
+> # With line type
+> plot_density(y ~ group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+> 
+> # Using data frame
+> df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+> plot_density(value ~ group, data = df)
+> plot_density(value ~ group, data = df, col = c("red", "blue"))
+> 
+> # Compare two vectors
+> y1 <- rnorm(50)
+> y2 <- rnorm(50, mean = 1)
+> plot_density(y1, y2)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("plot_density", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("plot_freq")
+> ### * plot_freq
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: plot_freq
+> ### Title: Plot frequencies for a variable (histogram without binning)
+> ### Aliases: plot_freq
+> 
+> ### ** Examples
+> 
+> # Simple example
+> x <- c(1, 1, 2, 2, 2, 5, 5)
+> plot_freq(x)
+> 
+> # Pass on some common \code{plot()} arguments
+> plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
+> 
+> # Add to an existing plot
+> plot_freq(x, col = "dodgerblue")
+> 
+> 
+> # Compare two vectors
+> y1 <- c(1, 1, 2, 2, 2, 5, 5)
+> y2 <- c(1, 2, 2, 3, 3, 3)
+> plot_freq(y1, y2)
+> 
+> # Using a data frame with grouping
+> df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
+> plot_freq(value ~ 1, data = df)  # single variable
+> plot_freq(value ~ group, data = df)  # with grouping
+> 
+> # Control group order in legend and plot
+> plot_freq(value ~ group, data = df, order = c("B", "A"))  # B first, then A
+> plot_freq(value ~ group, data = df, order = -1)  # Reverse default order
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("plot_freq", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("plot_gam")
+> ### * plot_gam
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: plot_gam
+> ### Title: Plot GAM Model
+> ### Aliases: plot_gam
+> 
+> ### ** Examples
+> 
+> ## No test: 
+> library(mgcv)
+Loading required package: nlme
+Warning: package 'nlme' was built under R version 4.5.3
+This is mgcv 1.9-4. For overview type '?mgcv'.
+> # Fit a GAM model
+> data(mtcars)
+> mtcars$cyl <- factor(mtcars$cyl)  # Convert to factor before fitting GAM
+> model <- gam(mpg ~ s(hp) + s(wt) + cyl, data = mtcars)
+> 
+> # Plot effect of hp (with other variables at median)
+> plot_gam(model, "hp")
+> 
+> # Plot effect of hp (with other variables at 25th percentile)
+> plot_gam(model, "hp", quantile.others = 25)
+> 
+> # Customize plot
+> plot_gam(model, "hp", main = "Effect of Horsepower", col = "blue", lwd = 2)
+> ## End(No test)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("plot_gam", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+
+detaching 'package:mgcv', 'package:nlme'
+
+> nameEx("plot_means")
+> ### * plot_means
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: plot_means
+> ### Title: Barplot of means
+> ### Aliases: plot_means
+> 
+> ### ** Examples
+> 
+> df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+> plot_means(y ~ group, data = df)
+
+tests:
+1) A vs B: t(97.9)=0.96, p=0.337
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.> 
+> df2 <- data.frame(
++   y = rnorm(200),
++   x1 = rep(c("A", "B"), 100),
++   x2 = rep(c("X", "Y"), each = 100)
++ )
+> plot_means(y ~ x1 + x2, data = df2)
+
+tests:
+1) X_A vs X_B: t(97.8)=-0.15, p=0.884
+2) Y_A vs Y_B: t(96.1)=-0.69, p=0.489
+3) interaction(x1:x2): regression interaction: t(196)=0.41, p=0.686
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.> 
+> df3 <- data.frame(
++   y = rnorm(600),
++   x1 = rep(c("control", "treatment"), times = 300),
++   x2 = rep(rep(c("low", "high"), each = 150), times = 2),
++   x3 = rep(c("online", "lab"), each = 300)
++ )
+> plot_means(y ~ x1 + x2 + x3, data = df3)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("plot_means", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("resize_images")
+> ### * resize_images
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: resize_images
+> ### Title: Resize Images
+> ### Aliases: resize_images
+> 
+> ### ** Examples
+> 
+> ## No test: 
+> # Create a temporary PNG file and resize it
+> tmp_png <- tempfile(fileext = ".png")
+> grDevices::png(tmp_png, width = 400, height = 300)
+> old_par <- graphics::par(no.readonly = TRUE)
+> graphics::par(mar = c(2, 2, 1, 1))
+> graphics::plot(1:2, 1:2, type = "n")
+> grDevices::dev.off()
+pdf 
+  2 
+> graphics::par(old_par)
+> resize_images(tmp_png, width = 80)
+
+Resized 'file848836b03e5a_80.png'> ## End(No test)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("resize_images", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> graphics::par(get("par.postscript", pos = 'CheckExEnv'))
+> cleanEx()
+> nameEx("scatter.gam")
+> ### * scatter.gam
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: scatter.gam
+> ### Title: Scatter Plot with GAM Smooth Line
+> ### Aliases: scatter.gam
+> 
+> ### ** Examples
+> 
+> # Generate sample data for examples
+> x <- rnorm(100)
+> y <- 2*x + rnorm(100)
+> 
+> # Plot GAM smooth line only
+> scatter.gam(x, y)
+> 
+> # Equivalent call using formula syntax (y ~ x)
+> scatter.gam(y ~ x)
+> 
+> # Include scatter plot with underlying data points behind the GAM line
+> scatter.gam(x, y, data.dots = TRUE)
+> 
+> # Include summary points showing mean x and y for each tertile bin
+> scatter.gam(x, y, three.dots = TRUE)
+> 
+> # Customize the plot with a custom title, line color, and line width
+> scatter.gam(x, y, data.dots = TRUE, col = "red", lwd = 2, main = "GAM Fit")
+> 
+> # Control smoothness of the GAM line by specifying the basis dimension
+> scatter.gam(x, y, k = 10)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("scatter.gam", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("t.test2")
+> ### * t.test2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: t.test2
+> ### Title: Enhanced alternative to t.test()
+> ### Aliases: t.test2
+> 
+> ### ** Examples
+> 
+> # Two-sample t-test
+> men <- rnorm(100, mean = 5, sd = 1)
+> women <- rnorm(100, mean = 4.8, sd = 1)
+> t.test2(men, women)
+Two sample Welch t-test
+
+   men women men-women  ci  ci.L  ci.H    t    df p.value N(men) N(women)
+ 5.109 4.762     0.347 95% 0.088 0.606 2.64 197.2   .0089    100      100
+
+APA Style:
+t(197.2) = 2.64, p = .0089
+> 
+> # Paired t-test
+> x <- rnorm(50, mean = 5, sd = 1)
+> y <- rnorm(50, mean = 5.2, sd = 1)
+> t.test2(x, y, paired = TRUE)
+Two sample paired t-test
+
+     x     y    x-y  ci   ci.L  ci.H      t df p.value  N r(x,y)
+ 4.969 5.291 -0.322 95% -0.718 0.074 -1.634 49   .1087 50  0.099
+
+APA Style:
+t(49.0) = -1.63, p = .1087
+> 
+> # One-sample t-test
+> data <- rnorm(100, mean = 5, sd = 1)
+> t.test2(data, mu = 0)
+One sample Student t-test
+
+  mean  ci  ci.L  ci.H     t df p.value   N
+ 5.052 95% 4.855 5.248 50.94 99  <.0001 100
+
+APA Style:
+t(99.0) = 50.94, p < .0001
+> 
+> # Formula syntax
+> data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+> t.test2(y ~ group, data = data)
+Two sample Welch t-test
+
+     A     B    A-B  ci   ci.L ci.H     t   df p.value N(A) N(B)
+ 5.162 5.419 -0.256 95% -0.382 0.55 0.358 97.8   .7209   25   25
+
+APA Style:
+t(97.8) = 0.36, p = .7209
+
+note: 'A' is missing 25 of 50 values, while 'B' is missing 25 of 50
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("t.test2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("table2")
+> ### * table2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: table2
+> ### Title: Enhanced alternative to table()
+> ### Aliases: table2
+> 
+> ### ** Examples
+> 
+> # Create example data
+> df <- data.frame(
++   group = c("A", "A", "B", "B", "A"),
++   status = c("X", "Y", "X", "Y", "X")
++ )
+> 
+> # Enhanced table with variable names (2 variables)
+> table2(df$group, df$status)
+     status
+group X Y
+    A 2 1
+    B 1 1
+> 
+> # Enhanced table with variable names (3 variables)
+> df3 <- data.frame(
++   x = c("A", "A", "B", "B"),
++   y = c("X", "Y", "X", "Y"),
++   z = c("high", "low", "high", "low")
++ )
+> table2(df3$x, df3$y, df3$z)
+, , z = high
+
+   y
+x   X Y
+  A 1 0
+  B 1 0
+
+, , z = low
+
+   y
+x   X Y
+  A 0 1
+  B 0 1
+
+> 
+> # Table with proportions
+> table2(df$group, df$status, prop = 'all')  # Overall proportions
+     status
+group X Y
+    A 2 1
+    B 1 1
+
+Overall proportions:
+       status
+group   X     Y     Total
+  A     0.400 0.200 0.600
+  B     0.200 0.200 0.400
+  Total 0.600 0.400 1.000
+> table2(df$group, df$status, prop = 'row')  # Row proportions
+     status
+group X Y
+    A 2 1
+    B 1 1
+
+Row proportions:
+     status
+group X     Y     Total
+    A 0.667 0.333 1.000
+    B 0.500 0.500 1.000
+> table2(df$group, df$status, prop = 'col')  # Column proportions
+     status
+group X Y
+    A 2 1
+    B 1 1
+
+Column proportions:
+       status
+group   X     Y    
+  A     0.667 0.500
+  B     0.333 0.500
+  Total 1.000 1.000
+> 
+> # Table with chi-square test
+> table2(df$group, df$status, chi = TRUE,prop='all')
+     status
+group X Y
+    A 2 1
+    B 1 1
+
+Overall proportions:
+       status
+group   X     Y     Total
+  A     0.400 0.200 0.600
+  B     0.200 0.200 0.400
+  Total 0.600 0.400 1.000
+
+
+	Pearson's Chi-squared test
+
+data:  result
+X-squared = 0.13889, df = 1, p-value = 0.7094
+
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("table2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("text2")
+> ### * text2
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: text2
+> ### Title: Enhanced alternative to text()
+> ### Aliases: text2
+> 
+> ### ** Examples
+> 
+> # Create a simple plot
+> plot(1:10, 1:10, type = "n", main = "text2() - Alignment & Color")
+> 
+> # Alignment respect to x=5
+> text2(5, 8, "align='left' from 5", align = "left", bg = "yellow1")
+> text2(5, 7, "align='right' from 5", align = "right", bg = "blue", col = "white")
+> text2(5, 6, "align='center' from 5", align = "center", bg = "black", col = "white")
+> abline(v = 5, lty = 2)
+> 
+> # Multiple labels with different alignments
+> text2(c(2, 5, 8), c(5, 5, 5), 
++       labels = c("Left", "Center", "Right"),
++       align = c("left", "center", "right"),
++       bg = c("pink", "lightblue", "lightgreen"))
+> 
+> # Text with custom font color (passed through ...)
+> text2(5, 3, "Red Text", col = "red", bg = "white")
+> 
+> # Padding examples
+> plot(1:10, 1:10, type = "n", main = "Padding Examples")
+> 
+> # Default padding (pad=0.03, pad_v=0.25)
+> text2(5, 8, "Default padding", bg = "lightblue")
+> 
+> # More horizontal padding
+> text2(5, 6, "Wide padding", pad = 0.2, bg = "lightgreen")
+> 
+> # More vertical padding
+> text2(5, 4, "Tall padding", pad_v = 0.8, bg = "lightyellow")
+> 
+> # Both padding increased
+> text2(5, 2, "Extra padding", pad = 0.15, pad_v = 0.6, bg = "pink")
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("text2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("twolines")
+> ### * twolines
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: twolines
+> ### Title: Two-Lines Test of U-Shapes
+> ### Aliases: twolines
+> 
+> ### ** Examples
+> 
+> ## No test: 
+> # Simple example with simulated data
+> set.seed(123)
+> x <- rnorm(100)
+> y <- -x^2 + rnorm(100)
+> data <- data.frame(x = x, y = y)
+> result <- twolines(y ~ x, data = data)
+
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.05 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
+Local range of values considered for breakpoint 'x': [-0.33, 0.36]
+t-values for two lines at 'x' = 0.01:
+   t1 = 6.5
+   t2 = 9.35
+We compute t2/(t1+t2) = 0.59
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.59) = 0.05 and set that value, 0.05, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`> 
+> # With covariates
+> z <- rnorm(100)
+> y <- -x^2 + 0.5*z + rnorm(100)
+> data <- data.frame(x = x, y = y, z = z)
+> result <- twolines(y ~ x + z, data = data)
+
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = -0.35 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = -0.4
+Local range of values considered for breakpoint 'x': [-0.63, 0.3]
+t-values for two lines at 'x' = -0.4:
+   t1 = 4.49
+   t2 = 5.5
+We compute t2/(t1+t2) = 0.55
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.55) = -0.35 and set that value, -0.35, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`> 
+> # Without data argument (variables evaluated from environment)
+> x <- rnorm(100)
+> y <- -x^2 + rnorm(100)
+> result <- twolines(y ~ x)
+
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.07 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
+Local range of values considered for breakpoint 'x': [-0.41, 0.38]
+t-values for two lines at 'x' = 0.01:
+   t1 = 5.51
+   t2 = 7.83
+We compute t2/(t1+t2) = 0.59
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.59) = 0.07 and set that value, 0.07, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`> ## End(No test)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("twolines", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("var_labels")
+> ### * var_labels
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: var_labels
+> ### Title: Get or set variable labels
+> ### Aliases: var_labels var_labels<-
+> 
+> ### ** Examples
+> 
+> df <- data.frame(x = 1:3, y = 4:6)
+> 
+> # Set labels for all columns
+> var_labels(df) <- c("this is x", "this is y")
+> var_labels(df)
+          x           y 
+"this is x" "this is y" 
+> 
+> # Set a label for a single column
+> var_labels(df$x) <- "this is x"
+> var_labels(df$x)
+[1] "this is x"
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("var_labels", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> ### * <FOOTER>
+> ###
+> cleanEx()
+> options(digits = 7L)
+> base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
+Time elapsed:  3.32 0.64 3.3 NA NA 
+> grDevices::dev.off()
+null device 
+          1 
+> ###
+> ### Local variables: ***
+> ### mode: outline-minor ***
+> ### outline-regexp: "\\(> \\)?### [*]+" ***
+> ### End: ***
+> quit('no')

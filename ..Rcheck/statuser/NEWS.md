@@ -2,10 +2,7 @@
 ### changes to pass CRAN inspection
 - `plot_means()`: removed the `save.as` argument (no longer saves plots to PNG/SVG).
 - `t.test2()`: documented S3 registration as `t.test2` for `base::t` to avoid recurring CRAN S3 consistency notes while keeping direct `t.test2(...)` usage unchanged.
-- `desc_var()`: removed dependency on `labelled` rely on new function var_labels
-
-### New function
-- Added `var_labels()` to get/set these labels for vectors and data frames. This avoids depending on labelled 
+- `desc_var()`: removed dependency on `labelled`; output columns now carry base-R `"label"` attributes instead of `labelled::var_label()`.
 
 # statuser 0.2.0 (never on CRAN)
 

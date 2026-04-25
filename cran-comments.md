@@ -17,6 +17,7 @@ This is a resubmission following an error produced in Debian testing.
 * Removed the `save.as` argument and file-export code path from `plot_means()` to fix the Debian testing error.
 * Registered `t.test2` as an S3 method for `t` (`S3method(t,test2)`) and aligned the function signature to `function(x, ...)` to address the recurring S3 generic/method consistency note triggered by the dot-name heuristic.
 * Updated `t.test2` documentation and `NEWS.md` accordingly.
+* Removed the dependency on `labelled` to avoid CRAN macOS dependency failures; `desc_var()` now stores variable labels as base-R `"label"` attributes on output columns.
 
 ## Notes
 

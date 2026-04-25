@@ -6,9 +6,117 @@
     GNU Fortran (GCC) 14.3.0
 * running under: Windows 11 x64 (build 26200)
 * using session charset: UTF-8
-* using options '--no-tests --no-manual --no-vignettes --as-cran'
-* checking for file './DESCRIPTION' ... ERROR
-Required fields missing or empty:
-  'Author' 'Maintainer'
+* using option '--as-cran'
+* checking for file './DESCRIPTION' ... OK
+* checking extension type ... Package
+* this is package 'statuser' version '0.2.1'
+* package encoding: UTF-8
+* checking CRAN incoming feasibility ... [23s] NOTE
+Maintainer: 'Uri Simonsohn <urisohn@gmail.com>'
+
+The build time stamp is missing.
+* checking package namespace information ... OK
+* checking package dependencies ... OK
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... NOTE
+Found the following hidden files and directories:
+  .Rhistory
+  .gitattributes
+  .gitignore
+  .r_path_note.txt
+  R/.Rhistory
+  ..Rcheck
+  .cursor
+  .git
+These were most likely included in error. See section 'Package
+structure' in the 'Writing R Extensions' manual.
+
+CRAN-pack does not know about
+  .r_path_note.txt
+  ..Rcheck
+  .cursor
+  .git
+* checking for portable file names ... ERROR
+Found the following non-portable file paths:
+  statuser/assets/c__Users_uri_s_AppData_Roaming_Cursor_User_workspaceStorage_930378eae802c843418b9881ba18b5d0_images_image-b2e31514-5428-4fc3-bd6e-c7f31f73da02.png
+  statuser/assets/c__Users_uri_s_AppData_Roaming_Cursor_User_workspaceStorage_930378eae802c843418b9881ba18b5d0_images_image-fc27a763-3ed8-4d10-b170-bac2d0a7c3af.png
+
+Tarballs are only required to store paths of up to 100 bytes and cannot
+store those of more than 256 bytes, with restrictions including to 100
+bytes for the final component.
+See section 'Package structure' in the 'Writing R Extensions' manual.
+ OK
+* checking serialization versions ... OK
+* checking whether package 'statuser' can be installed ... OK
+* checking installed package size ... OK
+* checking package directory ... OK
+* checking for future file timestamps ... OK
+* checking DESCRIPTION meta-information ... NOTE
+Checking should be performed on sources prepared by 'R CMD build'.
+* checking top-level files ... NOTE
+Files 'README.md' or 'NEWS.md' cannot be checked without 'pandoc' being installed.
+Non-standard files/directories found at top level:
+  'CRAN-SUBMISSION' 'NSE_IMPLEMENTATION_SUMMARY.md' 'Rplots.pdf'
+  'assets' 'cran-comments.md' 'examples' 'scripts' 'statuser.Rcheck'
+  'statuser_0.2.1.tar.gz'
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... WARNING
+Found the following directories with names of check directories:
+  ./..Rcheck
+  ./statuser.Rcheck
+Most likely, these were included erroneously.
+Found the following directory with the name of a version control directory:
+  ./.git
+These should not be in a package tarball.
+* checking code files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking whether startup messages can be suppressed ... OK
+* checking use of S3 registration ... OK
+* checking dependencies in R code ... OK
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... [14s] OK
+* checking Rd files ... OK
+* checking Rd metadata ... OK
+* checking Rd line widths ... OK
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... OK
+* checking for code/documentation mismatches ... OK
+* checking Rd \usage sections ... WARNING
+Undocumented arguments in Rd file 'var_labels.Rd'
+  'value'
+
+Functions with \usage entries need to have the appropriate \alias
+entries, and all their arguments documented.
+The \usage entries must correspond to syntactically valid R code.
+See chapter 'Writing R documentation files' in the 'Writing R
+Extensions' manual.
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking examples ... OK
+* checking examples with --run-donttest ... OK
+* checking for unstated dependencies in 'tests' ... OK
+* checking tests ... [20s] OK
+  Running 'testthat.R' [20s]
+* checking PDF version of manual ... WARNING
+LaTeX errors when creating PDF version.
+This typically indicates Rd problems.
+* checking PDF version of manual without index ... ERROR
+Re-running with no redirection of stdout/stderr.
+* checking HTML version of manual ... OK
+* checking for non-standard things in the check directory ... NOTE
+Found the following files/directories:
+  'statuser-manual.tex'
+* checking for detritus in the temp directory ... OK
 * DONE
-Status: 1 ERROR
+Status: 2 ERRORs, 3 WARNINGs, 5 NOTEs

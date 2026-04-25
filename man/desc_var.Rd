@@ -35,6 +35,8 @@ A data frame with one row per group (or one row if no group is specified) contai
     \item \code{n.missing}: Number of observations with missing (NA) values
     \item \code{n.unique}: Number of unique values
   }
+  Columns may also carry a \code{"label"} attribute, which provides a short
+  human-readable description of each column.
 }
 \description{
 Returns a dataframe with one row per group.

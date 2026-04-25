@@ -1,0 +1,299 @@
+
+R version 4.5.2 (2025-10-31 ucrt) -- "[Not] Part in a Rumble"
+Copyright (C) 2025 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # This file is part of the statuser package
+> # 
+> # This file is run automatically by R CMD check
+> library(testthat)
+> library(statuser)
+> 
+> test_check("statuser")
+
+desc_var() says:
+Multiple grouping variables should not overlap perfectly: 'x1' and 'x2' overlap perfectly
+desc_var() says:
+'y_char' must be numeric; currently character
+desc_var() says:
+'y_char' must be numeric; currently character
+desc_var() says:
+'y_factor' must be numeric; currently factor
+desc_var() says:
+'nonexistent' not found in data
+desc_var() says:
+'nonexistent' not found in data
+desc_var() says:
+'x' must be numeric; currently character
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.05 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
+Local range of values considered for breakpoint 'x': [-0.33, 0.36]
+t-values for two lines at 'x' = 0.01:
+   t1 = 6.5
+   t2 = 9.35
+We compute t2/(t1+t2) = 0.59
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.59) = 0.05 and set that value, 0.05, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.05 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
+Local range of values considered for breakpoint 'x': [-0.33, 0.36]
+t-values for two lines at 'x' = 0.01:
+   t1 = 6.5
+   t2 = 9.35
+We compute t2/(t1+t2) = 0.59
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.59) = 0.05 and set that value, 0.05, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.22 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.12
+Local range of values considered for breakpoint 'x': [-0.22, 0.49]
+t-values for two lines at 'x' = 0.12:
+   t1 = 2.92
+   t2 = 10.2
+We compute t2/(t1+t2) = 0.78
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.78) = 0.22 and set that value, 0.22, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.22 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.12
+Local range of values considered for breakpoint 'x': [-0.22, 0.49]
+t-values for two lines at 'x' = 0.12:
+   t1 = 2.92
+   t2 = 10.2
+We compute t2/(t1+t2) = 0.78
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.78) = 0.22 and set that value, 0.22, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.07 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
+Local range of values considered for breakpoint 'x': [-0.41, 0.38]
+t-values for two lines at 'x' = 0.01:
+   t1 = 5.51
+   t2 = 7.83
+We compute t2/(t1+t2) = 0.59
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.59) = 0.07 and set that value, 0.07, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.1 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.16
+Local range of values considered for breakpoint 'x': [-0.21, 0.42]
+t-values for two lines at 'x' = 0.16:
+   t1 = 7.8
+   t2 = 7.95
+We compute t2/(t1+t2) = 0.5
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.5) = 0.1 and set that value, 0.1, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.05 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0
+Local range of values considered for breakpoint 'x': [-0.32, 0.41]
+t-values for two lines at 'x' = 0:
+   t1 = 8.25
+   t2 = 7.01
+We compute t2/(t1+t2) = 0.46
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.46) = 0.05 and set that value, 0.05, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.08 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
+Local range of values considered for breakpoint 'x': [-0.17, 0.2]
+t-values for two lines at 'x' = 0.01:
+   t1 = 8.45
+   t2 = 13.54
+We compute t2/(t1+t2) = 0.62
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.62) = 0.08 and set that value, 0.08, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+Robin Hood calculations (see Simonsohn, 2018)
+Explaining why x = 0.11 is used as the breakpoint
+
+Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.18
+Local range of values considered for breakpoint 'x': [0, 0.32]
+t-values for two lines at 'x' = 0.18:
+   t1 = 11.61
+   t2 = 8.11
+We compute t2/(t1+t2) = 0.41
+We then lookup the value of 'x' at that quantile, so we run
+quantile(x, 0.41) = 0.11 and set that value, 0.11, as the breakpoint.
+
+Note: you may turn off this message by setting `quiet=TRUE`
+print() and summary() show the same information for lm2()
+print() and summary() show the same information for lm2()
+print() and summary() show the same information for lm2()
+print() and summary() show the same information for lm2()
+print() and summary() show the same information for lm2()
+Test message
+Testmessagewithmultipleparts
+Red message
+Blue message
+Cyan message
+Green message
+Custom color
+Plain text
+Bold text
+This stops
+This doesn't stop
+Part1andPart2
+Value:42
+Count:5items
+Test
+The p-values are based on quantile regressions that assume all observations are independent
+plot_cdf() says: dropped 10 observations with missing 'y' values
+plot_cdf() says: dropped 10 observations with missing 'y' values
+plot_cdf() says: dropped 10 observations with missing 'y' values
+plot_density() says: dropped 10 observations with missing 'y' values
+plot_density() says: dropped 10 observations with missing 'y' values
+plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior
+plot_freq() says: dropped 1 observations with missing 'x' values
+plot_freq() says: dropped 1 observations with missing 'x' values
+plot_freq() says: dropped 2 observations with missing 'value' values
+plot_freq() says: dropped 2 observations with missing 'value' values
+plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior
+plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior
+tests:
+1) A vs B: t(97.5)=-0.03, p=0.979
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.
+tests:
+1) X_A vs X_B: t(97.6)=-1.70, p=0.092
+2) Y_A vs Y_B: t(97.7)=-0.32, p=0.753
+3) interaction(x1:x2): regression interaction: t(196)=-0.89, p=0.375
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.
+tests:
+1) A vs B: t(96.9)=-1.10, p=0.274
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.
+tests:
+1) B vs A: t(96.9)=-1.10, p=0.274
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.
+tests:
+1) B vs A: t(96.9)=-1.10, p=0.274
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.
+desc_var() says:
+Some possible group combinations are not observed:
+x1=B, x2=Y, x3=N
+tests:
+1) A vs B: t(57.5)=2.14, p=0.037
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.
+tests:
+1) X_A vs X_B: t(53.3)=0.44, p=0.661
+2) Y_A vs Y_B: t(57.8)=-0.93, p=0.355
+3) interaction(x1:x2): regression interaction: t(116)=0.94, p=0.348
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.
+tests:
+1) X_A vs X_B: t(56.0)=0.44, p=0.662
+2) Y_A vs Y_B: t(57.6)=-1.33, p=0.189
+3) Z_A vs Z_B: t(58.0)=-0.45, p=0.655
+You can specify which statistical tests to report with the `tests` argument.
+
+Set `quiet=TRUE` to suppress this output.     status
+group X Y
+    A 2 1
+    B 1 1
+     status
+group X Y
+    A 2 1
+    B 1 1
+   y
+x   X Y
+  A 2 1
+  B 1 1
+
+Row proportions:
+   y
+x   X     Y     Total
+  A 0.667 0.333 1.000
+  B 0.500 0.500 1.000
+, , z = high
+
+   y
+x   X Y
+  A 1 0
+  B 1 0
+
+, , z = low
+
+   y
+x   X Y
+  A 0 1
+  B 0 1
+
+   y
+x   X Y
+  A 1 1
+  B 1 1
+x
+A B 
+3 2 
+[ FAIL 0 | WARN 0 | SKIP 14 | PASS 917 ]
+
+══ Skipped tests (14) ══════════════════════════════════════════════════════════
+• On CRAN (14): 'test-lm2.R:651:1', 'test-lm2.R:661:1', 'test-lm2.R:670:1',
+  'test-t.test2.R:360:1', 'test-t.test2.R:372:1', 'test-t.test2.R:385:1',
+  'test-t.test2.R:396:1', 'test-t.test2.R:406:1', 'test-t.test2.R:418:1',
+  'test-table2.R:362:1', 'test-table2.R:373:1', 'test-table2.R:384:1',
+  'test-table2.R:395:1', 'test-table2.R:406:1'
+
+[ FAIL 0 | WARN 0 | SKIP 14 | PASS 917 ]
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> proc.time()
+   user  system elapsed 
+  15.45    4.00   19.65 

@@ -1,0 +1,2450 @@
+\nonstopmode{}
+\documentclass[a4paper]{book}
+\usepackage[times,inconsolata,hyper]{Rd}
+\usepackage{makeidx}
+\makeatletter\@ifl@t@r\fmtversion{2018/04/01}{}{\usepackage[utf8]{inputenc}}\makeatother
+% \usepackage{graphicx} % @USE GRAPHICX@
+\makeindex{}
+\begin{document}
+\chapter*{}
+\begin{center}
+{\textbf{\huge Package `statuser'}}
+\par\bigskip{\large \today}
+\end{center}
+\ifthenelse{\boolean{Rd@use@hyper}}{\hypersetup{pdftitle = {statuser: Statistical Tools Designed for End Users}}}{}
+\ifthenelse{\boolean{Rd@use@hyper}}{\hypersetup{pdfauthor = {Uri Simonsohn}}}{}
+\begin{description}
+\raggedright{}
+\item[Type]\AsIs{Package}
+\item[Title]\AsIs{Statistical Tools Designed for End Users}
+\item[Version]\AsIs{0.2.1}
+\item[Author]\AsIs{Uri Simonsohn [aut, cre]}
+\item[Maintainer]\AsIs{Uri Simonsohn }\email{urisohn@gmail.com}\AsIs{}
+\item[Description]\AsIs{The statistical tools in this package do one of four things:
+1) Enhance basic statistical functions with more 
+flexible inputs, smarter defaults, and richer, clearer, and ready-to-use 
+output (e.g., t.test2())
+2) Produce publication-ready commonly needed figures with one line of code (e.g., plot_cdf())
+3) Implement novel analytical tools developed by the authors (e.g., twolines())
+4) Deliver niche functions of high value to the authors that are not easily
+available elsewhere (e.g., clear(), convert_to_sql(), resize_images()).}
+\item[License]\AsIs{GPL-3}
+\item[Encoding]\AsIs{UTF-8}
+\item[RoxygenNote]\AsIs{7.3.3}
+\item[Imports]\AsIs{mgcv, marginaleffects, rsvg, magick, sandwich, lmtest, utils}
+\item[Suggests]\AsIs{testthat (>= 3.0.0), crayon, quantreg, estimatr, broom,
+modelsummary}
+\item[Config/testthat/edition]\AsIs{3}
+\end{description}
+\Rdcontents{Contents}
+\HeaderA{statuser-package}{Stat Tools for End Users}{statuser.Rdash.package}
+\aliasA{statuser}{statuser-package}{statuser}
+\keyword{internal}{statuser-package}
+%
+\begin{Description}
+Basic and custom statistical tools designed with end users in mind. 
+Functions have optimized defaults, produce decluttered and informative output 
+that is self-explanatory, and generate publication-ready results in 1 line of code.
+\end{Description}
+%
+\begin{Section}{Basic Stats (improved)}
+
+\begin{itemize}
+
+\item{} \code{\LinkA{lm2}{lm2}}: like lm(), with robust SE and much more informative output
+\item{} \code{\LinkA{t.test2}{t.test2}}: like t.test(), decluttered, and more informative output 
+\item{} \code{\LinkA{table2}{table2}}: like table(), showing variable names, and with proportions \& chi2 built in
+\item{} \code{\LinkA{desc\_var}{desc.Rul.var}}: Descriptive statistics for variables (optional, by group(s))
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{Section}{Custom tools from papers by Uri Simonsohn}
+
+\begin{itemize}
+
+\item{} \code{\LinkA{twolines}{twolines}}: Two-lines test for U-shapes (Simonsohn 2018)
+\item{} \code{\LinkA{interprobe}{interprobe}}: Probe and visualize nonlinear interactions (Simonsohn 2024; Montealegre \& Simonsohn 2026)
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{Section}{Graphing}
+
+\begin{itemize}
+
+\item{} \code{\LinkA{scatter.gam}{scatter.gam}}: Makes scatter plot for x \& y, with fitted GAM line y=f(x)
+\item{} \code{\LinkA{plot\_cdf}{plot.Rul.cdf}}: Plot empirical cumulative distribution functions (optional, by group)
+\item{} \code{\LinkA{plot\_density}{plot.Rul.density}}: Plot density functions (optional, by group)
+\item{} \code{\LinkA{plot\_freq}{plot.Rul.freq}}: Plot frequency of observed values (optional, by group)
+\item{} \code{\LinkA{plot\_means}{plot.Rul.means}}: Barplot of means with confidence intervals and (optionally) tests
+\item{} \code{\LinkA{plot\_gam}{plot.Rul.gam}}: Plot fitted GAM values for a focal predictor
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{Section}{Formatting}
+
+\begin{itemize}
+
+\item{} \code{\LinkA{format\_pvalue}{format.Rul.pvalue}}: Format p-values for display
+\item{} \code{\LinkA{message2}{message2}}: Print colored messages to console
+\item{} \code{\LinkA{resize\_images}{resize.Rul.images}}: Resize images (SVG, PDF, EPS, JPG, PNG, etc.) to PNG with specified width
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{Section}{Miscellaneous}
+
+\begin{itemize}
+
+\item{} \code{\LinkA{clear}{clear}}: Clear environment, console, and all graphics devices
+\item{} \code{\LinkA{list2}{list2}}: Like list(), but unnamed objects are automatically named
+\item{} \code{\LinkA{convert\_to\_sql}{convert.Rul.to.Rul.sql}}: Convert CSV files to SQL INSERT statements
+\item{} \code{\LinkA{text2}{text2}}: like text() adding text-alignment and background color
+
+\end{itemize}
+
+\end{Section}
+%
+\begin{Author}
+Uri Simonsohn \email{urisohn@gmail.com}
+\end{Author}
+%
+\begin{References}
+Simonsohn, U. (2018). Two lines: A valid alternative to the invalid testing of 
+U-shaped relationships with quadratic regressions. \emph{Advances in Methods and 
+Practices in Psychological Science}, 1(4), 538-555. \Rhref{https://doi.org/10.1177/2515245918805755}{doi:10.1177\slash{}2515245918805755}
+
+Simonsohn, U. (2024). Interacting with curves: How to validly test and probe interactions in the real (nonlinear) world. \emph{Advances in Methods and Practices in Psychological Science}, 7(1), Article 25152459231207787. \Rhref{https://doi.org/10.1177/25152459231207787}{doi:10.1177\slash{}25152459231207787}
+
+Montealegre, D., \& Simonsohn, U. (2026). \emph{Johnson Neyman 2.0} (working paper).
+\end{References}
+%
+\begin{SeeAlso}
+Useful links:
+\begin{itemize}
+
+\item{} \url{https://github.com/urisohn/statuser}
+
+\end{itemize}
+
+\end{SeeAlso}
+\HeaderA{clear}{Clear Plot, Global Environment, and Console}{clear}
+%
+\begin{Description}
+Clears plot, global environment, and console. On first use the user is
+prompted to authorize clearing the environment to comply with CRAN rules.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+clear()
+\end{verbatim}
+\end{Usage}
+%
+\begin{Details}
+This function performs three cleanup operations:
+\begin{itemize}
+
+\item{} \strong{Plot}: Closes all open graphics devices (except the null device)
+\item{} \strong{Global environment}: Removes all objects from the global environment
+\item{} \strong{Console}: Clears the console screen (only in interactive sessions)
+
+\end{itemize}
+
+
+\code{clear()} will not modify the global environment unless you have
+previously typed "yes" when prompted. If you do not type "yes", you are asked
+again next time; only "yes" is remembered for future sessions.
+
+\strong{Warning}: This function deletes all objects in the global environment.
+Save anything that you wish to keep before running.
+\end{Details}
+%
+\begin{Value}
+Invisibly returns NULL. Prints a colored confirmation message.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+
+# Interactive use: clear workspace, console, and plots
+# First run may prompt; once you type "yes", your preference is saved.
+clear()
+
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{convert\_to\_sql}{Convert CSV file to SQL INSERT statements}{convert.Rul.to.Rul.sql}
+%
+\begin{Description}
+Reads a CSV file and generates SQL statements to insert all rows. Optionally
+can also generate a CREATE TABLE statement. The function automatically infers
+column types (REAL for numeric, DATE for date strings matching YYYY-MM-DD
+format, TEXT otherwise).
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+convert_to_sql(input, output, create_table = FALSE)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{input}] Character string. Path to the input CSV file.
+
+\item[\code{output}] Character string. Path to the output SQL file where the
+statements will be written.
+
+\item[\code{create\_table}] Logical. If \code{TRUE}, includes a CREATE TABLE
+statement before the INSERT statements. Default is \code{FALSE}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+The function performs the following steps:
+\begin{enumerate}
+
+\item{} Reads the CSV file using \code{read.csv()} with
+\code{stringsAsFactors = FALSE}
+\item{} Infers SQL column types:
+\begin{itemize}
+
+\item{} Numeric columns become \code{REAL}
+\item{} Date columns (matching YYYY-MM-DD format) become \code{DATE}
+\item{} All other columns become \code{TEXT}
+
+\end{itemize}
+
+\item{} If \code{create\_table = TRUE}, generates a \code{CREATE TABLE}
+statement using the base filename (without extension) as the table name
+\item{} Generates \code{INSERT INTO} statements for each row
+\item{} Writes all SQL statements to the output file
+
+\end{enumerate}
+
+
+Single quotes in text values are escaped by doubling them (SQL standard).
+Numeric values are inserted without quotes, while text and date values are
+wrapped in single quotes.
+\end{Details}
+%
+\begin{Value}
+Invisibly returns NULL. The function writes SQL statements to the
+specified output file.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Convert a CSV file to SQL (INSERT statements only)
+tmp_csv <- tempfile(fileext = ".csv")
+tmp_sql <- tempfile(fileext = ".sql")
+write.csv(
+  data.frame(id = 1:2, value = c("a", "b"), date = c("2024-01-01", "2024-02-02")),
+  tmp_csv,
+  row.names = FALSE
+)
+convert_to_sql(tmp_csv, tmp_sql)
+
+# Convert a CSV file to SQL with CREATE TABLE statement
+convert_to_sql(tmp_csv, tmp_sql, create_table = TRUE)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{desc\_var}{Describe a variable, optionally by groups}{desc.Rul.var}
+%
+\begin{Description}
+Returns a dataframe with one row per group.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+desc_var(y, group = NULL, data = NULL, digits = 3)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{y}] A numeric vector of values, a column name (character string or unquoted) if \code{data} is provided,
+or a formula of the form \code{y \textasciitilde{} x} or \code{y \textasciitilde{} x1 + x2} (for multiple grouping variables).
+
+\item[\code{group}] Optional grouping variable, if not provided computed for the full data.
+Ignored if \code{y} is a formula.
+
+\item[\code{data}] Optional data frame containing the variable(s).
+
+\item[\code{digits}] Number of decimal places to round to. Default is 3.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+The dependent variable (`y`) must be numeric. If you pass an existing
+non-numeric variable (e.g., character, factor), `desc\_var()` will stop with
+a clear error indicating that the variable must be numeric.
+\end{Details}
+%
+\begin{Value}
+A data frame with one row per group (or one row if no group is specified) containing:
+\begin{itemize}
+
+\item{} \code{group}: Group identifier
+\item{} \code{mean}: Mean
+\item{} \code{sd}: Standard deviation
+\item{} \code{se}: Standard error
+\item{} \code{median}: Median
+\item{} \code{min}: Minimum
+\item{} \code{max}: Maximum
+\item{} \code{mode}: Most frequent value
+\item{} \code{freq\_mode}: Frequency of mode
+\item{} \code{mode2}: 2nd most frequent value
+\item{} \code{freq\_mode2}: Frequency of 2nd mode
+\item{} \code{n.total}: Number of observations
+\item{} \code{n.missing}: Number of observations with missing (NA) values
+\item{} \code{n.unique}: Number of unique values
+
+\end{itemize}
+
+Columns may also carry a \code{"label"} attribute, which provides a short
+human-readable description of each column.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# With grouping
+df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+desc_var(y, group, data = df)
+
+# Without grouping (full dataset)
+desc_var(y, data = df)
+
+# Direct vectors
+y <- rnorm(100)
+group <- rep(c("A", "B"), 50)
+desc_var(y, group)
+
+# With custom decimal places
+desc_var(y, group, data = df, digits = 2)
+
+# Using formula syntax: y ~ x
+desc_var(y ~ group, data = df)
+
+# Using formula syntax with multiple grouping variables: y ~ x1 + x2
+df2 <- data.frame(y = rnorm(200), x1 = rep(c("A", "B"), 100), x2 = rep(c("X", "Y"), each = 100))
+desc_var(y ~ x1 + x2, data = df2)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{evaluate\_variable\_arguments}{Evaluate Variable Arguments with NSE Support}{evaluate.Rul.variable.Rul.arguments}
+\keyword{internal}{evaluate\_variable\_arguments}
+%
+\begin{Description}
+Resolves bare symbols (unquoted names) or quoted strings to actual data,
+either from a data frame or the calling environment. This enables both
+\code{plot\_density(DV1, data=df)} and \code{plot\_density("DV1", data=df)}
+to work identically.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+evaluate_variable_arguments(
+  arg_expr,
+  arg_name = "arg",
+  data = NULL,
+  calling_env = parent.frame(),
+  func_name = "function",
+  allow_null = FALSE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{arg\_expr}] Unevaluated expression (from match.call() or substitute())
+
+\item[\code{arg\_name}] Character string. Name of the argument (for error messages)
+
+\item[\code{data}] Optional data frame to look up columns
+
+\item[\code{calling\_env}] Environment to evaluate symbols if data is NULL
+
+\item[\code{func\_name}] Character string. Name of calling function (for error messages)
+
+\item[\code{allow\_null}] Logical. If TRUE, NULL is a valid input. Default FALSE.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list with:
+\begin{itemize}
+
+\item{} \code{value}: The actual data (vector, formula, or NULL)
+\item{} \code{name}: Clean name for labels (e.g., "DV1")
+\item{} \code{name\_raw}: Raw name for error messages (e.g., "df\$DV1")
+\item{} \code{was\_symbol}: Logical. TRUE if input was an unquoted name
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{format\_pvalue}{Format P-Values for Display}{format.Rul.pvalue}
+%
+\begin{Description}
+Formats p-values for clean display in figures and tables. e.g., p = .0231, p<.0001
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+format_pvalue(p, digits = 4, include_p = FALSE)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{p}] A numeric vector of p-values to format.
+
+\item[\code{digits}] Number of decimal places to round to. Default is 4.
+
+\item[\code{include\_p}] Logical. If TRUE, includes "p" prefix before the formatted
+value (e.g., "p = .05"). Default is FALSE.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A character vector of formatted p-values.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Basic usage
+format_pvalue(0.05)
+format_pvalue(0.0001)
+
+# More rounding
+format_pvalue(0.0001,digits=2)
+
+# Vector input
+format_pvalue(c(0.05, 0.001, 0.00001, 0.99))
+
+# With p prefix
+format_pvalue(0.05, include_p = TRUE)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{interprobe}{Probe interactions robustly to nonlinearities}{interprobe}
+%
+\begin{Description}
+Probes an interaction by estimating (or accepting) a model and computing:
+- simple slopes ("spotlights") using predicted values
+- Johnson-Neyman ("jn") curves using marginal effects
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+interprobe(
+  x = NULL,
+  z = NULL,
+  y = NULL,
+  model = NULL,
+  data = NULL,
+  moderator.on.x.axis = TRUE,
+  k = NULL,
+  spotlights = NULL,
+  spotlight.labels = NULL,
+  histogram = TRUE,
+  max.unique = 11,
+  n.bin.continuous = 10,
+  n.max = 50,
+  xlab = "",
+  ylab1 = "",
+  ylab2 = "",
+  cols = c("red4", "dodgerblue", "green4"),
+  main1 = "GAM Simple Slopes",
+  main2 = "GAM Johnson-Neyman",
+  legend.round = c(1, 4),
+  draw = "both",
+  save.as = NULL,
+  xlim = NULL,
+  ylim1 = NULL,
+  ylim2 = NULL,
+  x.ticks = NULL,
+  y1.ticks = NULL,
+  y2.ticks = NULL,
+  legend.simple.slopes = NULL,
+  legend.jn = NULL,
+  quiet = FALSE,
+  probe.bins = 100
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] The focal predictor. Can be a name (bare or quoted) when `data` or `model`
+is provided, or a numeric/factor vector when probing from vectors.
+
+\item[\code{z}] The moderator. Same options as `x`.
+
+\item[\code{y}] The dependent variable. Same options as `x`. Not required when `model` is supplied.
+
+\item[\code{model}] By default `interprobe` estimates a GAM model predicting `y` with `x` and `z`.
+You can instead probe a linear interaction by setting model=linear. You can also probe a 
+model of your choice by running it separately, saving the output, and submitting it as the model 
+argument to  interprobe. This is the way to include covariates for a probed interaction.
+
+\item[\code{data}] Optional data frame containing `x`, `z`, and `y`.
+
+\item[\code{moderator.on.x.axis}] Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.
+
+\item[\code{k}] Integer. Smoothness parameter passed to `mgcv::gam()` when estimating with the default
+GAM engine.
+
+\item[\code{spotlights}] Numeric vector of length 3. Values at which curves are computed.
+
+\item[\code{spotlight.labels}] Character vector of length 3. Labels for the legend.
+
+\item[\code{histogram}] Logical. If TRUE (default), show sample size distribution under the plot.
+
+\item[\code{max.unique}] Integer. Threshold for treating a variable as continuous vs discrete.
+
+\item[\code{n.bin.continuous}] Integer. Number of bins used in histogram when binning continuous values.
+
+\item[\code{n.max}] Integer. Sample size at which line darkness/width saturates.
+
+\item[\code{xlab}] Character. X-axis label.
+
+\item[\code{ylab1}] Character. Y-axis label for simple slopes panel.
+
+\item[\code{ylab2}] Character. Y-axis label for JN panel.
+
+\item[\code{cols}] Character vector of length 3. Colors for the three curves.
+
+\item[\code{main1}] Character. Title for simple slopes panel.
+
+\item[\code{main2}] Character. Title for JN panel.
+
+\item[\code{legend.round}] Integer vector length 2. Min/max decimals in legend.
+
+\item[\code{draw}] Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), or `"jn"`.
+
+\item[\code{save.as}] Optional file path to save plot (`.png` or `.svg`).
+
+\item[\code{xlim}] Numeric vector length 2. X-axis limits.
+
+\item[\code{ylim1}] Numeric vector length 2. Y-axis limits for simple slopes.
+
+\item[\code{ylim2}] Numeric vector length 2. Y-axis limits for JN.
+
+\item[\code{x.ticks}] Optional custom x-axis ticks.
+
+\item[\code{y1.ticks}] Optional custom y-axis ticks for panel 1.
+
+\item[\code{y2.ticks}] Optional custom y-axis ticks for panel 2.
+
+\item[\code{legend.simple.slopes}] Optional legend title for simple slopes.
+
+\item[\code{legend.jn}] Optional legend title for JN.
+
+\item[\code{quiet}] Logical. If TRUE, reduces console output.
+
+\item[\code{probe.bins}] Integer. Resolution for probing curves (larger = smoother/slower).
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Designed for GAM models but works with any model supported by `marginaleffects`
+(including `lm`, `glm`, `mgcv::gam`, and `lm2` / `estimatr::lm\_robust`).
+\end{Details}
+%
+\begin{Value}
+Invisibly returns a list with:
+\begin{itemize}
+
+\item{} \code{simple.slopes}: data.frame of predicted values and confidence intervals
+\item{} \code{johnson.neyman}: data.frame of marginal effects and confidence intervals
+\item{} \code{frequencies}: data.frame with bin frequencies used for shading/histogram
+\item{} \code{gam\_results}: the fitted GAM model when estimated inside \code{interprobe()}
+\item{} \code{gam\_results\_testing}: when \code{interprobe()} estimates a GAM internally and \code{x}
+has exactly 2 unique values, a separate GAM fit used for interaction testing (with a \code{ti()}
+term and numeric coding of \code{x})
+\item{} \code{lm2\_results}: when \code{interprobe()} estimates a GAM internally, also returns the
+corresponding linear fit \code{lm2(y \textasciitilde{} x * z)} (or \code{NULL} if package \code{estimatr}
+is not installed)
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{list2}{Enhanced alternative to list()}{list2}
+%
+\begin{Description}
+List with objects that are automatically named.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+list2(...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{...}] Objects to include in the list. Objects are automatically named 
+based on their variable names unless explicit names are provided.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+list2(x , y)      is equivalent to list(x = x , y = y)
+
+list2(x , y2 = y) is equivalent to list(x = x , y2 = y)
+
+Based on: \url{https://stackoverflow.com/questions/16951080/can-lists-be-created-that-name-themselves-based-on-input-object-names}
+\end{Details}
+%
+\begin{Value}
+A named list. Each element is named after the variable passed to 
+the function (or the explicit name if provided). The structure is identical 
+to a standard R list created with \code{\LinkA{list}{list}}.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+x <- 1:5
+y <- letters[1:3]
+z <- matrix(1:4, nrow = 2)
+
+# Create named list from objects
+my_list <- list2(x, y, z)
+names(my_list)  # "x" "y" "z"
+
+# Works with explicit names too
+my_list2 <- list2(a = x, b = y)
+names(my_list2)  # "a" "b"
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{lm2}{Enhanced alternative to lm()}{lm2}
+%
+\begin{Description}
+Runs a linear regression with better defaults (robust SE), and richer \& better 
+formatted output than \code{lm}. For robust and clustered errors it relies on \code{\LinkA{lm\_robust}{lm.Rul.robust}}. 
+The output reports classical and robust errors, number of missing observations per
+variable, an effect size column (standardized regression coefficient), and a red.flag column per variable 
+flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors;
+\code{lm\_robust} relies on HC2 (and Stata's 'reg y x, robust' on HC1), which can have
+inflated false-positive rates in smaller samples (Long \& Ervin, 2000).
+\end{Description}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{se\_type}] The type of standard error to use. Default is \code{"HC3"}.
+Without clusters: \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
+When \code{clusters} is specified, \code{se\_type} is automatically set to \code{"CR2"}.
+
+\item[\code{notes}] Logical. If TRUE (default), print explanatory notes below the table
+when the result is printed.
+
+\item[\code{clusters}] An optional variable indicating clusters for cluster-robust standard 
+errors. When specified, \code{se\_type} is automatically set to \code{"CR2"} 
+(bias-reduced cluster-robust estimator). Passed to \code{\LinkA{lm\_robust}{lm.Rul.robust}}.
+
+\item[\code{fixed\_effects}] An optional right-sided formula containing the fixed effects 
+to be projected out (absorbed) before estimation. Useful for models with many 
+fixed effect groups (e.g., \code{\textasciitilde{} firm\_id} or \code{\textasciitilde{} firm\_id + year}). 
+Passed to \code{\LinkA{lm\_robust}{lm.Rul.robust}}.
+
+\item[\code{...}] Additional arguments passed to \code{\LinkA{lm\_robust}{lm.Rul.robust}}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Robust standard errors and clustered standard errors are computed using 
+\code{\LinkA{lm\_robust}{lm.Rul.robust}}; see the documentation of that function for details (using by default CR2 errors)
+The output shows both standard errors and when clustering errors it reports all three.
+The red.flag column is based on the difference between robust and classical standard errors.
+
+The \code{red.flag} column provides diagnostic warnings:
+\begin{itemize}
+
+\item{} \code{!}, \code{!!}, \code{!!!}: Robust and classical standard errors differ by 
+more than 25\%, 50\%, or 100\%, respectively. Large differences may suggest model 
+misspecification or outliers (but they may also be benign). When encountering a red flag,
+authors should plot the distributions to look for outliers or skewed data, and use \code{\LinkA{scatter.gam}{scatter.gam}}
+to look for possible nonlinearities in the relevant variables.
+King \& Roberts (2015) propose a higher cutoff, at 100\%, and a bootstrapped significance test; 
+\code{statuser} does not follow either recommendation. The former seems too liberal, the 
+latter too time consuming to include in every regression, plus the focus here is on individual variables rather than joint tests.
+\item{} \code{X}: For interaction terms, the component variables are correlated (|r| > 0.3 or p < .05),
+which means the interaction term is likely to be biased. See Simonsohn (2024) "Interacting with curves"
+\Rhref{https://doi.org/10.1177/25152459231207787}{doi:10.1177\slash{}25152459231207787}.
+
+\end{itemize}
+
+\end{Details}
+%
+\begin{Value}
+An object of class \code{c("lm2", "lm\_robust", "lm")}. This inherits 
+from \code{\LinkA{lm\_robust}{lm.Rul.robust}} and can be used with packages like 
+\code{marginaleffects}. The object contains all components of an \code{lm\_robust} 
+object plus additional attributes:
+\begin{description}
+
+\item[statuser\_table] A data frame with columns: \code{term}, \code{estimate}, 
+\code{SE.robust}, \code{SE.classical}, \code{t}, \code{df}, \code{p.value}, 
+\code{B} (standardized coefficient), and optionally \code{SE.cluster} when 
+clustered standard errors are used.
+\item[classical\_fit] The underlying \code{lm} object with classical standard errors.
+\item[na\_counts] Integer vector of missing value counts per variable.
+\item[n\_missing] Total number of observations excluded due to missing values.
+\item[has\_clusters] Logical indicating whether clustered standard errors were used.
+
+\end{description}
+
+When printed, displays a formatted regression table with robust and classical 
+standard errors, effect sizes, and diagnostic red flags.
+\end{Value}
+%
+\begin{References}
+King, G., \& Roberts, M. E. (2015). How robust standard errors expose methodological 
+problems they do not fix, and what to do about it. \emph{Political Analysis}, 23(2), 159-179.
+
+Long, J. S., \& Ervin, L. H. (2000). Using heteroscedasticity consistent standard errors 
+in the linear regression model. \emph{The American Statistician}, 54(3), 217-224.
+
+Simonsohn, U. (2024). Interacting with curves: How to validly test and probe 
+interactions in the real (nonlinear) world. \emph{Advances in Methods and Practices in 
+Psychological Science}, 7(1), 1-22.
+\end{References}
+%
+\begin{SeeAlso}
+\code{\LinkA{lm\_robust}{lm.Rul.robust}}, \code{\LinkA{scatter.gam}{scatter.gam}}
+\end{SeeAlso}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Basic usage with data argument
+lm2(mpg ~ wt + hp, data = mtcars)
+
+# Without data argument (variables from environment)
+y <- mtcars$mpg
+x1 <- mtcars$wt
+x2 <- mtcars$hp
+lm2(y ~ x1 + x2)
+
+# RED FLAG EXAMPLES
+
+# Example 1: red flag catches a nonlinearity
+# True model is quadratic: y = x^2
+set.seed(123)
+x <- runif(200, -3, 3)
+y <- x^2 + rnorm(200, sd = 2)
+
+# lm2() shows red flag due to misspecification
+lm2(y ~ x)
+
+# Follow up with scatter.gam() to diagnose it
+scatter.gam(x, y)
+
+# Example 2: red flag catches an outlier in y
+# True model is y = x, but one observation has a very large y value
+set.seed(123)
+x <- sort(rnorm(200))
+y <- round(x + rnorm(200, sd = 2), 1)
+y[200] <- 100  # Outlier
+
+# lm2() flags x
+lm2(y ~ x)
+
+# Look at distribution of y to spot the outlier
+plot_freq(y)
+
+# Example 3: red flag catches an outlier in one predictor
+# True model is y = x1 + x2, but x2 has an extreme value
+set.seed(123)
+x1 <- round(rnorm(200),.1)
+x2 <- round(rnorm(200),.1)
+y <- x1 + x2 + rnorm(200, sd = 0.5)
+x2[200] <- 50  # Outlier in x2
+
+# lm2() flags x2 (but not x1)
+lm2(y ~ x1 + x2)
+
+# Look at distribution of x2 to spot the outlier
+plot_freq(x2)
+
+# CLUSTERED STANDARD ERRORS
+# When observations are grouped (e.g., students within schools),
+# use clusters to account for within-group correlation
+set.seed(123)
+n_clusters <- 20
+n_per_cluster <- 15
+cluster_id <- rep(1:n_clusters, each = n_per_cluster)
+cluster_effect <- rnorm(n_clusters, sd = 2)[cluster_id]
+x <- rnorm(n_clusters * n_per_cluster)
+y <- 1 + 0.5 * x + cluster_effect + rnorm(n_clusters * n_per_cluster)
+mydata <- data.frame(y = y, x = x, cluster_id = cluster_id)
+
+# Clustered SE (CR2) - note the SE.cluster column in output
+lm2(y ~ x, data = mydata, clusters = cluster_id)
+
+# FIXED EFFECTS
+# Use fixed_effects to absorb group-level variation (e.g., firm or year effects)
+# This is useful for panel data or when you have many fixed effect levels
+set.seed(456)
+n_firms <- 30
+n_years <- 5
+firm_id <- rep(1:n_firms, each = n_years)
+year <- rep(2018:2022, times = n_firms)
+firm_effect <- rnorm(n_firms, sd = 3)[firm_id]
+x <- rnorm(n_firms * n_years)
+y <- 2 + 0.8 * x + firm_effect + rnorm(n_firms * n_years)
+panel <- data.frame(y = y, x = x, firm_id = factor(firm_id), year = factor(year))
+
+# Absorb firm fixed effects (coefficient on x is estimated, firm dummies are not shown)
+lm2(y ~ x, data = panel, fixed_effects = ~ firm_id)
+
+# Two-way fixed effects (firm and year)
+lm2(y ~ x, data = panel, fixed_effects = ~ firm_id + year)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{message2}{Enhanced alternative to message()}{message2}
+%
+\begin{Description}
+Add options to set color and to end execution of code (to be used as error message)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+message2(..., col = "cyan", font = 1, stop = FALSE)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{...}] Message content to be printed. Multiple arguments are pasted together.
+
+\item[\code{col}] text color. Default is "cyan".
+
+\item[\code{font}] Integer. 1 for plain text (default), 2 for bold text.
+
+\item[\code{stop}] Logical. If TRUE, stops execution (like \code{stop()}) but without printing "Error:".
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+This function prints colored messages to the console. If ANSI color codes are supported
+by the terminal, the message will be colored. Otherwise, it will be printed as plain text.
+If \code{stop = TRUE}, execution will be halted after printing the message.
+\end{Details}
+%
+\begin{Value}
+No return value, called for side effects. Prints a colored message 
+to the console. If \code{stop = TRUE}, execution is halted after printing 
+the message.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+message2("This is a plain cyan message", col = "cyan", font = 1)
+message2("This is a bold cyan message", col = "cyan", font = 2)
+message2("This is a bold red message", col = "red", font = 2)
+
+cat("this will be shown")
+try(message2("This stops execution", stop = TRUE), silent = TRUE)
+cat("this will be shown after the try")
+
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_cdf}{Plot Empirical Cumulative Distribution Functions by Group}{plot.Rul.cdf}
+%
+\begin{Description}
+Plots empirical cumulative distribution functions (ECDFs) separately for
+each unique value of a grouping variable, with support for vectorized
+plotting parameters. If no grouping variable is provided, plots a single ECDF.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_cdf(
+  formula,
+  y2 = NULL,
+  data = NULL,
+  order = NULL,
+  show.ks = TRUE,
+  show.quantiles = TRUE,
+  ...
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{formula}] Two possible uses (similar to \code{t.test()}):
+\begin{itemize}
+
+\item{} Single Variable (possibly by subgroup): \code{plot\_cdf(y)} or \code{plot\_cdf(y\textasciitilde{}x)}
+\item{} Contrast Two Variables: \code{plot\_cdf(y1, y2)}
+
+\end{itemize}
+
+
+\item[\code{y2}] optional second variable when contrasting two variables \code{plot\_cdf(y1,y2)}
+
+\item[\code{data}] An optional data frame containing the variables in the formula.
+If \code{data} is not provided, variables are evaluated from the calling environment.
+
+\item[\code{order}] Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots.
+
+\item[\code{show.ks}] Logical. If TRUE (default), shows Kolmogorov-Smirnov test results
+when there are exactly 2 groups. If FALSE, KS test results are not displayed.
+
+\item[\code{show.quantiles}] Logical. If TRUE (default), shows horizontal lines and results
+at 25th, 50th, and 75th percentiles when there are exactly 2 groups. If FALSE,
+quantile lines and results are not displayed.
+
+\item[\code{...}] Additional arguments passed to plotting functions. Can be single values
+(applied to all groups) or vectors (applied element-wise to each group).
+Common parameters include \code{col}, \code{lwd}, \code{lty}, \code{pch},
+\code{type}, etc.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly returns a list containing:
+\begin{itemize}
+
+\item{} \code{ecdfs}: A list of ECDF function objects, one per group. Each can be
+called as a function to compute cumulative probabilities (e.g., \code{result\$ecdfs[[1]](5)}
+returns P(X <= 5) for group 1).
+\item{} \code{ks\_test}: (Only when exactly 2 groups) The Kolmogorov-Smirnov test result
+comparing the two distributions. Access p-value with \code{result\$ks\_test\$p.value}.
+\item{} \code{quantile\_regression\_25}: (Only when exactly 2 groups) Quantile regression
+model for the 25th percentile.
+\item{} \code{quantile\_regression\_50}: (Only when exactly 2 groups) Quantile regression
+model for the 50th percentile (median).
+\item{} \code{quantile\_regression\_75}: (Only when exactly 2 groups) Quantile regression
+model for the 75th percentile.
+\item{} \code{warnings}: Any warnings captured during execution (if any).
+
+\end{itemize}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Basic usage with single variable (no grouping)
+y <- rnorm(100)
+plot_cdf(y)
+
+# Basic usage with formula syntax and grouping
+group <- rep(c("A", "B", "C"), c(30, 40, 30))
+plot_cdf(y ~ group)
+
+# With custom colors (scalar - same for all)
+plot_cdf(y ~ group, col = "blue")
+
+# With custom colors (vector - different for each group)
+plot_cdf(y ~ group, col = c("red", "green", "blue"))
+
+# Multiple parameters
+plot_cdf(y ~ group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+
+# With line type and point character
+plot_cdf(y ~ group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+
+# Using data frame
+df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+plot_cdf(value ~ group, data = df)
+plot_cdf(value ~ group, data = df, col = c("red", "blue"))
+
+# Compare two vectors
+y1 <- rnorm(50)
+y2 <- rnorm(50, mean = 1)
+plot_cdf(y1, y2)
+
+# Formula syntax without data (variables evaluated from environment)
+widgetness <- rnorm(100)
+gender <- rep(c("M", "F"), 50)
+plot_cdf(widgetness ~ gender)
+
+# Using the returned object
+df <- data.frame(value = c(rnorm(50, 0), rnorm(50, 1)), group = rep(c("A", "B"), each = 50))
+result <- plot_cdf(value ~ group, data = df)
+
+# Use ECDF to find P(X <= 0.5) for group A
+result$ecdfs[[1]](0.5)
+
+# Access KS test p-value
+result$ks_test$p.value
+
+# Summarize median quantile regression
+summary(result$quantile_regression_50)
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_density}{Plot density of a variable, optionally by another variable}{plot.Rul.density}
+%
+\begin{Description}
+Plots the distribution of a variable by group, simply: \code{plot\_density(y \textasciitilde{} x)}
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_density(
+  formula,
+  y2 = NULL,
+  data = NULL,
+  order = NULL,
+  show_means = TRUE,
+  ...
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{formula}] Two possible uses (similar to \code{t.test()}):
+\begin{itemize}
+
+\item{} Single Variable (possibly by subgroup): \code{plot\_density(y)} or \code{plot\_density(y\textasciitilde{}x)}
+\item{} Contrast Two Variables: \code{plot\_density(y1, y2)}
+
+\end{itemize}
+
+
+\item[\code{y2}] optional second variable when contrasting two variables \code{plot\_density(y1,y2)}
+
+\item[\code{data}] An optional data frame containing the variables in the formula.
+
+\item[\code{order}] Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots.
+
+\item[\code{show\_means}] Logical. If TRUE (default), shows points at means.
+
+\item[\code{...}] Additional arguments passed to plotting functions.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Plot parameters like
+\code{col}, \code{lwd}, \code{lty}, and \code{pch} can be specified as:
+\begin{itemize}
+
+\item{} A single value: applied to all groups
+\item{} A vector: applied to groups in order of unique \code{group} values
+
+\end{itemize}
+
+\end{Details}
+%
+\begin{Value}
+Invisibly returns a list with the following element:
+\begin{description}
+
+\item[densities] A named list of density objects (class \code{"density"}), 
+one for each group. Each density object contains \code{x} (evaluation points), 
+\code{y} (density estimates), \code{bw} (bandwidth), and other components 
+as returned by \code{\LinkA{density}{density}}. If no grouping variable is 
+provided, the list contains a single element named \code{"all"}.
+
+\end{description}
+
+The function is primarily called for its side effect of creating a plot.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Basic usage with formula syntax (no grouping)
+y <- rnorm(100)
+plot_density(y)
+
+# With grouping variable
+group <- rep(c("A", "B", "C"), c(30, 40, 30))
+plot_density(y ~ group)
+
+# With custom colors (scalar - same for all)
+plot_density(y ~ group, col = "blue")
+
+# With custom colors (vector - different for each group)
+plot_density(y ~ group, col = c("red", "green", "blue"))
+
+# Multiple parameters
+plot_density(y ~ group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+
+# With line type
+plot_density(y ~ group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+
+# Using data frame
+df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+plot_density(value ~ group, data = df)
+plot_density(value ~ group, data = df, col = c("red", "blue"))
+
+# Compare two vectors
+y1 <- rnorm(50)
+y2 <- rnorm(50, mean = 1)
+plot_density(y1, y2)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_freq}{Plot frequencies for a variable (histogram without binning)}{plot.Rul.freq}
+%
+\begin{Description}
+Creates a frequency plot showing the frequency of every observed value, optionaly by group. 
+Most frequent values are labeled by default.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_freq(
+  formula,
+  y2 = NULL,
+  data = NULL,
+  freq = TRUE,
+  order = NULL,
+  col = "dodgerblue",
+  lwd = 9,
+  width = NULL,
+  value.labels = "auto",
+  ticks.max = 30,
+  show.x.value = "auto",
+  show.legend = TRUE,
+  legend.title = NULL,
+  col.text = NULL,
+  ...
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{formula}] Two possible uses (similar to \code{t.test()}):
+\begin{itemize}
+
+\item{} Single Variable (possibly by subgroup): \code{plot\_freq(y)} or \code{plot\_freq(y\textasciitilde{}x)}
+\item{} Contrast Two Variables: \code{plot\_freq(y1, y2)}
+
+\end{itemize}
+
+
+\item[\code{y2}] optional second variable when contrasting two variables \code{plot\_freq(y1,y2)}
+
+\item[\code{data}] An optional data frame containing the variables in the formula.
+
+\item[\code{freq}] Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.
+
+\item[\code{order}] Controls the order in which groups appear in the plot and legend. 
+Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+ordered by their factor levels (if the grouping variable is a factor) or sorted 
+alphabetically/numerically. Only applies when using grouped plots or comparing two variables.
+
+\item[\code{col}] Color for the bars.
+
+\item[\code{lwd}] Line width for the frequency bars. Default is 9.
+
+\item[\code{width}] Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.
+
+\item[\code{value.labels}] Controls value labeling. If numeric, shows labels for the \code{value.labels}
+highest-frequency values (including ties). Use \code{-1} or \code{"all"} to show all labels and
+\code{0} to show none. Use \code{"auto"} to label all values when there are 30 or fewer
+unique values; otherwise label the single most frequent value. For backward compatibility, \code{TRUE}
+is treated as \code{-1} and \code{FALSE} as \code{0}.
+
+\item[\code{ticks.max}] Integer. Maximum number of unique x values to label on the x-axis. If there are more
+than \code{ticks.max} unique values, \code{pretty()} ticks are used instead of labeling every value.
+
+\item[\code{show.x.value}] Either \code{"auto"} (default), \code{TRUE}, or \code{FALSE}. If enabled, draws a
+small \code{x=<value>} label just above each frequency value label. When \code{"auto"}, x labels are
+shown only when plot\_freq is not already labeling all x values on the x-axis.
+
+\item[\code{show.legend}] Logical. If TRUE (default), displays a legend when \code{group} is specified. If FALSE, no legend is shown.
+
+\item[\code{legend.title}] Character string. Title for the legend when \code{group} is specified. If NULL (default), no title is shown.
+
+\item[\code{col.text}] Color for the value labels. If not specified, uses \code{col} for non-grouped plots or group colors for grouped plots.
+
+\item[\code{...}] Pass on any argument accepted by \code{plot()} e.g., \code{xlab='x-axis'} , \code{main='Distribution of X'}
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+This function creates a frequency plot where each observed value is shown
+with its frequency. Unlike a standard histogram, there is no binning, unlike
+a barplot, non-observed values of the variable are shown with 0 frequency 
+instead of skipped.
+\end{Details}
+%
+\begin{Value}
+Invisibly returns a data frame with values and their frequencies.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Simple example
+x <- c(1, 1, 2, 2, 2, 5, 5)
+plot_freq(x)
+
+# Pass on some common \code{plot()} arguments
+plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
+
+# Add to an existing plot
+plot_freq(x, col = "dodgerblue")
+
+
+# Compare two vectors
+y1 <- c(1, 1, 2, 2, 2, 5, 5)
+y2 <- c(1, 2, 2, 3, 3, 3)
+plot_freq(y1, y2)
+
+# Using a data frame with grouping
+df <- data.frame(value = c(1, 1, 2, 2, 2, 5, 5), group = c("A", "A", "A", "B", "B", "A", "B"))
+plot_freq(value ~ 1, data = df)  # single variable
+plot_freq(value ~ group, data = df)  # with grouping
+
+# Control group order in legend and plot
+plot_freq(value ~ group, data = df, order = c("B", "A"))  # B first, then A
+plot_freq(value ~ group, data = df, order = -1)  # Reverse default order
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_gam}{Plot GAM Model}{plot.Rul.gam}
+%
+\begin{Description}
+Plots fitted GAM values for focal predictor,
+keeping any other predictors in the model at a specified quantile  (default: median)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_gam(
+  model,
+  predictor,
+  quantile.others = 50,
+  col = "blue4",
+  bg = adjustcolor("dodgerblue", 0.2),
+  plot2 = "auto",
+  col2 = NULL,
+  bg2 = "gray90",
+  ...
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{model}] A GAM model object fitted using \code{mgcv::gam()}.
+
+\item[\code{predictor}] Character string specifying the name of the predictor variable
+to plot on the x-axis.
+
+\item[\code{quantile.others}] Number between 1 and 99 for quantile
+at which all other predictors are held constant. Default is 50 (median).
+
+\item[\code{col}] Color for the prediction line. Default is "blue4".
+
+\item[\code{bg}] Background color for the confidence band. Default is
+\code{adjustcolor('dodgerblue', .2)}.
+
+\item[\code{plot2}] How to plot the distribution in the lower plot. Options: \code{'auto'} (default,
+auto-select based on number of unique values), \code{'freq'} (always plot frequencies),
+\code{'density'} (always plot the density) or \code{'none'} (neither). When \code{'auto'}, 
+plots frequencies with predictor has less than 30 unique values, density otherwise.
+
+\item[\code{col2}] Color for the lines/bars in the bottom distribution plot. Default is "dodgerblue"
+
+\item[\code{bg2}] Background color for the bottom distribution plot. Default is "gray90".
+
+\item[\code{...}] Additional arguments passed to \code{plot()} and \code{lines()}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly returns a list containing:
+\begin{itemize}
+
+\item{} \code{predictor\_values}: The sequence of predictor values used
+\item{} \code{predicted}: The predicted values
+\item{} \code{se}: The standard errors
+\item{} \code{lower}: Lower confidence bound (predicted - 2*se)
+\item{} \code{upper}: Upper confidence bound (predicted + 2*se)
+
+\end{itemize}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+
+library(mgcv)
+# Fit a GAM model
+data(mtcars)
+mtcars$cyl <- factor(mtcars$cyl)  # Convert to factor before fitting GAM
+model <- gam(mpg ~ s(hp) + s(wt) + cyl, data = mtcars)
+
+# Plot effect of hp (with other variables at median)
+plot_gam(model, "hp")
+
+# Plot effect of hp (with other variables at 25th percentile)
+plot_gam(model, "hp", quantile.others = 25)
+
+# Customize plot
+plot_gam(model, "hp", main = "Effect of Horsepower", col = "blue", lwd = 2)
+
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{plot\_means}{Barplot of means}{plot.Rul.means}
+%
+\begin{Description}
+Plots means, with confidence intervals, and (optionally) p-values for differences of means and interactions
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+plot_means(
+  formula,
+  data = NULL,
+  cluster = NULL,
+  tests = "auto",
+  quiet = FALSE,
+  order = NULL,
+  legend.title = NULL,
+  col = NULL,
+  col.text = NULL,
+  values.cex = 1,
+  values.align = "top",
+  values.round = 1,
+  pvalue.cex = 0.9,
+  pvalue.col = "gray50",
+  ci.level = 95,
+  buffer.top = "auto",
+  ...
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{formula}] A formula, e.g., \code{y \textasciitilde{} x1+x2}, where x1 \& x2 are
+grouping variables (e.g., condition indicators in a 2x2 experiment). 
+The formula can include up to three grouping variables. The plot will 
+show contiguous bars for x1, and sets of bars for x2 and x3
+
+\item[\code{data}] Optional data frame containing variables in the formula.
+
+\item[\code{cluster}] Optional clustering variable when there are repeated 
+observations per cluster 
+e.g., \code{cluster="participant\_ID"}. 
+When provided, inference for reported tests is based on regressions with
+clustered standard errors (via \code{lm2(..., clusters=...)}).
+
+\item[\code{tests}] specifies which comparisons of means to report. Syntax involves 
+putting column numbers in a character string, with a - to symbolize a 
+comparison and a + symbolizing combination. For example tests="1-2" reports 
+t-test comparing columns 1 and 2. tests="1-2,3-4" t-tests comparing columns 
+1 \& 2 and another 3 \& 4. To run an interaction use parentheses:
+tests=\code{"(4-3)-(2-1)"} and can also be combined with simple tests. 
+Main effects can be specified using `+`, for example (1+2)-(3+4) compares 
+all observations in the first two columns with all observations in 
+the next two columns.
+
+\item[\code{quiet}] Logical. When \code{TRUE}, suppresses console messages from \code{plot\_means()}.
+
+\item[\code{order}] Controls the order of \code{x1} groups (bar order and colors).
+Use \code{-1} to reverse the default order (e.g., if plot shows 'male' first and 'female' second, order=-1 will flip that).
+
+\item[\code{legend.title}] Character string. Title for the legend. If \code{NULL},
+no title is shown.
+
+\item[\code{col}] Color(s) for \code{x1} bars. If \code{NULL}, colors are chosen
+automatically.
+
+\item[\code{col.text}] Color for confidence intervals and other non-bar annotations.
+If \code{NULL}, defaults to a dark gray.
+
+\item[\code{values.cex}] Numeric scalar controlling text size for mean value labels
+(and related annotations).
+
+\item[\code{values.align}] Where within the bars to put the mean value labels: \code{"top"}, \code{"middle"},
+\code{"bottom"}, or \code{"none"}.
+
+\item[\code{values.round}] Non-negative integer. Number of decimal places for mean
+value labels.
+
+\item[\code{pvalue.cex}] Numeric scalar controlling p-value label size.
+
+\item[\code{pvalue.col}] Color for p-value brackets/labels.
+
+\item[\code{ci.level}] Confidence interval level for \code{ciL}/\code{ciH} in \code{\$means}.
+Default is \code{95}. You can also pass a proportion (e.g., \code{0.95}).
+
+\item[\code{buffer.top}] Either \code{"auto"} (default) or a numeric value. Extra
+vertical headroom (as a fraction of the data y-range) added above the
+maximum y value to make room for annotations. When \code{"auto"}, uses 0.35
+when an interaction p-value is shown (scenario 2) and 0.25 otherwise.
+
+\item[\code{...}] Additional arguments passed to \code{plot()} (e.g., \code{main},
+\code{ylim}, \code{ylab}).
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+When \code{tests="auto"}, the function reports a small default set of
+differences-of-means tests (when applicable) and, in 2x2 designs, an
+interaction test:
+\begin{description}
+
+\item[Differences in means] If \code{cluster} is \code{NULL}, these are Welch
+two-sample t-tests computed with \code{t.test(..., var.equal=FALSE)}. If
+\code{cluster} is provided, these comparisons are computed from a
+regression using \code{lm2()} with clustered standard errors.
+\item[Interaction] The interaction is tested using a linear regression fit
+with \code{lm2()}, even when \code{cluster} is \code{NULL}; when
+\code{cluster} is provided, the interaction test uses clustered standard
+errors.
+
+\end{description}
+
+The regression-based tests use heteroskedasticity-robust inference (HC3) when
+\code{cluster} is \code{NULL}. HC3 is a common small-sample adjustment to
+White-type robust standard errors and is used to reduce sensitivity to
+heteroskedasticity. When \code{cluster} is provided, \code{plot\_means()}
+instead uses clustered standard errors (robust to within-cluster correlation).
+
+In the returned \code{\$means} table, \code{ciL} and \code{ciH} are the lower and
+upper bounds of a \code{ci.level}\% confidence interval for the mean (when
+available). The same confidence level is used for the confidence-interval
+whiskers drawn in the figure.
+\end{Details}
+%
+\begin{Value}
+A minimal list returned invisibly with two elements:
+\begin{description}
+
+\item[\code{means}] A data frame of means (and, when available, confidence intervals)
+aligned to the plotting grid.
+\item[\code{tests}] A data frame of comparisons used for p-value
+annotation (or \code{NULL} if not applicable).
+
+\end{description}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+df <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+plot_means(y ~ group, data = df)
+
+df2 <- data.frame(
+  y = rnorm(200),
+  x1 = rep(c("A", "B"), 100),
+  x2 = rep(c("X", "Y"), each = 100)
+)
+plot_means(y ~ x1 + x2, data = df2)
+
+df3 <- data.frame(
+  y = rnorm(600),
+  x1 = rep(c("control", "treatment"), times = 300),
+  x2 = rep(rep(c("low", "high"), each = 150), times = 2),
+  x3 = rep(c("online", "lab"), each = 300)
+)
+plot_means(y ~ x1 + x2 + x3, data = df3)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{predict.lm2}{Predict method for lm2 objects}{predict.lm2}
+%
+\begin{Description}
+Predict method for lm2 objects
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+## S3 method for class 'lm2'
+predict(object, newdata, ...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{object}] An object of class \code{lm2}
+
+\item[\code{newdata}] An optional data frame in which to look for variables with 
+which to predict. If omitted, the original model data is used.
+
+\item[\code{...}] Additional arguments passed to \code{\LinkA{predict.lm\_robust}{predict.lm.Rul.robust}},
+including \code{se.fit} and \code{interval}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A vector of predicted values (or a list with \code{fit} and \code{se.fit} 
+if \code{se.fit = TRUE}, or a matrix with \code{fit}, \code{lwr}, \code{upr} 
+if \code{interval} is specified)
+\end{Value}
+\HeaderA{print.desc\_var}{Print method for desc\_var objects}{print.desc.Rul.var}
+%
+\begin{Description}
+Print method for desc\_var objects
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+## S3 method for class 'desc_var'
+print(x, ...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] An object of class \code{desc\_var}
+
+\item[\code{...}] Additional arguments passed to print.data.frame
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly returns the original object
+\end{Value}
+\HeaderA{print.lm2}{Print method for lm2 objects}{print.lm2}
+%
+\begin{Description}
+Print method for lm2 objects
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+## S3 method for class 'lm2'
+print(x, notes = NULL, ...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] An object of class \code{lm2}
+
+\item[\code{notes}] Logical. If TRUE (default), print explanatory notes below the table.
+If not specified, uses the value set when \code{lm2()} was called.
+
+\item[\code{...}] Additional arguments (ignored)
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly returns the original object
+\end{Value}
+\HeaderA{print.t.test2}{Print method for t.test2 output}{print.t.test2}
+%
+\begin{Description}
+Print method for t.test2 output
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+## S3 method for class 't.test2'
+print(x, ...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] An object of class \code{t.test2}
+
+\item[\code{...}] Additional arguments passed to print
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly returns the input object \code{x}. Called for its side effect 
+of printing a formatted t-test summary to the console, including means, 
+confidence intervals, test statistics, p-values, sample sizes, and 
+APA-formatted results.
+\end{Value}
+\HeaderA{print.table2}{Print method for table2 output with centered column variable name}{print.table2}
+%
+\begin{Description}
+Print method for table2 output with centered column variable name
+
+Print method for table2 objects
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+## S3 method for class 'table2'
+print(x, ...)
+
+## S3 method for class 'table2'
+print(x, ...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] An object of class \code{table2}
+
+\item[\code{...}] Additional arguments (ignored)
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly returns the input object \code{x}. Called for its side effect 
+of printing a formatted cross-tabulation table to the console. The output 
+includes frequencies, optional relative frequencies (row, column, or overall 
+proportions), and chi-squared test results when applicable.
+
+Invisibly returns the original object
+\end{Value}
+\HeaderA{reg2}{Two-Line Interrupted Regression}{reg2}
+\keyword{internal}{reg2}
+%
+\begin{Description}
+Performs an interrupted regression analysis with heteroskedastic robust standard errors.
+This function fits two regression lines with a breakpoint at a specified value of the
+first predictor variable.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+reg2(f, xc, graph = 1, family = "gaussian", data = NULL)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{f}] A formula object specifying the model (e.g., y \textasciitilde{} x1 + x2 + x3).
+The first predictor is the one on which the u-shape is tested.
+
+\item[\code{xc}] Numeric value specifying where to set the breakpoint.
+
+\item[\code{graph}] Integer. If 1 (default), produces a plot. If 0, no plot is generated.
+
+\item[\code{family}] Character string specifying the family for the GLM model.
+Default is "gaussian" for OLS regression. Use "binomial" for probit models.
+
+\item[\code{data}] A data frame containing the variables in the formula.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+This function fits two interrupted regression lines with heteroskedastic robust
+standard errors using the sandwich package. The first predictor variable is split
+at the breakpoint \code{xc}, creating separate slopes before and after the breakpoint.
+\end{Details}
+%
+\begin{Value}
+A list containing:
+\begin{itemize}
+
+\item{} \code{b1}, \code{b2}: Slopes of the two regression lines
+\item{} \code{p1}, \code{p2}: P-values for the slopes
+\item{} \code{z1}, \code{z2}: Z-statistics for the slopes
+\item{} \code{u.sig}: Indicator (0/1) for whether u-shape is significant
+\item{} \code{xc}: The breakpoint value
+\item{} \code{glm1}, \code{glm2}: The fitted GLM models
+\item{} \code{rob1}, \code{rob2}: Robust coefficient test results
+\item{} \code{msg}: Messages about standard error computation
+\item{} \code{yhat.smooth}: Fitted smooth values (if graph=1)
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{resize\_images}{Resize Images}{resize.Rul.images}
+%
+\begin{Description}
+Saves images to PNG with a specified width. As input it accepts (SVG, PDF, EPS, JPG, JPEG, TIF, TIFF, BMP, PNG)
+Saves to subdirectory '/resized' within input folder (or same directory as file if input is a single file)
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+resize_images(path, width)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{path}] Character string. Path to a folder containing image files, or path to a single image file.
+
+\item[\code{width}] Numeric vector. Target width(s) in pixels for the output PNG files.
+Can be a single value (recycled for all files) or a vector matching the number
+of files found.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+This function:
+\begin{itemize}
+
+\item{} Searches for image files with extensions: svg, pdf, eps, jpg, jpeg, tif, tiff, bmp, png
+\item{} Creates a "resized" subfolder in the target directory if it doesn't exist
+\item{} Converts each file to PNG format at the specified width(s)
+\item{} Saves output files as: \code{originalname\_width.png} in the resized subfolder
+
+\end{itemize}
+
+
+Supported input formats:
+\begin{itemize}
+
+\item{} Vector graphics: SVG, PDF, EPS (rasterized using rsvg/magick)
+\item{} Raster images: JPG, JPEG, TIF, TIFF, BMP, PNG
+
+\end{itemize}
+
+\end{Details}
+%
+\begin{Value}
+Invisibly returns TRUE on success.
+\end{Value}
+%
+\begin{Note}
+Dependencies required: \code{rsvg}, \code{magick}, and \code{tools} (base R).
+SVG files are rasterized using \code{rsvg::rsvg()}, while PDF/EPS and other
+formats are handled by \code{magick::image\_read()}.
+\end{Note}
+%
+\begin{Examples}
+\begin{ExampleCode}
+
+# Create a temporary PNG file and resize it
+tmp_png <- tempfile(fileext = ".png")
+grDevices::png(tmp_png, width = 400, height = 300)
+old_par <- graphics::par(no.readonly = TRUE)
+graphics::par(mar = c(2, 2, 1, 1))
+graphics::plot(1:2, 1:2, type = "n")
+grDevices::dev.off()
+graphics::par(old_par)
+resize_images(tmp_png, width = 80)
+
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{scatter.gam}{Scatter Plot with GAM Smooth Line}{scatter.gam}
+%
+\begin{Description}
+Creates a scatter plot with a GAM (Generalized Additive Model) smooth line.
+Supports both \code{scatter.gam(x, y)} and \code{scatter.gam(y \textasciitilde{} x)}.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+scatter.gam(
+  x,
+  y,
+  data.dots = TRUE,
+  three.dots = FALSE,
+  data = NULL,
+  k = NULL,
+  plot.dist = NULL,
+  dot.pch = 16,
+  dot.col = adjustcolor("gray", 0.7),
+  jitter = FALSE,
+  ...
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] A numeric vector of x values, or a formula of the form \code{y \textasciitilde{} x}.
+
+\item[\code{y}] A numeric vector of y values. Not used if \code{x} is a formula.
+
+\item[\code{data.dots}] Logical. If TRUE, displays data on scatterplot
+
+\item[\code{three.dots}] Logical. If TRUE, divides x into tertiles and puts markers on the average  x \& y for each
+
+\item[\code{data}] An optional data frame containing the variables \code{x} and \code{y}.
+
+\item[\code{k}] Optional integer specifying the basis dimension for the smooth term
+in the GAM model (passed to \code{s(x, k=k)}). If NULL (default), uses the
+default basis dimension.
+
+\item[\code{plot.dist}] Character string specifying how to plot the distribution of \code{x}
+underneath the scatter plot. Options: \code{NULL} (default, auto-select based on
+number of unique values), \code{"none"} (no distribution plot), \code{"plot\_freq"}
+(always use \code{plot\_freq()}), or \code{"hist"} (always use \code{hist()}).
+When \code{NULL}, uses \code{plot\_freq()} if there are 25 or fewer unique values,
+otherwise uses \code{hist()}.
+
+\item[\code{dot.pch}] Plotting character for data points when \code{data.dots = TRUE}.
+Default is 16 (filled circle).
+
+\item[\code{dot.col}] Color for data points when \code{data.dots = TRUE}. Default is
+\code{adjustcolor('gray', 0.7)} (semi-transparent gray).
+
+\item[\code{jitter}] Logical. If TRUE, applies a small amount of jitter to data points
+to reduce overplotting. Default is FALSE.
+
+\item[\code{...}] Additional arguments passed to \code{plot()} and \code{gam()}.
+Common plot arguments include:
+\begin{itemize}
+
+\item{} \code{main}: Custom title for the plot (e.g., \code{main = "My Title"})
+\item{} \code{col}: Color of the GAM smooth line (e.g., \code{col = "red"})
+\item{} \code{lwd}: Line width of the GAM smooth line (e.g., \code{lwd = 2})
+\item{} \code{xlim}, \code{ylim}: Axis limits (e.g., \code{xlim = c(0, 10)})
+\item{} \code{xlab}, \code{ylab}: Axis labels (e.g., \code{xlab = "Age"})
+
+\end{itemize}
+
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+This function fits a GAM model with a smooth term for x and plots the fitted
+smooth line. The function uses the \code{mgcv} package's \code{gam()} function.
+
+When \code{three.dots = TRUE}, the x variable is divided into three equal-sized
+groups (tertiles), and the mean x and y values for each group are plotted as
+points. This provides a simple summary of the relationship across the range of x.
+\end{Details}
+%
+\begin{Value}
+Invisibly returns the fitted GAM model object.
+\end{Value}
+%
+\begin{SeeAlso}
+\code{\LinkA{scatter.smooth}{scatter.smooth}} for a simpler loess-based scatter plot smoother.
+\end{SeeAlso}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Generate sample data for examples
+x <- rnorm(100)
+y <- 2*x + rnorm(100)
+
+# Plot GAM smooth line only
+scatter.gam(x, y)
+
+# Equivalent call using formula syntax (y ~ x)
+scatter.gam(y ~ x)
+
+# Include scatter plot with underlying data points behind the GAM line
+scatter.gam(x, y, data.dots = TRUE)
+
+# Include summary points showing mean x and y for each tertile bin
+scatter.gam(x, y, three.dots = TRUE)
+
+# Customize the plot with a custom title, line color, and line width
+scatter.gam(x, y, data.dots = TRUE, col = "red", lwd = 2, main = "GAM Fit")
+
+# Control smoothness of the GAM line by specifying the basis dimension
+scatter.gam(x, y, k = 10)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{summary.lm2}{Summary method for lm2 objects}{summary.lm2}
+%
+\begin{Description}
+Summary method for lm2 objects
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+## S3 method for class 'lm2'
+summary(object, ...)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{object}] An object of class \code{lm2}
+
+\item[\code{...}] Additional arguments passed to \code{\LinkA{print.lm2}{print.lm2}}
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Invisibly returns the original object
+\end{Value}
+\HeaderA{t.test2}{Enhanced alternative to t.test()}{t.test2}
+%
+\begin{Description}
+The basic t-test function in R, \code{\LinkA{t.test}{t.test}}, does not report 
+the observed difference of means, does not stipulate which mean
+is subtracted from which (i.e., whether it computed A-B or B-A), and
+presents the test results on the console in a verbose unorganized 
+paragraph of text. \code{t.test2} improves on all those counts, and 
+in addition, it reports the number of observations per group and if any observations 
+are missing it issues a warning. It returns a dataframe instead of a list.
+The function is also registered as \code{t.test2} for the \code{\LinkA{t}{t}}
+generic to satisfy S3 registration checks while keeping direct calls to
+\code{t.test2(...)} unchanged.
+\end{Description}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] The first data argument passed to \code{\LinkA{t.test}{t.test}}. This can
+be a numeric vector or a formula.
+
+\item[\code{...}] Arguments passed to \code{\LinkA{t.test}{t.test}}
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A data frame with class \code{c("t.test2", "data.frame")} containing 
+a single row with the following columns:
+\begin{description}
+
+\item[mean columns] One or two columns containing group means, named after 
+the input variables (e.g., \code{men}, \code{women}) or \code{Group 1}, 
+\code{Group 2} for long names.
+\item[diff column] For two-sample tests, the difference between means 
+(e.g., \code{men-women}).
+\item[ci] The confidence level as a string (e.g., "95 percent").
+\item[ci.L, ci.H] Lower and upper bounds of the confidence interval.
+\item[t] The t-statistic.
+\item[df] Degrees of freedom.
+\item[p.value] The p-value.
+\item[N columns] Sample sizes, named \code{N(group1)}, \code{N(group2)} or 
+\code{N1}, \code{N2}. For paired tests, a single \code{N} column.
+\item[correlation] For paired tests only, the correlation between pairs.
+
+\end{description}
+
+Attributes store additional information including missing value counts and 
+test type (one-sample, two-sample, paired, Welch vs. Student).
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Two-sample t-test
+men <- rnorm(100, mean = 5, sd = 1)
+women <- rnorm(100, mean = 4.8, sd = 1)
+t.test2(men, women)
+
+# Paired t-test
+x <- rnorm(50, mean = 5, sd = 1)
+y <- rnorm(50, mean = 5.2, sd = 1)
+t.test2(x, y, paired = TRUE)
+
+# One-sample t-test
+data <- rnorm(100, mean = 5, sd = 1)
+t.test2(data, mu = 0)
+
+# Formula syntax
+data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
+t.test2(y ~ group, data = data)
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{table2}{Enhanced alternative to table()}{table2}
+%
+\begin{Description}
+The function \code{\LinkA{table}{table}} does not show variable 
+names when tabulating from a dataframe, requires running another
+function, \code{\LinkA{prop.table}{prop.table}},  to tabulate proportions 
+and yet another function, \code{\LinkA{chisq.test}{chisq.test}} to test difference of 
+proportions.  \code{table2} does what those three functions do, producing easier to 
+read output, and always shows variable names.
+\end{Description}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{...}] same arguments as \code{\LinkA{table}{table}}, plus the arguments shown below
+
+\item[\code{prop}] report a table with:
+\begin{itemize}
+
+\item{} \code{prop="all"}: Proportions for full table (each cell / total)
+\item{} \code{prop="row"}: Proportions by row  ('rows' also accepted)
+\item{} \code{prop="col"}: Proportions by columns ('cols', 'column', 'columns' also accepted)
+
+\end{itemize}
+
+
+\item[\code{digits}] Number of decimal values to show for proportions
+
+\item[\code{chi}] Logical. If \code{TRUE}, performs a chi-square test on frequency table,
+reports results in APA format
+
+\item[\code{correct}] Logical. If \code{TRUE}, applies Yates' continuity correction 
+for 2x2 tables in the chi-square test. Default is \code{FALSE} (no correction).
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list (object of class "table2") with the following components:
+\begin{itemize}
+
+\item{} \code{freq}: frequency table 
+\item{} \code{prop}: proportions table 
+\item{} \code{chisq}: chi-square test  
+
+\end{itemize}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Create example data
+df <- data.frame(
+  group = c("A", "A", "B", "B", "A"),
+  status = c("X", "Y", "X", "Y", "X")
+)
+
+# Enhanced table with variable names (2 variables)
+table2(df$group, df$status)
+
+# Enhanced table with variable names (3 variables)
+df3 <- data.frame(
+  x = c("A", "A", "B", "B"),
+  y = c("X", "Y", "X", "Y"),
+  z = c("high", "low", "high", "low")
+)
+table2(df3$x, df3$y, df3$z)
+
+# Table with proportions
+table2(df$group, df$status, prop = 'all')  # Overall proportions
+table2(df$group, df$status, prop = 'row')  # Row proportions
+table2(df$group, df$status, prop = 'col')  # Column proportions
+
+# Table with chi-square test
+table2(df$group, df$status, chi = TRUE,prop='all')
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{text2}{Enhanced alternative to text()}{text2}
+%
+\begin{Description}
+Adds to text() optional background color and verbal alignment (align='center')
+\end{Description}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}, \code{y}] coordinates for text placement
+
+\item[\code{labels}] text to display
+
+\item[\code{align}] alignment in relation to x coordinate ('left','center','right')
+
+\item[\code{bg}] background color
+
+\item[\code{cex}] character expansion factor
+
+\item[\code{pad}] left/right padding in percentage (e.g., .03)
+
+\item[\code{pad\_v}] top/bottom padding in percentage (e.g., .25)
+
+\item[\code{...}] Additional arguments passed to \code{\LinkA{text}{text}}.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+No return value, called for side effects. Adds text with an optional 
+background rectangle to an existing plot.
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+# Create a simple plot
+plot(1:10, 1:10, type = "n", main = "text2() - Alignment & Color")
+
+# Alignment respect to x=5
+text2(5, 8, "align='left' from 5", align = "left", bg = "yellow1")
+text2(5, 7, "align='right' from 5", align = "right", bg = "blue", col = "white")
+text2(5, 6, "align='center' from 5", align = "center", bg = "black", col = "white")
+abline(v = 5, lty = 2)
+
+# Multiple labels with different alignments
+text2(c(2, 5, 8), c(5, 5, 5), 
+      labels = c("Left", "Center", "Right"),
+      align = c("left", "center", "right"),
+      bg = c("pink", "lightblue", "lightgreen"))
+
+# Text with custom font color (passed through ...)
+text2(5, 3, "Red Text", col = "red", bg = "white")
+
+# Padding examples
+plot(1:10, 1:10, type = "n", main = "Padding Examples")
+
+# Default padding (pad=0.03, pad_v=0.25)
+text2(5, 8, "Default padding", bg = "lightblue")
+
+# More horizontal padding
+text2(5, 6, "Wide padding", pad = 0.2, bg = "lightgreen")
+
+# More vertical padding
+text2(5, 4, "Tall padding", pad_v = 0.8, bg = "lightyellow")
+
+# Both padding increased
+text2(5, 2, "Extra padding", pad = 0.15, pad_v = 0.6, bg = "pink")
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{twolines}{Two-Lines Test of U-Shapes}{twolines}
+%
+\begin{Description}
+Implements the two-lines test for U-shaped (or inverted U-shaped) relationships 
+introduced by Simonsohn (2018).
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+twolines(
+  f,
+  graph = 1,
+  link = "gaussian",
+  data = NULL,
+  pngfile = "",
+  quiet = FALSE
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{f}] A formula object specifying the model (e.g., y \textasciitilde{} x1 + x2 + x3).
+The first predictor is the one tested for a u-shaped relationship.
+
+\item[\code{graph}] Integer. If 1 (default), produces a plot. If 0, no plot is generated.
+
+\item[\code{link}] Character string specifying the link function for the GAM model.
+Default is "gaussian".
+
+\item[\code{data}] An optional data frame containing the variables in the formula.
+If not provided, variables are evaluated from the calling environment.
+
+\item[\code{pngfile}] Optional character string. If provided, saves the plot to a PNG file
+with the specified filename.
+
+\item[\code{quiet}] Logical. If TRUE, suppresses the Robin Hood details messages.
+Default is FALSE.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+Reference: 
+Simonsohn, Uri (2018) "Two lines: A valid alternative to the invalid testing of 
+U-shaped relationships with quadratic regressions." AMPPS, 538-555. 
+\Rhref{https://doi.org/10.1177/2515245918805755}{doi:10.1177\slash{}2515245918805755}
+
+
+The test beings fitting a GAM model, predicting y with a smooth of x, and optionally with covariates. 
+It identifies the interior most extreme value of fitted y, and adjusts from the matching x-value 
+to set the breakpoint relying on the Robin Hood procedure introduced also by Simonsohn (2018).
+It then estimates the (once) interrupted regression using that breakpoint,
+and reports the slope and significance of the average slopes at either side of it. A U-shape 
+is significant if the slopes are of opposite sign and are both individually significant.
+\end{Details}
+%
+\begin{Value}
+A list containing:
+\begin{itemize}
+
+\item{} All elements from \code{reg2()}: \code{b1}, \code{b2}, \code{p1}, \code{p2},
+\code{z1}, \code{z2}, \code{u.sig}, \code{xc}, \code{glm1}, \code{glm2}, \code{rob1},
+\code{rob2}, \code{msg}, \code{yhat.smooth}
+\item{} \code{yobs}: Observed y values (adjusted for covariates if present)
+\item{} \code{y.hat}: Fitted values from GAM
+\item{} \code{y.ub}, \code{y.lb}: Upper and lower bounds for fitted values
+\item{} \code{y.most}: Most extreme fitted value
+\item{} \code{x.most}: x-value associated with most extreme fitted value
+\item{} \code{f}: Formula as character string
+\item{} \code{bx1}, \code{bx2}: Linear and quadratic coefficients from preliminary quadratic regression
+\item{} \code{minx}: Minimum x value
+\item{} \code{midflat}: Median of flat region
+\item{} \code{midz1}, \code{midz2}: Z-statistics at midpoint
+
+\end{itemize}
+
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+
+# Simple example with simulated data
+set.seed(123)
+x <- rnorm(100)
+y <- -x^2 + rnorm(100)
+data <- data.frame(x = x, y = y)
+result <- twolines(y ~ x, data = data)
+
+# With covariates
+z <- rnorm(100)
+y <- -x^2 + 0.5*z + rnorm(100)
+data <- data.frame(x = x, y = y, z = z)
+result <- twolines(y ~ x + z, data = data)
+
+# Without data argument (variables evaluated from environment)
+x <- rnorm(100)
+y <- -x^2 + rnorm(100)
+result <- twolines(y ~ x)
+
+
+\end{ExampleCode}
+\end{Examples}
+\HeaderA{validate\_formula}{Validate Formula Variables}{validate.Rul.formula}
+\keyword{internal}{validate\_formula}
+%
+\begin{Description}
+Checks if the input is a formula and validates that all variables mentioned
+in the formula exist either in the provided data frame or in the environment.
+This is a lightweight validation function that should be called early in functions
+that accept formula syntax.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+validate_formula(
+  formula,
+  data = NULL,
+  func_name = "function",
+  calling_env = parent.frame()
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{formula}] A potential formula object to validate (can be any object).
+
+\item[\code{data}] An optional data frame containing the variables.
+
+\item[\code{func\_name}] Character string. Name of the calling function (for error messages).
+
+\item[\code{calling\_env}] The environment in which to look for variables if data is not provided.
+Defaults to parent.frame().
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+Returns NULL invisibly. Stops with an error if validation fails.
+\end{Value}
+\HeaderA{validate\_lm2}{Validate Inputs for lm2() Function}{validate.Rul.lm2}
+\keyword{internal}{validate\_lm2}
+%
+\begin{Description}
+Validates se\_type and clusters arguments for lm2().
+Also handles creating a data frame from vectors if data is not provided.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+validate_lm2(
+  formula,
+  data = NULL,
+  se_type = "HC3",
+  se_type_missing = TRUE,
+  dots = list(),
+  calling_env = parent.frame()
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{formula}] A formula specifying the model.
+
+\item[\code{data}] An optional data frame containing the variables.
+
+\item[\code{se\_type}] The type of standard error to use.
+
+\item[\code{se\_type\_missing}] Logical. Whether se\_type was not explicitly provided by user.
+
+\item[\code{dots}] Additional arguments passed to lm\_robust (to check for clusters).
+
+\item[\code{calling\_env}] The environment in which to look for variables if data is not provided.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list containing:
+\begin{itemize}
+
+\item{} \code{data}: The data frame to use (either provided or constructed from vectors)
+\item{} \code{se\_type}: The validated/adjusted se\_type
+\item{} \code{has\_clusters}: Logical indicating if clusters are being used
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{validate\_plot}{Validate Inputs for Plotting Functions}{validate.Rul.plot}
+\keyword{internal}{validate\_plot}
+%
+\begin{Description}
+Validates inputs for plotting functions that accept either formula syntax
+(y \textasciitilde{} group) or standard syntax (y, group), with optional data frame.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+validate_plot(
+  y,
+  group = NULL,
+  data = NULL,
+  func_name = "plot",
+  require_group = TRUE,
+  data_name = NULL
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{y}] A numeric vector, column name, or formula of the form y \textasciitilde{} group.
+
+\item[\code{group}] A vector used to group the data, or a column name if data is provided.
+Can be NULL for functions where group is optional.
+
+\item[\code{data}] An optional data frame containing the variables.
+
+\item[\code{func\_name}] Character string. Name of the calling function (for error messages).
+
+\item[\code{require\_group}] Logical. If TRUE, group is required. If FALSE, group can be NULL.
+
+\item[\code{data\_name}] Character string. Name of the data argument (for error messages). 
+If NULL, will attempt to infer from the call.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list containing:
+\begin{itemize}
+
+\item{} \code{y}: Validated y variable (numeric vector)
+\item{} \code{group}: Validated group variable (if provided, otherwise NULL)
+\item{} \code{y\_name}: Clean variable name for y (for labels)
+\item{} \code{group\_name}: Clean variable name for group (for labels)
+\item{} \code{y\_name\_raw}: Raw variable name for y (for error messages)
+\item{} \code{group\_name\_raw}: Raw variable name for group (for error messages)
+\item{} \code{data\_name}: Name of data argument (for error messages)
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{validate\_t.test2}{Validate Grouping Variable for t.test2()}{validate.Rul.t.test2}
+\keyword{internal}{validate\_t.test2}
+%
+\begin{Description}
+Validates that a grouping variable exists and has exactly 2 levels for t-test.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+validate_t.test2(
+  group_var_name,
+  data = NULL,
+  calling_env = parent.frame(),
+  data_name = NULL
+)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{group\_var\_name}] Character string. Name of the grouping variable (for error messages).
+
+\item[\code{data}] An optional data frame containing the variable.
+
+\item[\code{calling\_env}] The environment in which to look for the variable if data is not provided.
+
+\item[\code{data\_name}] Character string. Name of the data argument (for error messages).
+If NULL, will attempt to infer from the call.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+The validated grouping variable (numeric or factor vector). Stops execution with an error message if validation fails.
+\end{Value}
+\HeaderA{validate\_table2}{Validate Inputs for table2() Function}{validate.Rul.table2}
+\keyword{internal}{validate\_table2}
+%
+\begin{Description}
+Validates inputs for table2() function that accepts multiple variables via ...
+with optional data frame.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+validate_table2(..., data = NULL, func_name = "table2", data_name = NULL)
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{...}] One or more variables to be tabulated.
+
+\item[\code{data}] An optional data frame containing the variables.
+
+\item[\code{func\_name}] Character string. Name of the calling function (for error messages).
+Default is "table2".
+
+\item[\code{data\_name}] Character string. Name of the data argument (for error messages).
+If NULL, will attempt to infer from the call.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Value}
+A list containing:
+\begin{itemize}
+
+\item{} \code{dots}: List of evaluated variables (ready for base::table)
+\item{} \code{dot\_expressions}: List of expressions (for variable name extraction)
+\item{} \code{data\_name}: Name of data argument (for error messages)
+
+\end{itemize}
+
+\end{Value}
+\HeaderA{var\_labels}{Get or set variable labels}{var.Rul.labels}
+\aliasA{var\_labels<\Rdash{}}{var\_labels}{var.Rul.labels<.Rdash.}
+%
+\begin{Description}
+Works like \code{names()}: calling \code{var\_labels(x)} returns labels, and
+assignment \code{var\_labels(x) <- value} sets them.
+\end{Description}
+%
+\begin{Usage}
+\begin{verbatim}
+var_labels(x)
+
+var_labels(x) <- value
+\end{verbatim}
+\end{Usage}
+%
+\begin{Arguments}
+\begin{ldescription}
+\item[\code{x}] A vector or a data frame.
+\end{ldescription}
+\end{Arguments}
+%
+\begin{Details}
+For a vector, this reads/writes a base-R \code{"label"} attribute.
+For a data frame, this reads/writes the \code{"label"} attribute of each
+column.
+\end{Details}
+%
+\begin{Value}
+- If \code{x} is a data frame: a named character vector with one entry per
+column (missing labels are returned as \code{NA\_character\_}).
+- Otherwise: a single character string (or \code{NA\_character\_}).
+\end{Value}
+%
+\begin{Examples}
+\begin{ExampleCode}
+df <- data.frame(x = 1:3, y = 4:6)
+
+# Set labels for all columns
+var_labels(df) <- c("this is x", "this is y")
+var_labels(df)
+
+# Set a label for a single column
+var_labels(df$x) <- "this is x"
+var_labels(df$x)
+
+\end{ExampleCode}
+\end{Examples}
+\printindex{}
+\end{document}

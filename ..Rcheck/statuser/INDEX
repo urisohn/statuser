@@ -1,0 +1,30 @@
+clear                   Clear Plot, Global Environment, and Console
+convert_to_sql          Convert CSV file to SQL INSERT statements
+desc_var                Describe a variable, optionally by groups
+format_pvalue           Format P-Values for Display
+interprobe              Probe interactions robustly to nonlinearities
+list2                   Enhanced alternative to list()
+lm2                     Enhanced alternative to lm()
+message2                Enhanced alternative to message()
+plot_cdf                Plot Empirical Cumulative Distribution
+                        Functions by Group
+plot_density            Plot density of a variable, optionally by
+                        another variable
+plot_freq               Plot frequencies for a variable (histogram
+                        without binning)
+plot_gam                Plot GAM Model
+plot_means              Barplot of means
+predict.lm2             Predict method for lm2 objects
+print.desc_var          Print method for desc_var objects
+print.lm2               Print method for lm2 objects
+print.t.test2           Print method for t.test2 output
+print.table2            Print method for table2 output with centered
+                        column variable name
+resize_images           Resize Images
+scatter.gam             Scatter Plot with GAM Smooth Line
+summary.lm2             Summary method for lm2 objects
+t.test2                 Enhanced alternative to t.test()
+table2                  Enhanced alternative to table()
+text2                   Enhanced alternative to text()
+twolines                Two-Lines Test of U-Shapes
+var_labels              Get or set variable labels

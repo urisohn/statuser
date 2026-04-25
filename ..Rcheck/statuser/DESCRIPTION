@@ -19,19 +19,8 @@ Description: The statistical tools in this package do one of four things:
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 7.3.3
-Imports:
-    mgcv,
-    marginaleffects,
-    rsvg,
-    magick,
-    sandwich,
-    lmtest,
-    utils
-Suggests:
-    testthat (>= 3.0.0),
-    crayon,
-    quantreg,
-    estimatr,
-    broom,
-    modelsummary
+Imports: mgcv, marginaleffects, rsvg, magick, sandwich, lmtest, utils
+Suggests: testthat (>= 3.0.0), crayon, quantreg, estimatr, broom,
+        modelsummary
 Config/testthat/edition: 3
+Built: R 4.5.2; ; 2026-04-25 11:21:10 UTC; windows
