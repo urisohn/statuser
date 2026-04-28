@@ -109,6 +109,20 @@ test_that("desc_var handles formula syntax", {
   expect_equal(as.character(result$group), c("A", "B"))
 })
 
+#desc_var_021
+test_that("desc_var accepts df$y ~ df$g without data=", {
+  df <- data.frame(y = rnorm(100), g = rep(c("A", "B"), 50))
+  result <- desc_var(df$y ~ df$g)
+  expect_equal(nrow(result), 2)
+  expect_equal(as.character(result$group), c("A", "B"))
+})
+
+#desc_var_022
+test_that("desc_var errors if df$y ~ df$g is combined with data=", {
+  df <- data.frame(y = rnorm(100), g = rep(c("A", "B"), 50))
+  expect_error(desc_var(df$y ~ df$g, data = df), "Do not combine", fixed = TRUE)
+})
+
 #desc_var_010
 test_that("desc_var handles multiple grouping variables", {
   df <- data.frame(

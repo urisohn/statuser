@@ -701,6 +701,22 @@ test_that("lm2 works without data argument (variables from environment)", {
   expect_equal(tbl$term, c("(Intercept)", "x1", "x2"))
 })
 
+#lm2_051
+test_that("lm2 accepts df$y ~ df$x without data=", {
+  skip_if_not_installed("estimatr")
+  
+  df1 <- data.frame(y = rnorm(60), x = rnorm(60))
+  expect_error(lm2(df1$y ~ df1$x), NA)
+})
+
+#lm2_052
+test_that("lm2 errors if df$y ~ df$x is combined with data=", {
+  skip_if_not_installed("estimatr")
+  
+  df1 <- data.frame(y = rnorm(60), x = rnorm(60))
+  expect_error(lm2(df1$y ~ df1$x, data = df1), "Do not combine", fixed = TRUE)
+})
+
 #lm2_039
 test_that("lm2 without data matches estimatr::lm_robust without data", {
   skip_if_not_installed("estimatr")

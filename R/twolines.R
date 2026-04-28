@@ -103,6 +103,20 @@ twolines <- function(f, graph = 1, link = "gaussian", data = NULL, pngfile = "",
   #1. Validate inputs and handle data
     # Get calling environment for evaluating variables
     calling_env <- parent.frame()
+
+    # If formula uses `$`, do not allow data= (use either one style or the other).
+    .assert_no_dollar_with_data(f, data, func_name = "twolines")
+
+    # If formula uses `$` and data is NULL, normalize into a clean data+formula pair.
+    if (is.null(data) && .formula_contains_dollar(f)) {
+      normalized <- .normalize_dollar_formula_to_data_and_formula(
+        formula = f,
+        calling_env = calling_env,
+        func_name = "twolines"
+      )
+      f <- normalized$formula
+      data <- normalized$data
+    }
     
     # Extract variable names from formula
     vars <- all.vars(f)

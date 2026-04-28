@@ -200,7 +200,7 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
     # Emit the standard message shown when value.labels="auto" and the plot has
     # more unique values than the auto cutoff.
     warn_value_labels_auto_many <- function() {
-      message2("plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior")
+      invisible(NULL)
     }
     
     # Return a logical mask selecting the bars that should receive frequency

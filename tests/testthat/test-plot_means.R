@@ -8,6 +8,18 @@ test_that("plot_means runs with formula + data and returns desc_var object", {
   expect_true(is.data.frame(result$means))
 })
 
+#plot_means_009
+test_that("plot_means accepts df$y ~ df$g without data=", {
+  df <- data.frame(y = rnorm(100), g = rep(c("A", "B"), 50))
+  expect_error(plot_means(df$y ~ df$g, quiet = TRUE), NA)
+})
+
+#plot_means_010
+test_that("plot_means errors if df$y ~ df$g is combined with data=", {
+  df <- data.frame(y = rnorm(100), g = rep(c("A", "B"), 50))
+  expect_error(plot_means(df$y ~ df$g, data = df, quiet = TRUE), "Do not combine", fixed = TRUE)
+})
+
 #plot_means_002
 test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
   df <- data.frame(

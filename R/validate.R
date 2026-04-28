@@ -1,5 +1,36 @@
-# Helpers: `all.vars()` lists RHS of `$` (column names) as if they were free
-# variables — they must not be required to exist as bindings (see t.test2).
+# =============================================================================
+# validate.R overview
+# =============================================================================
+# 1) Formula + NSE hygiene
+#    - Validate formula inputs early and provide helpful errors.
+#    - Avoid common NSE traps where `all.vars()` and `deparse()` can mislead.
+# 2) `$` formulas (df$y ~ df$x)
+#    - Detect `$` inside formulas.
+#    - Enforce a package policy: **do not** allow `$` formulas together with `data=`.
+#    - When `data=` is absent, normalize `$` formulas into an internal `(formula, data)`
+#      via `model.frame()` so downstream code behaves like standard `y ~ x, data=df`.
+# 3) Shared validators used across exported functions
+#    - `validate_formula()`: lightweight early validation used by many functions.
+#    - `validate_plot()`, `validate_table2()`, `validate_t.test2()`, `validate_lm2()`:
+#      argument validation + safe evaluation patterns shared across the package.
+#
+# =============================================================================
+# Formula evaluation helpers
+# =============================================================================
+# Many user-facing functions accept formulas, and users often write either:
+#   - `y ~ x` with `data = df`
+#   - `df$y ~ df$x` with no `data=`
+#
+# Base helpers like `all.vars()` treat column names in `$` calls (the RHS symbol
+# of `df$col`) as if they were free variables. This is correct for “symbol-only”
+# evaluation, but it breaks validation / data-construction when we mistakenly
+# require `col` to exist as a binding in an environment.
+#
+# The helpers below do two things:
+#   1) Decide which symbols must truly exist as bindings (env variables) vs.
+#      which are “just column names” inside `$`.
+#   2) For `$`-formulas, normalize them into a clean `(formula, data)` pair
+#      using `model.frame()`, so downstream code can operate like `y ~ x` + data.
 #' @noRd
 .collect_dollar_rhs_symbols <- function(expr) {
   acc <- character()
@@ -30,6 +61,8 @@ formula_symbols_required_in_env <- function(formula) {
 }
 
 .extract_formula_side_label <- function(expr) {
+  # Produce a human-friendly label for plotting/tables.
+  # For `$` expressions, we strip the data prefix: `df$y` -> `y`.
   if (is.symbol(expr) || is.name(expr)) {
     return(as.character(expr))
   }
@@ -38,6 +71,134 @@ formula_symbols_required_in_env <- function(formula) {
     return(trimws(sub(".*\\$", "", es)))
   }
   trimws(es)
+}
+
+#' @noRd
+.expr_contains_dollar <- function(expr) {
+  # Walk an expression tree and return TRUE if it contains a `$` call.
+  found <- FALSE
+  walk <- function(e) {
+    if (isTRUE(found)) return(invisible(NULL))
+    if (is.call(e)) {
+      op <- e[[1L]]
+      if (identical(op, quote(`$`)) || identical(op, as.name("$"))) {
+        found <<- TRUE
+        return(invisible(NULL))
+      }
+      if (length(e) >= 2L) {
+        for (i in 2L:length(e)) walk(e[[i]])
+      }
+    }
+    invisible(NULL)
+  }
+  walk(expr)
+  isTRUE(found)
+}
+
+#' @noRd
+.formula_contains_dollar <- function(formula) {
+  # TRUE when either side of the formula uses `$` (e.g., df$y ~ df$x).
+  tryCatch({
+    if (!inherits(formula, "formula")) return(FALSE)
+    if (length(formula) >= 2L && .expr_contains_dollar(formula[[2L]])) return(TRUE)
+    if (length(formula) >= 3L && .expr_contains_dollar(formula[[3L]])) return(TRUE)
+    FALSE
+  }, error = function(e) FALSE)
+}
+
+#' @noRd
+.assert_no_dollar_with_data <- function(formula, data, func_name = "function") {
+  # Package policy: users should choose *one* evaluation style.
+  # If they use `$` in the formula, we forbid also passing `data=`, because it is
+  # ambiguous and can mask mistakes (is `$` pointing at the same data as `data=`?).
+  if (!is.null(data) && .formula_contains_dollar(formula)) {
+    stop(
+      sprintf(
+        "%s(): Do not combine `$` formulas with `data=`.\nUse either `%s(y ~ x, data = df)` or `%s(df$y ~ df$x)`.",
+        func_name, func_name, func_name
+      ),
+      call. = FALSE
+    )
+  }
+  invisible(NULL)
+}
+
+#' @noRd
+.normalize_dollar_formula_to_data_and_formula <- function(formula, calling_env, func_name = "function") {
+  # Convert `df$y ~ df$x` into:
+  #   - a temporary data.frame containing the evaluated vectors
+  #   - a rewritten formula `y ~ x` that refers to those temp columns
+  #
+  # This lets downstream code use standard formula workflows (`model.frame`,
+  # `terms`, `reformulate`, etc.) without special-casing `$` everywhere.
+  if (!inherits(formula, "formula") || !.formula_contains_dollar(formula)) {
+    return(list(formula = formula, data = NULL, mapping = NULL))
+  }
+
+  # Determine evaluation environment (prefer formula env if present).
+  formula_env <- environment(formula)
+  if (is.null(formula_env)) formula_env <- calling_env
+
+  # Evaluate into a model.frame to respect formula semantics and NA handling.
+  # NOTE: we pass `data = <env>` so expressions like `df$y` can resolve `df`
+  # from the environment (no data.frame needed at this stage).
+  mf <- tryCatch(
+    stats::model.frame(formula, data = formula_env, na.action = stats::na.pass),
+    error = function(e) {
+      stop(sprintf("%s(): %s", func_name, e$message), call. = FALSE)
+    }
+  )
+  if (!is.data.frame(mf) || ncol(mf) < 1) {
+    stop(sprintf("%s(): Could not evaluate formula", func_name), call. = FALSE)
+  }
+
+  # Build clean, syntactic column names for the evaluated vectors.
+  # We prefer labels like `y`/`x` (not `df$y`/`df$x`) and make them syntactic so
+  # `reformulate()` and data.frame access are safe.
+  response_expr <- formula[[2L]]
+  response_label <- .extract_formula_side_label(response_expr)
+  response_name <- make.names(response_label)
+  if (!nzchar(response_name)) response_name <- "y"
+
+  # `term.labels` reflects the RHS terms; for `$` calls this will include `df$x`
+  # as a term label string, which we strip for display/column naming.
+  predictor_terms <- attr(stats::terms(formula), "term.labels")
+  if (length(predictor_terms) == 0) {
+    stop(sprintf("%s(): Formula must include at least one predictor", func_name), call. = FALSE)
+  }
+  predictor_labels <- vapply(
+    predictor_terms,
+    function(s) {
+      s2 <- trimws(s)
+      if (grepl("\\$", s2)) sub(".*\\$", "", s2) else s2
+    },
+    character(1)
+  )
+  predictor_names <- make.names(predictor_labels)
+  predictor_names[predictor_names == ""] <- paste0("x", which(predictor_names == ""))
+  predictor_names <- make.unique(predictor_names, sep = "_")
+
+  # Rename model.frame columns and rebuild a formula that no longer needs `df$...`.
+  # `model.frame()` returns response first, then predictors in formula order.
+  new_names <- c(response_name, predictor_names)
+  if (ncol(mf) != length(new_names)) {
+    # Defensive fallback: keep original mf names but make them syntactic.
+    new_names <- make.unique(make.names(names(mf)), sep = "_")
+  }
+  names(mf) <- new_names
+
+  new_formula <- stats::reformulate(termlabels = new_names[-1L], response = new_names[1L])
+  list(
+    formula = new_formula,
+    data = as.data.frame(mf, stringsAsFactors = FALSE),
+    mapping = list(
+      # Mapping is for debugging / future UX; not currently shown to users.
+      response_raw = deparse(response_expr, width.cutoff = 500L),
+      response = new_names[1L],
+      predictors_raw = predictor_terms,
+      predictors = new_names[-1L]
+    )
+  )
 }
 
 #' Validate Formula Variables
@@ -665,38 +826,53 @@ validate_lm2 <- function(formula, data = NULL, se_type = "HC3", se_type_missing 
   
   # If data is not provided, try to construct it from vectors in the environment
   if (is.null(data)) {
-    # Extract variable names from formula (omit `$` RHS column names; see t.test2 / validate_formula)
-    formula_vars <- all.vars(formula)
-    must_exist <- formula_symbols_required_in_env(formula)
-    
-    # Check if all required bindings exist in the calling environment
-    all_exist <- all(sapply(must_exist, function(v) exists(v, envir = calling_env, inherits = TRUE)))
-    
-    if (!all_exist) {
-      missing_vars <- must_exist[!sapply(must_exist, function(v) exists(v, envir = calling_env, inherits = TRUE))]
-      message2(paste0("lm2() says: Could not find variable(s): ", paste(missing_vars, collapse = ", "), 
-           ". Either provide a 'data' argument or ensure variables exist in the environment."), col = "red")
-      invokeRestart("abort")
+    # If the formula uses `$`, evaluate it and rewrite to a data+formula pair.
+    # This avoids treating `$` column names as required free variables.
+    normalized <- .normalize_dollar_formula_to_data_and_formula(
+      formula = formula,
+      calling_env = calling_env,
+      func_name = "lm2"
+    )
+    if (!is.null(normalized$data)) {
+      formula <- normalized$formula
+      data <- normalized$data
     }
-    
-    # Get all variables from environment
-    var_list <- lapply(formula_vars, function(v) {
-      eval(as.name(v), envir = calling_env)
-    })
-    names(var_list) <- formula_vars
-    
-    # Check all have the same length
-    lengths <- sapply(var_list, length)
-    if (length(unique(lengths)) > 1) {
-      length_info <- paste(sapply(seq_along(formula_vars), function(i) {
-        paste0(formula_vars[i], " (", lengths[i], ")")
-      }), collapse = ", ")
-      message2(paste0("lm2() says: All variables must have the same length. Lengths: ", length_info), col = "red")
-      invokeRestart("abort")
+
+    # If normalization produced data, we are done (skip env-based construction).
+    if (is.null(data)) {
+      # Extract variable names from formula (omit `$` RHS column names; see t.test2 / validate_formula)
+      formula_vars <- all.vars(formula)
+      must_exist <- formula_symbols_required_in_env(formula)
+      
+      # Check if all required bindings exist in the calling environment
+      all_exist <- all(sapply(must_exist, function(v) exists(v, envir = calling_env, inherits = TRUE)))
+      
+      if (!all_exist) {
+        missing_vars <- must_exist[!sapply(must_exist, function(v) exists(v, envir = calling_env, inherits = TRUE))]
+        message2(paste0("lm2() says: Could not find variable(s): ", paste(missing_vars, collapse = ", "), 
+             ". Either provide a 'data' argument or ensure variables exist in the environment."), col = "red")
+        invokeRestart("abort")
+      }
+      
+      # Get all variables from environment
+      var_list <- lapply(formula_vars, function(v) {
+        eval(as.name(v), envir = calling_env)
+      })
+      names(var_list) <- formula_vars
+      
+      # Check all have the same length
+      lengths <- sapply(var_list, length)
+      if (length(unique(lengths)) > 1) {
+        length_info <- paste(sapply(seq_along(formula_vars), function(i) {
+          paste0(formula_vars[i], " (", lengths[i], ")")
+        }), collapse = ", ")
+        message2(paste0("lm2() says: All variables must have the same length. Lengths: ", length_info), col = "red")
+        invokeRestart("abort")
+      }
+      
+      # Create data frame
+      data <- as.data.frame(var_list, stringsAsFactors = FALSE)
     }
-    
-    # Create data frame
-    data <- as.data.frame(var_list, stringsAsFactors = FALSE)
     
     # Also check clusters variable if specified
     if (has_clusters) {
@@ -720,6 +896,7 @@ validate_lm2 <- function(formula, data = NULL, se_type = "HC3", se_type_missing 
   
   list(
     data = data,
+    formula = formula,
     se_type = se_type,
     has_clusters = has_clusters
   )

@@ -189,6 +189,9 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
     clusters_vec <- eval(clusters_expr, envir = parent.frame())
   }
   
+  # Do not allow combining `$` formulas with data= (user should pick one style).
+  .assert_no_dollar_with_data(formula, data, func_name = "lm2")
+
   # Validate formula early
   validate_formula(formula, data, func_name = "lm2", calling_env = parent.frame())
   
@@ -203,6 +206,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   )
   
   data <- validated$data
+  formula <- validated$formula
   se_type <- validated$se_type
   
 
@@ -265,7 +269,7 @@ lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
   n_missing <- n_original - n_used
   
   # Missing DV count (from original data)
-  y_name <- all.vars(formula)[1]
+  y_name <- .extract_formula_side_label(formula[[2L]])
   n_missing_y <- if (!is.null(y_name) && y_name %in% names(data)) {
     sum(is.na(data[[y_name]]))
   } else {

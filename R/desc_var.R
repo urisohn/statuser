@@ -135,6 +135,20 @@ desc_var <- function(y, group = NULL, data = NULL, digits = 3) {
   is_formula <- is.call(y_quote) && identical(y_quote[[1]], as.symbol("~"))
 
   if (is_formula) {
+    # If formula uses `$`, do not allow data= (use either one style or the other).
+    .assert_no_dollar_with_data(y, data, func_name = "desc_var")
+
+    # If formula uses `$` and data is NULL, normalize into a clean data+formula pair.
+    if (is.null(data) && .formula_contains_dollar(y)) {
+      normalized <- .normalize_dollar_formula_to_data_and_formula(
+        formula = y,
+        calling_env = calling_env,
+        func_name = "desc_var"
+      )
+      y <- normalized$formula
+      data <- normalized$data
+    }
+
     # Parse formula: y ~ x or y ~ x1 + x2 (evaluate only now that we know it's a formula)
     formula_vars <- all.vars(y)
     

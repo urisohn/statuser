@@ -82,6 +82,26 @@ test_that("scatter.gam accepts formula syntax with and without data", {
   expect_error(scatter.gam(df$y ~ df$x), NA)
 })
 
+#twolines_001
+test_that("twolines accepts df$y ~ df$x without data=", {
+  skip_if_not_installed("mgcv")
+  
+  df <- data.frame(x = rnorm(80), y = 2 * rnorm(80) + rnorm(80))
+  
+  pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(dev.off(), add = TRUE)
+  
+  expect_error(twolines(df$y ~ df$x, quiet = TRUE), NA)
+})
+
+#twolines_002
+test_that("twolines errors if df$y ~ df$x is combined with data=", {
+  skip_if_not_installed("mgcv")
+  
+  df <- data.frame(x = rnorm(80), y = 2 * rnorm(80) + rnorm(80))
+  expect_error(twolines(df$y ~ df$x, data = df, quiet = TRUE), "Do not combine", fixed = TRUE)
+})
+
 #scatter.gam_008
 test_that("scatter.gam accepts ylim via ... without duplicate-argument error", {
   skip_if_not_installed("mgcv")

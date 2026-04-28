@@ -67,6 +67,10 @@ t.test2 <- function(x, ...) {
   # Validate formula early if first argument is one
   if (!missing(x)) {
     validate_formula(x, dots_list$data, func_name = "t.test2", calling_env = parent.frame())
+    # Do not allow combining `$` formulas with data= (user should pick one style).
+    if (inherits(x, "formula")) {
+      .assert_no_dollar_with_data(x, dots_list$data, func_name = "t.test2")
+    }
   }
   
   # Run t.test with provided arguments (avoiding do.call to prevent expensive deparse)
@@ -171,6 +175,20 @@ t.test2 <- function(x, ...) {
       # Formula syntax: y ~ group
       formula <- eval(call_args[[2]], envir = calling_env)
       data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
+
+      # Do not allow combining `$` formulas with data= (user should pick one style).
+      .assert_no_dollar_with_data(formula, data_arg, func_name = "t.test2")
+
+      # If formula uses `$` and no data= is given, normalize into a clean data+formula pair.
+      if (is.null(data_arg) && .formula_contains_dollar(formula)) {
+        normalized <- .normalize_dollar_formula_to_data_and_formula(
+          formula = formula,
+          calling_env = calling_env,
+          func_name = "t.test2"
+        )
+        formula <- normalized$formula
+        data_arg <- normalized$data
+      }
       
       # Extract variable names from formula
       y_var_name <- extract_var_name(formula[[2]])

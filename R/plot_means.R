@@ -184,7 +184,7 @@ plot_means <- function(formula,
     buffer.top <- v$buffer.top
 
   # 2. Compute descriptives (means) using statuser::desc_var()
-    result <- eval(call("desc_var", v$mc$formula, data = v$data), envir = v$calling_env)
+    result <- eval(call("desc_var", v$formula_eval, data = v$data), envir = v$calling_env)
 
   # 2.1 Normalize desc_var output for single grouping variable
     result_plot <- result
@@ -434,14 +434,29 @@ plot_means_validate <- function(mc,
     if (!inherits(formula_eval, "formula")) {
       stop("plot_means(): First argument must be a formula like y ~ x1 + x2", call. = FALSE)
     }
+
+  # If formula uses `$`, do not allow data= (use either one style or the other).
+    .assert_no_dollar_with_data(formula_eval, data, func_name = "plot_means")
+
+  # If formula uses `$` and data is NULL, normalize into a clean data+formula pair.
+    if (is.null(data) && .formula_contains_dollar(formula_eval)) {
+      normalized <- .normalize_dollar_formula_to_data_and_formula(
+        formula = formula_eval,
+        calling_env = calling_env,
+        func_name = "plot_means"
+      )
+      formula_eval <- normalized$formula
+      data <- normalized$data
+    }
   
   # 2. Determine grouping variables (up to 3)
-    vars <- all.vars(formula_eval)
-    if (length(vars) < 2) {
+    lhs_expr <- formula_eval[[2L]]
+    rhs_terms <- attr(stats::terms(formula_eval), "term.labels")
+    if (length(rhs_terms) < 1) {
       stop("plot_means(): Formula must have at least one grouping variable: y ~ x1", call. = FALSE)
     }
-    y_name <- vars[1]
-    x_names <- vars[-1]
+    y_name <- .extract_formula_side_label(lhs_expr)
+    x_names <- rhs_terms
     if (length(x_names) > 3) {
       stop("plot_means(): Currently supports up to 3 grouping variables: y ~ x1 + x2 + x3", call. = FALSE)
     }

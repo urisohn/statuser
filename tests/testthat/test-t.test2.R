@@ -66,6 +66,12 @@ test_that("t.test2 accepts df$col ~ df$col2 without bare column names in env", {
   expect_true("B" %in% names(result))
 })
 
+#t.test2_006
+test_that("t.test2 errors if df$y ~ df$g is combined with data=", {
+  df1 <- data.frame(y1 = rnorm(100), x1 = rep(c("A", "B"), 50))
+  expect_error(t.test2(df1$y1 ~ df1$x1, data = df1), "Do not combine", fixed = TRUE)
+})
+
 #t.test2_005
 test_that("t.test2 handles two-vector syntax", {
   x1 <- rnorm(50, mean = 5)
