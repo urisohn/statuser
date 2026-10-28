@@ -15,3 +15,9 @@
 ^examples/
 ^\\.editorconfig$
 ^CRAN-SUBMISSION$
+^vignettes/figures_preview$
+^vignettes/_preview_figs\.R$
+^vignettes/interprobe\.html$
+^vignettes/interprobe\.R$
+^doc$
+^Meta$

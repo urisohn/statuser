@@ -3,6 +3,19 @@
 \name{text2}
 \alias{text2}
 \title{Enhanced alternative to text()}
+\usage{
+text2(
+  x,
+  y,
+  labels,
+  align = "center",
+  bg = "papayawhip",
+  cex = 1,
+  pad = 0.03,
+  pad_v = 0.25,
+  ...
+)
+}
 \arguments{
 \item{x, y}{coordinates for text placement}
 

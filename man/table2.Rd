@@ -3,8 +3,35 @@
 \name{table2}
 \alias{table2}
 \title{Enhanced alternative to table()}
+\usage{
+table2(
+  ...,
+  data = NULL,
+  exclude = if (useNA == "no") c(NA, NaN),
+  useNA = c("no", "ifany", "always"),
+  dnn = NULL,
+  deparse.level = 1,
+  prop = NULL,
+  digits = 3,
+  chi = FALSE,
+  chi2 = NULL,
+  correct = FALSE
+)
+}
 \arguments{
-\item{...}{same arguments as \code{\link[base]{table}}, plus the arguments shown below}
+\item{...}{Variables to tabulate, as in \code{\link[base]{table}} (e.g., vectors
+or \code{df$col} expressions). Extra named arguments below may also be passed here.}
+
+\item{data}{Unused; reserved for compatibility. Prefer \code{df$col} in \code{...}.}
+
+\item{exclude}{Values to exclude, passed to \code{\link[base]{table}}.}
+
+\item{useNA}{Whether to include \code{NA} levels, passed to \code{\link[base]{table}}.}
+
+\item{dnn}{Optional dimension names, passed to \code{\link[base]{table}}.}
+
+\item{deparse.level}{Passed to \code{\link[base]{table}} for naming dimensions from
+deparsed expressions when \code{dnn} is not set.}
 
 \item{prop}{report a table with:
 \itemize{

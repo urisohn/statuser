@@ -7,7 +7,8 @@
 #' flagging the need to conduct specific diagnostics. It relies by default on HC3 for standard errors;
 #' \code{lm_robust} relies on HC2 (and Stata's 'reg y x, robust' on HC1), which can have
 #' inflated false-positive rates in smaller samples (Long & Ervin, 2000). 
-#' @param ... same arguments as \code{\link[base]{lm}}, plus the arguments below
+#' @param formula A formula as in \code{\link[stats]{lm}} (e.g., \code{y ~ x1 + x2}).
+#' @param data An optional data frame containing the variables in the model.
 #' @param se_type The type of standard error to use. Default is \code{"HC3"}.
 #'   Without clusters: \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
 #'   When \code{clusters} is specified, \code{se_type} is automatically set to \code{"CR2"}.
@@ -24,7 +25,8 @@
 #'   \code{NULL} (default): magnitude-based decimals (1--3 places) with zero-chop.
 #'   \code{-1}: R default \code{format()} (respects \code{options("digits")}), with
 #'   leading-dot style for \code{|x| < 1}. Non-negative \code{k}: fixed \code{k} decimal places.
-#' @param ... Additional arguments passed to \code{\link[estimatr]{lm_robust}}.
+#' @param ... Additional arguments passed to \code{\link[estimatr]{lm_robust}}
+#'   (and, where applicable, the same style of arguments as \code{\link[stats]{lm}}).
 #'
 #' @details
 #' Robust standard errors and clustered standard errors are computed using 
@@ -163,7 +165,6 @@
 #'   standard errors, effect sizes, and diagnostic red flags.
 #'
 #' @seealso \code{\link[estimatr]{lm_robust}}, \code{\link{scatter.gam}}, \code{\link{lm2_notes}}
-#' @usage NULL
 #' @export lm2
 lm2 <- function(formula, data = NULL, se_type = "HC3", notes = TRUE,
                 clusters = NULL, fixed_effects = NULL, round = NULL, ...) {
@@ -769,7 +770,7 @@ print.lm2 <- function(x, notes, round = NULL, ...) {
   # >=100: 1 decimal, >=10: 2 decimals, else 3 decimals (when round is NULL)
   # Values below half a unit in the last place display as zero
   smart_round <- function(val) {
-    if (is.na(val)) return(NA_character_)
+    if (is.na(val)) return("--")
     abs_val <- abs(val)
     if (!is.null(round) && identical(round, -1L)) {
       formatted <- trimws(format(val, trim = TRUE))
@@ -795,14 +796,14 @@ print.lm2 <- function(x, notes, round = NULL, ...) {
 
   # Helper: format t statistics; cap extreme values when SE is near zero
   format_t <- function(val) {
-    if (is.na(val)) return(NA_character_)
+    if (is.na(val)) return("--")
     if (abs(val) > 999) return(">999")
     smart_round(val)
   }
   
   # Helper: format p-value (no leading zero, <.0001 if tiny)
   format_p <- function(p) {
-    if (is.na(p)) return(NA_character_)
+    if (is.na(p)) return("--")
     if (p < 0.0001) return("<.0001")
     # Round to 4 decimals, remove leading zero, add space to align with "<.0001"
     p_rounded <- round(p, 4)
@@ -1120,9 +1121,8 @@ print.lm2 <- function(x, notes, round = NULL, ...) {
   # Format B column, using "  --" for intercept or NA (with extra padding for alignment)
   B_formatted <- sapply(seq_along(tbl$B), function(i) {
     if (tbl$term[i] == "(Intercept)") return("  --")
-    val <- smart_round(tbl$B[i])
-    if (is.na(val)) return("  --")
-    val
+    if (is.na(tbl$B[i])) return("  --")
+    smart_round(tbl$B[i])
   })
   
   # Format mean column: mean for numeric vars, % only when mean_is_pct is TRUE (factor levels / factor*factor)
@@ -1154,8 +1154,10 @@ print.lm2 <- function(x, notes, round = NULL, ...) {
   pad <- function(x, n) paste0(strrep(" ", n), x)
   
   # Right-align values within column, then add trailing space
+  # Replace NA with "--" so nchar/max stay finite (exact fits, dropped terms)
   right_align <- function(x, trail = 1) {
-    max_width <- max(nchar(x))
+    x[is.na(x)] <- "--"
+    max_width <- max(nchar(x), 0L)
     formatted <- format(x, width = max_width, justify = "right")
     paste0(formatted, strrep(" ", trail))
   }

@@ -527,3 +527,129 @@ test_that("plot_freq two-vector supports col and freq args", {
   result_pct <- plot_freq(y1, y2, freq = FALSE)
   expect_true(is.data.frame(result_pct))
 })
+
+#plot_freq_037
+test_that("plot_freq supports character vectors alphabetically", {
+  x <- c("a", "a", "b", "c")
+  result <- plot_freq(x)
+  expect_true(is.data.frame(result))
+  expect_equal(as.character(result$value), c("a", "b", "c"))
+  expect_equal(as.numeric(result$frequency), c(2, 1, 1))
+
+  # Alphabetical order even when input is unsorted
+  x2 <- c("c", "a", "b", "a")
+  result2 <- plot_freq(x2)
+  expect_equal(as.character(result2$value), c("a", "b", "c"))
+  expect_equal(as.numeric(result2$frequency), c(2, 1, 1))
+})
+
+#plot_freq_038
+test_that("plot_freq factors default to level order; alpha forces alphabetical", {
+  x <- factor(c("b", "a", "a", "b", "c"), levels = c("b", "a", "c"))
+  result <- plot_freq(x)
+  expect_equal(as.character(result$value), c("b", "a", "c"))
+  expect_equal(as.numeric(result$frequency), c(2, 2, 1))
+
+  result_alpha <- plot_freq(x, x.order = "alpha")
+  expect_equal(as.character(result_alpha$value), c("a", "b", "c"))
+  expect_equal(as.numeric(result_alpha$frequency), c(2, 2, 1))
+})
+
+#plot_freq_039
+test_that("plot_freq character works via formula and data", {
+  df <- data.frame(v = c("c", "a", "a", "b"), stringsAsFactors = FALSE)
+  result <- plot_freq(v ~ 1, data = df)
+  expect_equal(as.character(result$value), c("a", "b", "c"))
+  expect_equal(as.numeric(result$frequency), c(2, 1, 1))
+})
+
+#plot_freq_040
+test_that("plot_freq grouped categorical x works", {
+  df <- data.frame(
+    v = c("b", "a", "a", "b", "c", "a"),
+    group = c("A", "A", "B", "B", "A", "B"),
+    stringsAsFactors = FALSE
+  )
+  result <- plot_freq(v ~ group, data = df)
+  expect_equal(as.character(result$value), c("a", "b", "c"))
+  expect_true(all(c("A", "B") %in% names(result)))
+})
+
+#plot_freq_041
+test_that("plot_freq two-vector character works; mixed types error", {
+  y1 <- c("a", "a", "b")
+  y2 <- c("b", "c", "c")
+  result <- plot_freq(y1, y2)
+  expect_true(is.data.frame(result))
+  expect_equal(as.character(result$value), c("a", "b", "c"))
+
+  expect_error(
+    plot_freq(c(1, 2, 2), c("a", "b")),
+    "same kind"
+  )
+})
+
+#plot_freq_042
+test_that("plot_freq rejects logical with clear message", {
+  err <- tryCatch(plot_freq(c(TRUE, FALSE, TRUE)), error = function(e) e)
+  expect_true(inherits(err, "error"))
+  expect_match(conditionMessage(err), "must be numeric, character, or factor")
+  expect_false(grepl("xlim", conditionMessage(err), fixed = TRUE))
+})
+
+#plot_freq_043
+test_that("plot_freq x.order freq and freq.asc", {
+  # a:3, b:1, c:2
+  x <- c("a", "a", "a", "c", "c", "b")
+  result_freq <- plot_freq(x, x.order = "freq")
+  expect_equal(as.character(result_freq$value), c("a", "c", "b"))
+  expect_equal(as.numeric(result_freq$frequency), c(3, 2, 1))
+
+  result_asc <- plot_freq(x, x.order = "freq.asc")
+  expect_equal(as.character(result_asc$value), c("b", "c", "a"))
+  expect_equal(as.numeric(result_asc$frequency), c(1, 2, 3))
+})
+
+#plot_freq_044
+test_that("plot_freq x.order = -1 reverses factor-level default", {
+  x <- factor(c("b", "a", "a", "b", "c"), levels = c("b", "a", "c"))
+  result <- plot_freq(x, x.order = -1)
+  expect_equal(as.character(result$value), c("c", "a", "b"))
+})
+
+#plot_freq_045
+test_that("plot_freq x.order custom vector validates categories", {
+  x <- c("a", "b", "c", "a")
+  result <- plot_freq(x, x.order = c("c", "a", "b"))
+  expect_equal(as.character(result$value), c("c", "a", "b"))
+
+  expect_error(
+    plot_freq(x, x.order = c("a", "b")),
+    "x.order.*missing"
+  )
+  expect_warning(
+    plot_freq(x, x.order = c("a", "b", "c", "d")),
+    "x.order.*not in data"
+  )
+})
+
+#plot_freq_046
+test_that("plot_freq grouped x.order freq independent of group order", {
+  df <- data.frame(
+    v = c("b", "a", "a", "b", "c", "a", "a"),
+    group = c("A", "A", "B", "B", "A", "B", "A"),
+    stringsAsFactors = FALSE
+  )
+  # Overall: a:4, b:2, c:1
+  result <- plot_freq(v ~ group, data = df, x.order = "freq", order = c("B", "A"))
+  expect_equal(as.character(result$value), c("a", "b", "c"))
+  expect_equal(names(result), c("value", "B", "A"))
+})
+
+#plot_freq_047
+test_that("plot_freq warns when x.order set for numeric x", {
+  expect_warning(
+    plot_freq(c(1, 1, 2, 3), x.order = "freq"),
+    "x.order.*ignored.*numeric"
+  )
+})

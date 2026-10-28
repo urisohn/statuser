@@ -3,6 +3,9 @@
 \name{t.test2}
 \alias{t.test2}
 \title{Enhanced alternative to t.test()}
+\usage{
+\method{t}{test2}(x, ...)
+}
 \arguments{
 \item{x}{The first data argument passed to \code{\link[stats]{t.test}}. This can
 be a numeric vector or a formula.}

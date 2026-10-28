@@ -1,6 +1,23 @@
-# statuser 0.3.1.9001
+# statuser 0.4.0.9001
+
+### Improvements
+- `plot_freq()`: character and factor inputs are supported (previously bare character vectors failed with an obscure `xlim` error). Thanks to Daniel Bankin for the report. New `x.order` controls category order on the x-axis: factor levels (default for factors), alphabetical, frequency (`"freq"` / `"freq.asc"`), `-1` to reverse the default, or a custom name vector.
+
+# statuser 0.4.0 (2026-10-09)
+
+### New functions
+- Added `round2()`: like `round()`, but always returns a character vector with the requested number of decimals. By default (`leading.zero = FALSE`), drops leading zeros when every finite value has `|x| < 1` (e.g. `0.34` → `.34`); mixed vectors keep leading zeros for all elements.
+
+### Improvements
+- `interprobe()`: Johnson–Neyman regions of significance now report what share of the sample falls in each range, e.g. `[2.50 to 4.80] (23.4% of the sample)`.
+- `interprobe()`: `moderator.on.x.axis` now defaults to `"auto"` (moderator on the x-axis for binary focal predictors; focal predictor on the x-axis when it has more than 3 values).
 
 ### Bug fixes
+- `print.lm2()`: undefined SE / t / p (exact fits under estimatr 2.0.1+, or dropped coefficients) now print as `--` instead of erroring in column alignment. Thanks to Alex Coppock for the report.
+- `stimulus.plot()`: `null.method = "demean"` now uses the two condition-mean columns from `get.means.condition()` (previously selected the stimulus-label column and one mean, which errored with character stimulus IDs). Thanks to ceo@unicupcompany.com for discovering this.
+- `stimulus.plot()`: with `flip.conditions = TRUE`, mean columns are named from the factor levels actually used in the t-tests (previously names always followed sorted condition order while contents followed the reversed levels).
+- `stimulus.plot()`: `null.method = "demean"` heterogeneity p-values now use the same flipped observed effects as the null resamples (previously compared unflipped observed effects to flipped null draws).
+- `interprobe()`: continuous Johnson–Neyman grids rename `x`/`z` to the real variable names before adding covariates at their means (avoids duplicate-name `newdata` columns).
 - `interprobe()`: bare (unquoted) names for `x`, `z`, and `y` now work with `data=` and `model=` even when those names exist only as columns (not in the calling environment). Missing columns report e.g. `'value' is not a variable in dataframe 'df'`.
 - `interprobe()`: `cols` of length 2 is allowed when the focal predictor has two levels (previously required length 3 even for binary `x`).
 
