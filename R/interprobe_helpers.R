@@ -377,13 +377,14 @@ ip_validate_arguments <- function(
 
   draw2 <- draw
   if (identical(draw2, "simple.slopes")) draw2 <- "simple slopes"
-  if (!draw2 %in% c("both", "simple slopes", "jn")) {
+  if (!draw2 %in% c("both", "simple slopes", "jn", "none")) {
     exit(
       paste0(
         "interprobe() says that the argument 'draw' must be one of:\n",
         "  - 'both'\n",
         "  - 'simple slopes' (or legacy: 'simple.slopes')\n",
-        "  - 'jn'"
+        "  - 'jn'\n",
+        "  - 'none'"
       )
     )
   }

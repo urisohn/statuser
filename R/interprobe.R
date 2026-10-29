@@ -34,7 +34,7 @@
 #' @param main1 Character. Title for simple slopes panel.
 #' @param main2 Character. Title for JN panel.
 #' @param legend.round Integer vector length 2. Min/max decimals in legend.
-#' @param draw Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), or `"jn"`.
+#' @param draw Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), `"jn"`, or `"none"` (no plot).
 #' @param save.as Optional file path to save plot (`.png` or `.svg`).
 #' @param xlim Numeric vector length 2. X-axis limits.
 #' @param ylim1 Numeric vector length 2. Y-axis limits for simple slopes.
@@ -350,22 +350,55 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   draw2 <- draw
   if (identical(draw2, "simple.slopes")) draw2 <- "simple slopes"
 
-  if (!is.null(save.as)) {
-    extension <- tools::file_ext(save.as)
+  breaks <- NULL
 
-    if (draw2 == "both") {
-      if (extension == "svg") grDevices::svg(save.as, width = 14, height = 7)
-      if (extension == "png") grDevices::png(save.as, width = 14000, height = 7000, res = 1000)
-      par(mfrow = c(1, 2))
-      par(oma = c(0, 1, 0, 0))
-    } else {
-      if (extension == "svg") grDevices::svg(save.as, width = 7, height = 7)
-      if (extension == "png") grDevices::png(save.as, width = 7000, height = 7000, res = 1000)
-      par(oma = c(0, 1, 0, 0))
+  if (draw2 != "none") {
+    if (!is.null(save.as)) {
+      extension <- tools::file_ext(save.as)
+
+      if (draw2 == "both") {
+        if (extension == "svg") grDevices::svg(save.as, width = 14, height = 7)
+        if (extension == "png") grDevices::png(save.as, width = 14000, height = 7000, res = 1000)
+        par(mfrow = c(1, 2))
+        par(oma = c(0, 1, 0, 0))
+      } else {
+        if (extension == "svg") grDevices::svg(save.as, width = 7, height = 7)
+        if (extension == "png") grDevices::png(save.as, width = 7000, height = 7000, res = 1000)
+        par(oma = c(0, 1, 0, 0))
+      }
+
+      if (draw2 %in% c("both", "simple slopes")) {
+        ip_make_plot(
+          type = "simple.slopes",
+          xlab, ylab1, main1, simple.slopes, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
+          focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim1, legend.title = legend.simple.slopes,
+          x.ticks, y1.ticks, moderator.on.x.axis
+        )
+      }
+
+      if (draw2 %in% c("both", "jn")) {
+        ip_make_plot(
+          type = "jn",
+          xlab, ylab2, main2, jn, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
+          focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim2, legend.title = legend.jn,
+          x.ticks, y2.ticks, moderator.on.x.axis
+        )
+      }
+
+      message(paste0("The figures have been saved to '", save.as, "'"))
+      dev.off()
     }
 
-    if (draw2 %in% c("both", "simple slopes")) {
-      ip_make_plot(
+    old_par <- par(no.readonly = TRUE)
+    par(oma = c(0, 1, 0, 0))
+
+    if (draw2 == "both") {
+      par(mfrow = c(1, 2))
+      on.exit(par(old_par))
+    }
+
+    if (draw2 %in% c("simple slopes", "both")) {
+      breaks <- ip_make_plot(
         type = "simple.slopes",
         xlab, ylab1, main1, simple.slopes, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
         focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim1, legend.title = legend.simple.slopes,
@@ -373,45 +406,14 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
       )
     }
 
-    if (draw2 %in% c("both", "jn")) {
-      ip_make_plot(
+    if (draw2 %in% c("jn", "both")) {
+      breaks <- ip_make_plot(
         type = "jn",
         xlab, ylab2, main2, jn, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
         focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim2, legend.title = legend.jn,
         x.ticks, y2.ticks, moderator.on.x.axis
       )
     }
-
-    message(paste0("The figures have been saved to '", save.as, "'"))
-    dev.off()
-  }
-
-  old_par <- par(no.readonly = TRUE)
-  par(oma = c(0, 1, 0, 0))
-
-  if (draw2 == "both") {
-    par(mfrow = c(1, 2))
-    on.exit(par(old_par))
-  }
-
-  breaks <- NULL
-
-  if (draw2 %in% c("simple slopes", "both")) {
-    breaks <- ip_make_plot(
-      type = "simple.slopes",
-      xlab, ylab1, main1, simple.slopes, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
-      focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim1, legend.title = legend.simple.slopes,
-      x.ticks, y1.ticks, moderator.on.x.axis
-    )
-  }
-
-  if (draw2 %in% c("jn", "both")) {
-    breaks <- ip_make_plot(
-      type = "jn",
-      xlab, ylab2, main2, jn, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
-      focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim2, legend.title = legend.jn,
-      x.ticks, y2.ticks, moderator.on.x.axis
-    )
   }
 
   regions.jn <- "N/A"

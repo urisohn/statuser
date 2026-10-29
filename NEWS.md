@@ -2,6 +2,7 @@
 
 ### Improvements
 - `plot_freq()`: character and factor inputs are supported (previously bare character vectors failed with an obscure `xlim` error). Thanks to Daniel Bankin for the report. New `x.order` controls category order on the x-axis: factor levels (default for factors), alphabetical, frequency (`"freq"` / `"freq.asc"`), `-1` to reverse the default, or a custom name vector.
+- `interprobe()`: `draw = "none"` skips plotting (and `save.as`) while still returning simple slopes, Johnson–Neyman results, and related output.
 
 # statuser 0.4.0 (2026-10-09)
 

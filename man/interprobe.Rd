@@ -87,7 +87,7 @@ otherwise length 3 is required (three spotlights or up to three categorical leve
 
 \item{legend.round}{Integer vector length 2. Min/max decimals in legend.}
 
-\item{draw}{Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), or `"jn"`.}
+\item{draw}{Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), `"jn"`, or `"none"` (no plot).}
 
 \item{save.as}{Optional file path to save plot (`.png` or `.svg`).}
 
