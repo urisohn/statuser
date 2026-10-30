@@ -3,6 +3,10 @@
 ### Improvements
 - `plot_freq()`: character and factor inputs are supported (previously bare character vectors failed with an obscure `xlim` error). Thanks to Daniel Bankin for the report. New `x.order` controls category order on the x-axis: factor levels (default for factors), alphabetical, frequency (`"freq"` / `"freq.asc"`), `-1` to reverse the default, or a custom name vector.
 - `interprobe()`: `draw = "none"` skips plotting (and `save.as`) while still returning simple slopes, Johnson–Neyman results, and related output.
+- `interprobe()`: when `histogram = TRUE`, the sample-size distribution is drawn as its own panel under each curve plot (shared x-axis) instead of being carved out of the GAM y-axis, so frequency labels no longer collide with axis ticks.
+
+### Bug fixes
+- `interprobe()`: discrete focal predictors with a continuous moderator on the x-axis now build frequency bins along the moderator (and return `bin_from` / `bin_to` only when breaks exist), fixing empty-break assignment errors.
 
 # statuser 0.4.0 (2026-10-09)
 

@@ -21,7 +21,7 @@
 #'   GAM engine. 
 #' @param spotlights Numeric vector of length 3. Values at which curves are computed.
 #' @param spotlight.labels Character vector of length 3. Labels for the legend.
-#' @param histogram Logical. If TRUE (default), show sample size distribution under the plot.
+#' @param histogram Logical. If TRUE (default), show a frequency panel under each curve plot.
 #' @param max.unique Integer. Threshold for treating a variable as continuous vs discrete.
 #' @param n.bin.continuous Integer. Number of bins used in histogram when binning continuous values.
 #' @param n.max Integer. Sample size at which line darkness/width saturates.
@@ -353,19 +353,23 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   breaks <- NULL
 
   if (draw2 != "none") {
+    # Device height: extra room when frequency panels are stacked under the curves
+    fig_h <- if (isTRUE(histogram)) 8.5 else 7
+    fig_h_px <- if (isTRUE(histogram)) 8500 else 7000
+
     if (!is.null(save.as)) {
       extension <- tools::file_ext(save.as)
 
       if (draw2 == "both") {
-        if (extension == "svg") grDevices::svg(save.as, width = 14, height = 7)
-        if (extension == "png") grDevices::png(save.as, width = 14000, height = 7000, res = 1000)
-        par(mfrow = c(1, 2))
-        par(oma = c(0, 1, 0, 0))
+        if (extension == "svg") grDevices::svg(save.as, width = 14, height = fig_h)
+        if (extension == "png") grDevices::png(save.as, width = 14000, height = fig_h_px, res = 1000)
       } else {
-        if (extension == "svg") grDevices::svg(save.as, width = 7, height = 7)
-        if (extension == "png") grDevices::png(save.as, width = 7000, height = 7000, res = 1000)
-        par(oma = c(0, 1, 0, 0))
+        if (extension == "svg") grDevices::svg(save.as, width = 7, height = fig_h)
+        if (extension == "png") grDevices::png(save.as, width = 7000, height = fig_h_px, res = 1000)
       }
+
+      graphics::par(oma = c(0, 1, 0, 0))
+      ip_setup_plot_layout(draw2, histogram)
 
       if (draw2 %in% c("both", "simple slopes")) {
         ip_make_plot(
@@ -386,16 +390,13 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
       }
 
       message(paste0("The figures have been saved to '", save.as, "'"))
-      dev.off()
+      grDevices::dev.off()
     }
 
-    old_par <- par(no.readonly = TRUE)
-    par(oma = c(0, 1, 0, 0))
-
-    if (draw2 == "both") {
-      par(mfrow = c(1, 2))
-      on.exit(par(old_par))
-    }
+    old_par <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(old_par), add = TRUE)
+    graphics::par(oma = c(0, 1, 0, 0))
+    ip_setup_plot_layout(draw2, histogram)
 
     if (draw2 %in% c("simple slopes", "both")) {
       breaks <- ip_make_plot(
@@ -422,7 +423,7 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
     cat(regions.jn)
   }
 
-  if (!is.null(breaks)) {
+  if (!is.null(breaks) && is.data.frame(breaks) && nrow(breaks) > 0) {
     output$frequencies$bin_from <- breaks$from
     output$frequencies$bin_to <- breaks$to
   }

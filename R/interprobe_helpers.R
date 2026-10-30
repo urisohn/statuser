@@ -731,7 +731,38 @@ ip_make_fxz <- function(data, n.bin.continuous, moderation, nux, max.unique, spo
     cuts <- c()
     cuts[1] <- (spotlights[1] + spotlights[2]) / 2
     cuts[2] <- (spotlights[3] + spotlights[2]) / 2
-    zbins <- cut(data[, zvar], breaks = c(-Inf, cuts, Inf), labels = paste0("zbin_", 1:3), include.lowest = TRUE)
+
+    # Moderator on x-axis: bin z (axis), group x into spotlight columns
+    if (moderator.on.x.axis == TRUE) {
+      if (nuz > max.unique) {
+        xbins <- cut(
+          data[, zvar],
+          n.bin.continuous,
+          include.lowest = TRUE,
+          labels = paste0("xbin_", 1:(n.bin.continuous))
+        )
+        x1bins <- cut(data[, zvar], n.bin.continuous, include.lowest = TRUE)
+      } else {
+        xbins <- data[, zvar]
+        x1bins <- data[, zvar]
+      }
+      zbins <- cut(
+        data[, xvar],
+        breaks = c(-Inf, cuts, Inf),
+        labels = paste0("zbin_", 1:3),
+        include.lowest = TRUE
+      )
+      fxz <- table(xbins, zbins)
+      return(list2(fxz, x1bins))
+    }
+
+    # Focal on x-axis: rows are discrete x values, columns are spotlight groups of z
+    zbins <- cut(
+      data[, zvar],
+      breaks = c(-Inf, cuts, Inf),
+      labels = paste0("zbin_", 1:3),
+      include.lowest = TRUE
+    )
     fxz <- table(data[, xvar], zbins)
     return(list2(fxz))
   }
@@ -754,67 +785,183 @@ ip_make_fxz <- function(data, n.bin.continuous, moderation, nux, max.unique, spo
   }
 }
 
-ip_draw_histogram <- function(fxz.list, focal, moderation, x1s, nux1, cols, ylim, xlim, max.unique) {
-  breaks <- NULL
+# Layout for GAM panel(s) with optional frequency subplot underneath
+ip_setup_plot_layout <- function(draw2, histogram) {
+  if (isTRUE(histogram)) {
+    if (identical(draw2, "both")) {
+      # Column-major: slopes, freq-under-slopes, JN, freq-under-JN
+      graphics::layout(matrix(c(1, 2, 3, 4), nrow = 2), heights = c(3, 1))
+    } else {
+      graphics::layout(matrix(c(1, 2), nrow = 2), heights = c(3, 1))
+    }
+  } else if (identical(draw2, "both")) {
+    graphics::par(mfrow = c(1, 2))
+  }
+}
 
-  fxz <- fxz.list$fxz
-  rs <- rowSums(fxz)
-  rs <- ifelse(rs > 1000000, paste0(round(rs / 1000000, 1), "M"), rs)
-  rs <- ifelse(rs > 1000, paste0(round(rs / 1000, 1), "k"), rs)
+# Standalone frequency subplot (own y-scale; shares xlim with the GAM panel above)
+ip_draw_histogram <- function(fxz.list, x1s, nux1, cols, xlim, max.unique, xlab = "", x.ticks = NULL) {
+  # 1. Counts and labels
+    breaks <- NULL
+    fxz <- fxz.list$fxz
+    rs <- as.numeric(rowSums(fxz))
+    rs_lab <- ifelse(
+      rs > 1000000,
+      paste0(round(rs / 1000000, 1), "M"),
+      ifelse(rs > 1000, paste0(round(rs / 1000, 1), "k"), as.character(rs))
+    )
+    x.axis.bins <- nrow(fxz)
+    lines.total <- ncol(fxz)
 
-  x.axis.bins <- nrow(fxz)
-  lines.total <- ncol(fxz)
+  # 2. Match left margin with the panel above; tight top so it sits under the GAM
+    m0 <- graphics::par("mar")
+    graphics::par(mar = c(3.2, m0[2], 0.15, m0[4]))
 
-  y0 <- par("usr")[3]
-  x0 <- par("usr")[1]
-  x1 <- par("usr")[2]
-  yd <- y0 + (0.09 + lines.total * 0.07) * diff(ylim) * 0.85
+  # 3. Y-limit from raw counts (extra headroom for title + count labels inside the panel)
+    if (nux1 > max.unique) {
+      max_y <- max(rs)
+    } else {
+      max_y <- max(fxz)
+    }
+    if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+    title_y <- max_y * 1.28
+    ylim_freq <- c(0, max_y * 1.45)
 
-  graphics::polygon(
-    x = c(x0, x0, x1, x1),
-    border = NA,
-    y = c(y0, yd, yd, y0),
-    col = grDevices::adjustcolor("gray77", 0.25)
-  )
-  xc <- (x1 + x0) / 2
-  yd2 <- (yd - y0) * 1.05 + y0
-  graphics::text(xc, yd2, "Number of Observations", font = 3, cex = 1.1, pos = 1)
+  # 4. Empty plot (x-axis lives here when stacked under the GAM)
+    xaxt <- if (!is.null(x.ticks)) "n" else "s"
+    graphics::plot(
+      NA, NA,
+      type = "n",
+      xlim = xlim,
+      ylim = ylim_freq,
+      xlab = xlab,
+      ylab = "",
+      las = 1,
+      yaxt = "n",
+      xaxt = xaxt,
+      cex.lab = 1.3,
+      font.lab = 2,
+      bty = "n"
+    )
+    usr <- graphics::par("usr")
+    graphics::rect(
+      usr[1], usr[3], usr[2], usr[4],
+      col = grDevices::adjustcolor("gray77", 0.18),
+      border = NA
+    )
+    graphics::text(
+      x = mean(xlim),
+      y = title_y,
+      labels = "Number of Observations",
+      font = 3,
+      cex = 0.95,
+      col = "gray25",
+      adj = c(0.5, 0.5)
+    )
 
-  if (nux1 > max.unique) {
-    breaks <- ip_get_breaks(fxz.list$x1bins)
-    y0 <- par("usr")[3]
-    y1 <- y0 + 0.05 * lines.total * diff(ylim)
+    if (!is.null(x.ticks)) {
+      if (!is.data.frame(x.ticks)) graphics::axis(side = 1, at = x.ticks)
+      if (is.data.frame(x.ticks)) graphics::axis(side = 1, at = x.ticks[, 1], labels = x.ticks[, 2])
+    }
 
-    fxz2 <- apply(fxz, 1, cumsum)
-    fxz2 <- fxz2 / max(fxz2[nrow(fxz2), ])
-    fxz2 <- rbind(rep(0, ncol(fxz2)), fxz2)
-    fxz2 <- fxz2 * (y1 - y0) + y0
+  # 5. Continuous x-axis: stacked filled bins
+    if (nux1 > max.unique) {
+      breaks <- ip_get_breaks(fxz.list$x1bins)
+      fxz2 <- apply(fxz, 1, cumsum)
+      fxz2 <- rbind(rep(0, ncol(fxz2)), fxz2)
 
-    for (j in 1:x.axis.bins) {
-      for (m in 1:lines.total) {
-        x1s2 <- c(breaks$from[j], breaks$from[j], breaks$to[j], breaks$to[j])
-        ys <- c(fxz2[m, j], fxz2[m + 1, j], fxz2[m + 1, j], fxz2[m, j])
-        graphics::polygon(x = x1s2, y = ys, col = ip_adjustcolor2(cols[m], 0.6))
+      for (j in 1:x.axis.bins) {
+        for (m in 1:lines.total) {
+          x1s2 <- c(breaks$from[j], breaks$from[j], breaks$to[j], breaks$to[j])
+          ys <- c(fxz2[m, j], fxz2[m + 1, j], fxz2[m + 1, j], fxz2[m, j])
+          graphics::polygon(x = x1s2, y = ys, col = ip_adjustcolor2(cols[m], 0.6), border = NA)
+        }
       }
+      graphics::text(rowMeans(breaks), rs, labels = rs_lab, pos = 3, cex = 0.8, font = 3, col = "gray38")
     }
 
-    graphics::text(rowMeans(breaks), y1, rs, pos = 3, cex = 0.8, font = 3, col = "gray38")
-  }
-
-  if (nux1 <= max.unique) {
-    y0 <- par("usr")[3]
-    y1 <- y0 + 0.05 * lines.total * diff(ylim)
-    fxz2 <- (fxz / max(fxz)) * (y1 - y0) + y0
-
-    x.width <- (x1s[2] - x1s[1])
-    for (j in 1:lines.total) {
-      xj <- x1s + x.width * (j - 2) * 0.1
-      graphics::segments(x0 = xj, x1 = xj, y0 = y0, y1 = fxz2[, j], lwd = 4, col = cols[j])
+  # 6. Discrete x-axis: side-by-side segments per line
+    if (nux1 <= max.unique) {
+      if (length(x1s) >= 2) {
+        x.width <- x1s[2] - x1s[1]
+      } else {
+        x.width <- diff(xlim) * 0.05
+      }
+      for (j in 1:lines.total) {
+        xj <- x1s + x.width * (j - 2) * 0.1
+        graphics::segments(x0 = xj, x1 = xj, y0 = 0, y1 = fxz[, j], lwd = 4, col = cols[j])
+      }
+      y_lab <- apply(fxz, 1, max)
+      graphics::text(x1s, y_lab, labels = rs_lab, pos = 3, cex = 0.8, font = 3, col = "gray38")
     }
-    graphics::text(x1s, y1, rs, pos = 3, cex = 0.8, font = 3, col = "gray38")
-  }
 
   breaks
+}
+
+# Y-tick locations/labels for ip_make_plot (pretty + optional JN zero; or user y.ticks)
+ip_y_tick_set <- function(ylim, type, y.ticks = NULL) {
+  if (!is.null(y.ticks)) {
+    if (inherits(y.ticks, "data.frame")) {
+      return(list(at = as.numeric(y.ticks[, 1]), labels = as.character(y.ticks[, 2])))
+    }
+    return(list(at = as.numeric(y.ticks), labels = NULL))
+  }
+
+  at <- pretty(ylim)
+  if (identical(type, "jn") && ylim[1] <= 0 && ylim[2] >= 0) {
+    at <- sort(unique(c(at, 0)))
+  }
+  list(at = at, labels = NULL)
+}
+
+# Drop y-ticks whose las=1 labels would overlap vertically (keeps 0 when present)
+ip_thin_y_ticks <- function(at, labels = NULL) {
+  if (length(at) <= 1L) {
+    return(list(at = at, labels = labels))
+  }
+
+  h_in <- graphics::strheight("0", units = "inches")
+  usr <- graphics::par("usr")
+  pin <- graphics::par("pin")
+  y_per_in <- diff(usr[3:4]) / pin[2]
+  min_gap <- h_in * y_per_in * 1.4
+
+  ord <- order(at)
+  at <- at[ord]
+  if (!is.null(labels)) labels <- labels[ord]
+
+  prefer0 <- which(at == 0)
+  keep <- rep(FALSE, length(at))
+  if (length(prefer0) == 1L) {
+    keep[prefer0] <- TRUE
+    last_lo <- at[prefer0]
+    last_hi <- at[prefer0]
+    for (i in rev(seq_len(prefer0 - 1L))) {
+      if (last_lo - at[i] >= min_gap) {
+        keep[i] <- TRUE
+        last_lo <- at[i]
+      }
+    }
+    for (i in seq.int(prefer0 + 1L, length(at))) {
+      if (at[i] - last_hi >= min_gap) {
+        keep[i] <- TRUE
+        last_hi <- at[i]
+      }
+    }
+  } else {
+    last <- -Inf
+    for (i in seq_along(at)) {
+      if (at[i] - last >= min_gap) {
+        keep[i] <- TRUE
+        last <- at[i]
+      }
+    }
+  }
+
+  list(
+    at = at[keep],
+    labels = if (is.null(labels)) NULL else labels[keep]
+  )
 }
 
 ip_make_plot <- function(
@@ -822,162 +969,179 @@ ip_make_plot <- function(
   focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim, legend.title,
   x.ticks, y.ticks, moderator.on.x.axis
 ) {
-  ylim.set.by.user <- !is.null(ylim)
+  # 1. Axis variable and number of curves
+    ylim.set.by.user <- !is.null(ylim)
 
-  if (moderator.on.x.axis == FALSE) {
-    if (xlab == "") xlab <- xvar
-    n.lines <- length(spotlights)
-    x1.range <- range(data[, xvar])
-    x1s <- xs
-    nux1 <- nux
-    x1.axis <- "x"
-  }
-
-  if (moderator.on.x.axis == TRUE) {
-    if (xlab == "") xlab <- zvar
-
-    if (type == "simple.slopes" & focal != "categorical") n.lines <- length(spotlights)
-    if (type == "simple.slopes" & focal == "categorical") n.lines <- nux
-
-    if (type == "jn" & focal == "categorical") n.lines <- nux - 1
-    if (type == "jn" & focal != "categorical") n.lines <- length(spotlights)
-
-    x1.range <- range(data[, zvar])
-    x1s <- zs
-    nux1 <- nuz
-    x1.axis <- "z"
-  }
-
-  if (!is.null(y.ticks) & inherits(y.ticks, "data.frame")) {
-    yline.adj <- max(nchar(y.ticks[, 2])) / 3.25
-    m0 <- par("mar")
-    m1 <- m0
-    m1[2] <- m1[2] + yline.adj
-    par(mar = m1)
-  }
-
-  res.df <- do.call(rbind, res)
-
-  if (is.null(ylim)) ylim <- range(res.df[, c("conf.low", "conf.high")])
-  ylim1 <- ylim[1]
-  ylim2 <- ylim[2]
-
-  if (type == "jn" & !ylim.set.by.user) {
-    if (ylim1 * ylim2 > 0) {
-      if (ylim1 > 0) ylim[1] <- 0 - 0.02 * diff(ylim)
-      if (ylim1 < 0) ylim[2] <- 0 + 0.02 * diff(ylim)
+    if (moderator.on.x.axis == FALSE) {
+      if (xlab == "") xlab <- xvar
+      n.lines <- length(spotlights)
+      x1.range <- range(data[, xvar])
+      x1s <- xs
+      nux1 <- nux
+      x1.axis <- "x"
     }
-  }
 
-  if (!ylim.set.by.user) ylim[2] <- ylim[2] + 0.3 * diff(ylim)
-  if (histogram == TRUE & !ylim.set.by.user) ylim[1] <- ylim[1] - (0.15 + n.lines * 0.07) * diff(ylim)
+    if (moderator.on.x.axis == TRUE) {
+      if (xlab == "") xlab <- zvar
 
-  if (is.null(xlim)) xlim <- x1.range
+      if (type == "simple.slopes" & focal != "categorical") n.lines <- length(spotlights)
+      if (type == "simple.slopes" & focal == "categorical") n.lines <- nux
 
-  xaxt <- "s"
-  yaxt <- "s"
-  if (!is.null(x.ticks)) xaxt <- "n"
-  if (!is.null(y.ticks)) yaxt <- "n"
+      if (type == "jn" & focal == "categorical") n.lines <- nux - 1
+      if (type == "jn" & focal != "categorical") n.lines <- length(spotlights)
 
-  ylab.plotted <- ylab
-  if (!is.null(y.ticks)) ylab.plotted <- ""
+      x1.range <- range(data[, zvar])
+      x1s <- zs
+      nux1 <- nuz
+      x1.axis <- "z"
+    }
 
-  graphics::plot(
-    x1s, res[[1]]$estimate,
-    type = "n",
-    xlab = xlab,
-    ylab = ylab.plotted,
-    las = 1,
-    ylim = ylim,
-    xlim = xlim,
-    yaxt = "n",
-    cex.lab = 1.3,
-    font.lab = 2,
-    xaxt = xaxt,
-    yaxt = yaxt
-  )
+  # 2. Y-limits for the GAM panel (no bottom carve-out for frequencies)
+    res.df <- do.call(rbind, res)
 
-  if (yaxt == "s") graphics::axis(2, at = pretty(ylim)[c(-1, -2)], las = 1)
+    if (is.null(ylim)) ylim <- range(res.df[, c("conf.low", "conf.high")])
+    ylim1 <- ylim[1]
+    ylim2 <- ylim[2]
 
-  if (!is.null(x.ticks)) {
-    if (!is.data.frame(x.ticks)) graphics::axis(side = 1, at = x.ticks)
-    if (is.data.frame(x.ticks)) graphics::axis(side = 1, at = x.ticks[, 1], x.ticks[, 2])
-  }
+    if (type == "jn" & !ylim.set.by.user) {
+      if (ylim1 * ylim2 > 0) {
+        if (ylim1 > 0) ylim[1] <- 0 - 0.02 * diff(ylim)
+        if (ylim1 < 0) ylim[2] <- 0 + 0.02 * diff(ylim)
+      }
+    }
 
-  if (!is.null(y.ticks)) {
-    if (!is.data.frame(y.ticks)) graphics::axis(side = 2, at = y.ticks, las = 1)
-    if (is.data.frame(y.ticks)) graphics::axis(side = 2, at = y.ticks[, 1], y.ticks[, 2], las = 1)
-  }
+    if (!ylim.set.by.user) ylim[2] <- ylim[2] + 0.3 * diff(ylim)
 
-  if (type == "jn") {
-    graphics::axis(2, at = 0, las = 1)
-    graphics::abline(h = 0, lty = 2, col = "gray77")
-  }
+    if (is.null(xlim)) xlim <- x1.range
 
-  col.seg <- cols
-  if (focal == "categorical" & type == "jn") col.seg <- col.seg[-1]
+  # 3. Y-tick set; left margin just wide enough for las=1 ticks + ylab (no huge gutter)
+    yset <- ip_y_tick_set(ylim, type, y.ticks)
+    lab_for_width <- if (is.null(yset$labels)) {
+      format(yset$at, trim = TRUE)
+    } else {
+      yset$labels
+    }
+    cex_axis <- graphics::par("cex.axis")
+    if (is.na(cex_axis)) cex_axis <- 1
+    csi <- graphics::par("csi")
+    mgp2 <- graphics::par("mgp")[2]
+    tick_in <- max(graphics::strwidth(lab_for_width, units = "inches", cex = cex_axis))
+    # ylab close to tick strings; leave most leftover margin to the LEFT of the ylab
+    ylab_line <- mgp2 + tick_in / csi + 0.55
+    mar_left <- ylab_line + 2.0
+    m0 <- graphics::par("mar")
+    mar_bottom <- if (isTRUE(histogram)) 0.4 else m0[1]
+    graphics::par(mar = c(mar_bottom, mar_left, m0[3], m0[4]))
 
-  for (j in 1:n.lines) {
-    g1 <- as.numeric(gr[, j])
-    if (nux1 > max.unique) g <- rep(g1, each = length(x1s) / length(g1))
-    if (nux1 <= max.unique) g <- g1
+  # 4. When a frequency subplot follows, suppress x-axis on the GAM panel
+    xlab_main <- xlab
+    xaxt <- "s"
+    if (!is.null(x.ticks)) xaxt <- "n"
+    if (isTRUE(histogram)) {
+      xlab_main <- ""
+      xaxt <- "n"
+    }
 
-    ip_line_seg(x1s, res[[j]]$estimate, lwd = 4 * g, col = col.seg[j], g = g)
-
-    graphics::polygon(
-      x = c(x1s, rev(x1s)),
-      y = c(res[[j]]$conf.high, rev(res[[j]]$conf.low)),
-      col = grDevices::adjustcolor(col.seg[j], 0.1),
-      border = NA
+  # 5. Main GAM plot (y-axis drawn once below)
+    # Do not pass las=1 to plot(): it sets par(las) and would make ylab/mtext horizontal
+    graphics::plot(
+      x1s, res[[1]]$estimate,
+      type = "n",
+      xlab = xlab_main,
+      ylab = "",
+      ylim = ylim,
+      xlim = xlim,
+      cex.lab = 1.3,
+      font.lab = 2,
+      xaxt = xaxt,
+      yaxt = "n"
     )
 
-    if (nux1 <= max.unique) {
-      graphics::points(x1s, res[[j]]$estimate, col = ip_adjustcolor2(col.seg[j], pmax(g, 0.2)), pch = 16, cex = 1.5)
+    yset <- ip_thin_y_ticks(yset$at, yset$labels)
+    if (is.null(yset$labels)) {
+      graphics::axis(2, at = yset$at, las = 1)
+    } else {
+      graphics::axis(2, at = yset$at, labels = yset$labels, las = 1)
     }
-  }
+    # Force las=0 so ylab stays parallel to the axis (axis(..., las=1) must not leak)
+    graphics::par(las = 0)
+    graphics::title(ylab = ylab, line = ylab_line, font.lab = 2, cex.lab = 1.3, las = 0)
 
-  graphics::mtext(side = 3, line = 1.5, font = 2, cex = 1.5, main)
-
-  if (x1.axis == "x") {
-    if (is.null(legend.title)) legend.title <- zvar
-    graphics::legend(
-      "top",
-      inset = 0.01,
-      bty = "n",
-      lwd = 8,
-      col = cols[1:n.lines],
-      title = legend.title,
-      title.font = 2,
-      legend = spotlight.labels
-    )
-  }
-
-  if (x1.axis == "z") {
-    if (is.null(legend.title)) legend.title <- paste0("Focal predictor ('", xvar, "')")
-
-    if (type == "simple.slopes" & focal == "categorical") {
-      graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols[1:n.lines], title = legend.title, title.font = 2, legend = xs)
+    if (!isTRUE(histogram) && !is.null(x.ticks)) {
+      if (!is.data.frame(x.ticks)) graphics::axis(side = 1, at = x.ticks)
+      if (is.data.frame(x.ticks)) graphics::axis(side = 1, at = x.ticks[, 1], labels = x.ticks[, 2])
     }
 
-    if (type == "simple.slopes" & focal != "categorical") {
-      graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols[1:n.lines], title = legend.title, title.font = 2, legend = spotlight.labels)
+    if (type == "jn") {
+      graphics::abline(h = 0, lty = 2, col = "gray77")
     }
 
-    if (type == "jn" & focal == "categorical") {
-      graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols[-1], title = legend.title, title.font = 2, legend = paste0(xs[-1], " - ", xs[1]))
+    col.seg <- cols
+    if (focal == "categorical" & type == "jn") col.seg <- col.seg[-1]
+
+    for (j in 1:n.lines) {
+      g1 <- as.numeric(gr[, j])
+      if (nux1 > max.unique) g <- rep(g1, each = length(x1s) / length(g1))
+      if (nux1 <= max.unique) g <- g1
+
+      ip_line_seg(x1s, res[[j]]$estimate, lwd = 4 * g, col = col.seg[j], g = g)
+
+      graphics::polygon(
+        x = c(x1s, rev(x1s)),
+        y = c(res[[j]]$conf.high, rev(res[[j]]$conf.low)),
+        col = grDevices::adjustcolor(col.seg[j], 0.1),
+        border = NA
+      )
+
+      if (nux1 <= max.unique) {
+        graphics::points(x1s, res[[j]]$estimate, col = ip_adjustcolor2(col.seg[j], pmax(g, 0.2)), pch = 16, cex = 1.5)
+      }
     }
 
-    if (type == "jn" & focal == "continuous") {
-      graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols, title = legend.title, title.font = 2, legend = spotlight.labels)
+    graphics::mtext(side = 3, line = 1.5, font = 2, cex = 1.5, main)
+
+    if (x1.axis == "x") {
+      if (is.null(legend.title)) legend.title <- zvar
+      graphics::legend(
+        "top",
+        inset = 0.01,
+        bty = "n",
+        lwd = 8,
+        col = cols[1:n.lines],
+        title = legend.title,
+        title.font = 2,
+        legend = spotlight.labels
+      )
     }
-  }
 
-  if (!is.null(y.ticks)) graphics::mtext(side = 2, line = par("mar")[2] - 1, font = 2, cex = 1.5, ylab)
+    if (x1.axis == "z") {
+      if (is.null(legend.title)) legend.title <- paste0("Focal predictor ('", xvar, "')")
 
-  breaks <- NULL
-  if (histogram == TRUE) {
-    breaks <- ip_draw_histogram(fxz.list, focal, moderation = "continuous", x1s, nux1, cols, ylim, xlim, max.unique)
-  }
+      if (type == "simple.slopes" & focal == "categorical") {
+        graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols[1:n.lines], title = legend.title, title.font = 2, legend = xs)
+      }
+
+      if (type == "simple.slopes" & focal != "categorical") {
+        graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols[1:n.lines], title = legend.title, title.font = 2, legend = spotlight.labels)
+      }
+
+      if (type == "jn" & focal == "categorical") {
+        graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols[-1], title = legend.title, title.font = 2, legend = paste0(xs[-1], " - ", xs[1]))
+      }
+
+      if (type == "jn" & focal == "continuous") {
+        graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols, title = legend.title, title.font = 2, legend = spotlight.labels)
+      }
+    }
+
+  # 6. Frequency subplot in the next layout cell
+    breaks <- NULL
+    if (isTRUE(histogram)) {
+      breaks <- ip_draw_histogram(
+        fxz.list, x1s, nux1, cols, xlim, max.unique,
+        xlab = xlab, x.ticks = x.ticks
+      )
+    }
 
   breaks
 }

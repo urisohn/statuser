@@ -63,7 +63,7 @@ GAM engine.}
 
 \item{spotlight.labels}{Character vector of length 3. Labels for the legend.}
 
-\item{histogram}{Logical. If TRUE (default), show sample size distribution under the plot.}
+\item{histogram}{Logical. If TRUE (default), show a frequency panel under each curve plot.}
 
 \item{max.unique}{Integer. Threshold for treating a variable as continuous vs discrete.}
 

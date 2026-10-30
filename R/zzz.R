@@ -17,7 +17,7 @@
       #While developing:
         packageStartupMessage(
          "#######################################################\n",
-                              "This Version 2026 10 28 - 07.55AM\n" )
+                              "This Version 2026 10 29 - 07.18AM\n" )
         
 
 
