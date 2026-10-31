@@ -297,14 +297,26 @@ test_that("plot_cdf reserves space for legend with groups", {
 })
 
 #plot_cdf_023
-test_that("plot_cdf xlim adds padding", {
-  # Test that xlim includes padding to prevent edge clipping
+test_that("plot_cdf honors user xlim via ...", {
+  x <- c(1, 2, 3, 4, 5)
+  pdf(NULL)
+  on.exit(dev.off())
+  plot_cdf(x, xlim = c(0, 10))
+  expect_equal(par("usr")[1:2], c(0, 10), tolerance = 1e-6)
+
   y1 <- c(1, 2, 3, 4, 5)
   y2 <- c(1, 2, 3)
-  
-  expect_error(plot_cdf(y1, y2), NA)
-  
-  # Single variable
+  plot_cdf(y1, y2, xlim = c(-1, 8))
+  expect_equal(par("usr")[1:2], c(-1, 8), tolerance = 1e-6)
+})
+
+#plot_cdf_024
+test_that("plot_cdf xlim adds padding when not supplied", {
   x <- c(1, 2, 3, 4, 5)
-  expect_error(plot_cdf(x), NA)
+  pdf(NULL)
+  on.exit(dev.off())
+  plot_cdf(x)
+  usr <- par("usr")[1:2]
+  expect_lt(usr[1], min(x))
+  expect_gt(usr[2], max(x))
 })

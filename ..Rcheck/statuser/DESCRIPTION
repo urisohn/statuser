@@ -1,11 +1,12 @@
 Package: statuser
 Type: Package
 Title: Statistical Tools Designed for End Users
-Version: 0.2.1
-Authors@R: person(given = "Uri",
-                  family = "Simonsohn",
-                  role = c("aut", "cre"),
-                  email = "urisohn@gmail.com")
+Version: 0.4.0.9001
+Authors@R: c(
+    person(given = "Uri",
+           family = "Simonsohn",
+           role = c("aut", "cre"),
+           email = "urisohn@gmail.com"))
 Author: Uri Simonsohn [aut, cre]
 Maintainer: Uri Simonsohn <urisohn@gmail.com>
 Description: The statistical tools in this package do one of four things:
@@ -17,10 +18,15 @@ Description: The statistical tools in this package do one of four things:
     4) Deliver niche functions of high value to the authors that are not easily
     available elsewhere (e.g., clear(), convert_to_sql(), resize_images()).
 License: GPL-3
+URL: https://github.com/urisohn/statuser
+BugReports: https://github.com/urisohn/statuser/issues
 Encoding: UTF-8
-RoxygenNote: 7.3.3
-Imports: mgcv, marginaleffects, rsvg, magick, sandwich, lmtest, utils
+LazyData: true
+Imports: mgcv, marginaleffects, rsvg, magick, sandwich, lmtest,
+        lmerTest, digest, beeswarm, utils
 Suggests: testthat (>= 3.0.0), crayon, quantreg, estimatr, broom,
-        modelsummary
+        modelsummary, knitr, rmarkdown, MASS
+VignetteBuilder: knitr
 Config/testthat/edition: 3
-Built: R 4.5.2; ; 2026-04-25 11:21:10 UTC; windows
+Config/roxygen2/version: 8.1.0
+Built: R 4.6.0; ; 2026-10-30 08:26:03 UTC; windows

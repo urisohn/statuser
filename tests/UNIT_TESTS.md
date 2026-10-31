@@ -77,7 +77,7 @@ Helper code: `tests/testthat/helper-backend_equivalence.R`.
 | **`model` / `data` routing** | Fits **lm2** when `model = linear` (or sentinel) with data; vector interface with `model = linear`. |
 | **Keyword vs object** | `linear` in calling env vs bare keyword; `lm` as keyword when appropriate. |
 | **NSE names** | Bare and quoted `x`/`z`/`y` with `data=` (columns need not exist in calling env); bare `x`/`z` with fitted `model=`. |
-| **Errors** | Messages preserve intended model name; missing column uses `'var' is not a variable in dataframe 'df'`. |
+| **Errors** | Messages preserve intended model name; missing column uses `'var' is not a variable in data.frame 'df'`. |
 
 ---
 

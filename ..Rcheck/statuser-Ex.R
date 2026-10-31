@@ -145,6 +145,76 @@ format_pvalue(0.05, include_p = TRUE)
 base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
 base::cat("format_pvalue", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
 cleanEx()
+nameEx("interprobe")
+### * interprobe
+
+flush(stderr()); flush(stdout())
+
+base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+### Name: interprobe
+### Title: Probe interactions robustly to nonlinearities
+### Aliases: interprobe
+
+### ** Examples
+
+## No test: 
+# Simulated example with a known nonlinear interaction
+data(interprobe_sim)
+interprobe(x = treat, z = mod, y = y, data = interprobe_sim, quiet = TRUE)
+
+if (requireNamespace("MASS", quietly = TRUE)) {
+  bw <- MASS::birthwt
+  bw$smoke <- factor(bw$smoke, levels = c(0, 1), labels = c("No", "Yes"))
+  bw$race <- factor(bw$race, levels = c(1, 2, 3),
+                    labels = c("White", "Black", "Other"))
+
+  # Case A: binary x x continuous moderator
+  interprobe(x = smoke, z = age, y = bwt, data = bw, quiet = TRUE)
+
+  # Case B: 3-level categorical x
+  interprobe(x = race, z = age, y = bwt, data = bw, quiet = TRUE)
+
+  # Case C: continuous x x continuous z
+  interprobe(x = age, z = lwt, y = bwt, data = bw, quiet = TRUE)
+
+  # Linear probe, or probe a fitted model (covariates)
+  interprobe(x = smoke, z = age, y = bwt, data = bw, model = "linear", quiet = TRUE)
+  fit <- lm(bwt ~ smoke * age + lwt, data = bw)
+  interprobe(model = fit, x = smoke, z = age, quiet = TRUE)
+}
+## End(No test)
+
+
+
+
+base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+base::cat("interprobe", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+cleanEx()
+nameEx("interprobe_sim")
+### * interprobe_sim
+
+flush(stderr()); flush(stdout())
+
+base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+### Name: interprobe_sim
+### Title: Simulated nonlinear interaction for interprobe demos
+### Aliases: interprobe_sim
+### Keywords: datasets
+
+### ** Examples
+
+data(interprobe_sim)
+head(interprobe_sim)
+## No test: 
+interprobe(x = treat, z = mod, y = y, data = interprobe_sim, quiet = TRUE)
+## End(No test)
+
+
+
+
+base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+base::cat("interprobe_sim", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+cleanEx()
 nameEx("list2")
 ### * list2
 
@@ -341,6 +411,9 @@ df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
 plot_cdf(value ~ group, data = df)
 plot_cdf(value ~ group, data = df, col = c("red", "blue"))
 
+# Custom x-axis limits
+plot_cdf(y ~ group, xlim = c(0, 10))
+
 # Compare two vectors
 y1 <- rnorm(50)
 y2 <- rnorm(50, mean = 1)
@@ -432,6 +505,11 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 # Simple example
 x <- c(1, 1, 2, 2, 2, 5, 5)
 plot_freq(x)
+
+# Character categories (alphabetical by default)
+cats <- c("a", "a", "b", "c")
+plot_freq(cats)
+plot_freq(cats, x.order = "freq")  # most frequent first
 
 # Pass on some common \code{plot()} arguments
 plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
@@ -561,6 +639,30 @@ resize_images(tmp_png, width = 80)
 base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
 base::cat("resize_images", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
 graphics::par(get("par.postscript", pos = 'CheckExEnv'))
+cleanEx()
+nameEx("round2")
+### * round2
+
+flush(stderr()); flush(stdout())
+
+base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+### Name: round2
+### Title: Round with Fixed Decimals
+### Aliases: round2
+
+### ** Examples
+
+round2(0.34, 2)
+round2(0.34, 2, leading.zero = TRUE)
+round2(c(0.34, 0.5), 2)
+round2(c(0.34, 1.25), 2)
+round2(1.2, 2)
+
+
+
+
+base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+base::cat("round2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
 cleanEx()
 nameEx("scatter.gam")
 ### * scatter.gam
@@ -696,7 +798,7 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 # Create a simple plot
 plot(1:10, 1:10, type = "n", main = "text2() - Alignment & Color")
 
-# Alignment respect to x=5
+# Alignment with respect to x=5
 text2(5, 8, "align='left' from 5", align = "left", bg = "yellow1")
 text2(5, 7, "align='right' from 5", align = "right", bg = "blue", col = "white")
 text2(5, 6, "align='center' from 5", align = "center", bg = "black", col = "white")

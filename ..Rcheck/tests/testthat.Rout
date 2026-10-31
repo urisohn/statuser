@@ -1,6 +1,6 @@
 
-R version 4.5.2 (2025-10-31 ucrt) -- "[Not] Part in a Rumble"
-Copyright (C) 2025 The R Foundation for Statistical Computing
+R version 4.6.0 (2026-04-24 ucrt) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-w64-mingw32/x64
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -20,6 +20,9 @@ Type 'q()' to quit R.
 > # This file is run automatically by R CMD check
 > library(testthat)
 > library(statuser)
+#######################################################
+This Version 2026 10 29 - 07.18AM
+
 > 
 > test_check("statuser")
 
@@ -153,7 +156,19 @@ We compute t2/(t1+t2) = 0.41
 We then lookup the value of 'x' at that quantile, so we run
 quantile(x, 0.41) = 0.11 and set that value, 0.11, as the breakpoint.
 
-Note: you may turn off this message by setting `quiet=TRUE`
+Note: you may turn off this message by setting `quiet=TRUE`Call: lm2(formula = mpg ~ wt, data = mtcars)
+
+            estimate  SE.robust SE.classical t.value p.value std.estimate
+intercept    37.29**    2.427      1.878      15.36   <.0001       --    
+wt          -5.344**    .738       .559      -7.241   <.0001    -.868    
+              mean missing red.flag
+intercept      --    --        !   
+wt          3.217    0         !   
+
+N = 32  | missing = 0  | df = 30  | R² = 0.753  | SE type: HC3 
+
+Note: to see explanations for lm2() output, run: `lm2_notes()`
+
 print() and summary() show the same information for lm2()
 print() and summary() show the same information for lm2()
 print() and summary() show the same information for lm2()
@@ -180,37 +195,34 @@ plot_cdf() says: dropped 10 observations with missing 'y' values
 plot_cdf() says: dropped 10 observations with missing 'y' values
 plot_density() says: dropped 10 observations with missing 'y' values
 plot_density() says: dropped 10 observations with missing 'y' values
-plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior
 plot_freq() says: dropped 1 observations with missing 'x' values
 plot_freq() says: dropped 1 observations with missing 'x' values
 plot_freq() says: dropped 2 observations with missing 'value' values
 plot_freq() says: dropped 2 observations with missing 'value' values
-plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior
-plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior
 tests:
 1) A vs B: t(97.5)=-0.03, p=0.979
 You can specify which statistical tests to report with the `tests` argument.
 
 Set `quiet=TRUE` to suppress this output.
 tests:
-1) X_A vs X_B: t(97.6)=-1.70, p=0.092
-2) Y_A vs Y_B: t(97.7)=-0.32, p=0.753
-3) interaction(x1:x2): regression interaction: t(196)=-0.89, p=0.375
+1) X_A vs X_B: t(96.9)=-1.10, p=0.274
+2) Y_A vs Y_B: t(91.1)=-1.99, p=0.049
+3) interaction(x1:x2): regression interaction: t(196)=0.45, p=0.654
 You can specify which statistical tests to report with the `tests` argument.
 
 Set `quiet=TRUE` to suppress this output.
 tests:
-1) A vs B: t(96.9)=-1.10, p=0.274
+1) A vs B: t(98.0)=-0.27, p=0.790
 You can specify which statistical tests to report with the `tests` argument.
 
 Set `quiet=TRUE` to suppress this output.
 tests:
-1) B vs A: t(96.9)=-1.10, p=0.274
+1) B vs A: t(98.0)=-0.27, p=0.790
 You can specify which statistical tests to report with the `tests` argument.
 
 Set `quiet=TRUE` to suppress this output.
 tests:
-1) B vs A: t(96.9)=-1.10, p=0.274
+1) B vs A: t(98.0)=-0.27, p=0.790
 You can specify which statistical tests to report with the `tests` argument.
 
 Set `quiet=TRUE` to suppress this output.
@@ -235,55 +247,112 @@ tests:
 3) Z_A vs Z_B: t(58.0)=-0.45, p=0.655
 You can specify which statistical tests to report with the `tests` argument.
 
-Set `quiet=TRUE` to suppress this output.     status
-group X Y
-    A 2 1
-    B 1 1
-     status
-group X Y
-    A 2 1
-    B 1 1
-   y
-x   X Y
-  A 2 1
-  B 1 1
+Set `quiet=TRUE` to suppress this output.
+         status
+         X  Y
+group A  2  1
+      B  1  1
 
-Row proportions:
-   y
-x   X     Y     Total
-  A 0.667 0.333 1.000
-  B 0.500 0.500 1.000
-, , z = high
 
-   y
-x   X Y
-  A 1 0
-  B 1 0
+         status
+         X  Y
+group A  2  1
+      B  1  1
 
-, , z = low
 
-   y
-x   X Y
-  A 0 1
-  B 0 1
+1. Frequencies
+      y
+     X  Y
+x A  2  1
+  B  1  1
 
-   y
-x   X Y
-  A 1 1
-  B 1 1
+
+2. Relative frequencies: by row
+              y
+         X      Y  Total
+x A   .667   .333  1.000
+  B   .500   .500  1.000
+
+
+z = high
+
+      y
+     X  Y
+x A  1  0
+  B  1  0
+
+
+z = low
+
+      y
+     X  Y
+x A  0  1
+  B  0  1
+
+
+      y
+     X  Y
+x A  1  1
+  B  1  1
+
+
+Cache for stimulus.plot() has been cleared.
+stimulus.plot() says: 1 observations were dropped because of missing values.
+Cache for stimulus.plot() has been cleared.
+stimulus.plot() says: 1 observations were dropped because of missing values.
+Will conduct 20 resamples to estimate expected heterogeneity under null of homogeneity.
+
+Cache for stimulus.plot() has been cleared.
+Will run 20 resamples to compute confidence band
+Cache for stimulus.plot() has been cleared.
+stimulus.plot() says: 1 observations were dropped because of missing values.
+Will conduct 20 resamples to estimate expected heterogeneity under null of homogeneity.
+
+Cache for stimulus.plot() has been cleared.
+Cache for stimulus.plot() has been cleared.
+stimulus.plot() says: 1 observations were dropped because of missing values.
+Will conduct 20 resamples to estimate expected heterogeneity under null of homogeneity.
+
+Cache for stimulus.plot() has been cleared.
+stimulus.plot() says: 1 observations were dropped because of missing values.
+Cache for stimulus.plot() has been cleared.
+stimulus.plot() says: 1 observations were dropped because of missing values.
+Will conduct 20 resamples to estimate expected heterogeneity under null of homogeneity.
+
+stimulus.plot() says: 
+
+Estimating regression:
+    m1=lm(rev~cond+factor(stimulus)+factor(id)) 
+
+  Clustering the standard errors:
+    lmtest::coeftest(m1,vcov=sandwich::vcovCL,type='HC3',cluster=~id)Error in solve.default(diag(length(ij)) - Hij) : 
+  system is computationally singular: reciprocal condition number = 1.70627e-16
+
+Couldn't estimate HC3, will try HC1 
+
+  Clustering the standard errors:
+    lmtest::coeftest(m1,vcov=sandwich::vcovCL,type='HC1',cluster=~id) 
+
+Estimating random intercepts model:
+    lmerTest::lmer(rev~cond+(1|stimulus)+(1|id)) 
+
+Estimating random slopes model:
+    lmerTest::lmer(rev~cond+(1+cond|stimulus)+(1|id))
 x
 A B 
 3 2 
-[ FAIL 0 | WARN 0 | SKIP 14 | PASS 917 ]
 
-══ Skipped tests (14) ══════════════════════════════════════════════════════════
-• On CRAN (14): 'test-lm2.R:651:1', 'test-lm2.R:661:1', 'test-lm2.R:670:1',
-  'test-t.test2.R:360:1', 'test-t.test2.R:372:1', 'test-t.test2.R:385:1',
-  'test-t.test2.R:396:1', 'test-t.test2.R:406:1', 'test-t.test2.R:418:1',
-  'test-table2.R:362:1', 'test-table2.R:373:1', 'test-table2.R:384:1',
-  'test-table2.R:395:1', 'test-table2.R:406:1'
+Warning: some cells have less than 5 expected observations.
+This makes the chi-square approximation less accurate; the p-value is questionable.[ FAIL 0 | WARN 0 | SKIP 15 | PASS 1071 ]
 
-[ FAIL 0 | WARN 0 | SKIP 14 | PASS 917 ]
+══ Skipped tests (15) ══════════════════════════════════════════════════════════
+• On CRAN (15): 'test-lm2.R:677:1', 'test-lm2.R:687:1', 'test-lm2.R:696:1',
+  'test-lm2.R:705:1', 'test-t.test2.R:390:1', 'test-t.test2.R:402:1',
+  'test-t.test2.R:415:1', 'test-t.test2.R:426:1', 'test-t.test2.R:436:1',
+  'test-t.test2.R:448:1', 'test-table2.R:386:1', 'test-table2.R:397:1',
+  'test-table2.R:408:1', 'test-table2.R:419:1', 'test-table2.R:430:1'
+
+[ FAIL 0 | WARN 0 | SKIP 15 | PASS 1071 ]
 > 
 > 
 > 
@@ -296,4 +365,4 @@ A B
 > 
 > proc.time()
    user  system elapsed 
-  15.45    4.00   19.65 
+  39.56   18.23   60.71 

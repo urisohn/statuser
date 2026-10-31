@@ -428,38 +428,39 @@ test_that("lm2 clustered SE is larger than robust SE when there's clustering", {
 # ============================================================================
 
 #lm2_021
-test_that("print.lm2 shows notes by default", {
+test_that("print.lm2 shows lm2_notes hint by default", {
   skip_if_not_installed("estimatr")
-  
+
   result <- lm2(mpg ~ wt, data = mtcars)
   output <- capture.output(print(result))
   output_text <- paste(output, collapse = "\n")
-  
-  expect_true(grepl("Notes:", output_text))
-  expect_true(grepl("std.estimate", output_text))
-  expect_true(grepl("red.flag", output_text))
+
+  expect_true(grepl("lm2_notes\\(\\)", output_text))
+  expect_false(grepl("^Notes:", output_text))
+  expect_false(grepl("std.estimate is the standardized", output_text))
 })
 
 #lm2_022
-test_that("print.lm2 respects notes=FALSE", {
+test_that("explicit notes argument on print.lm2 is deprecated", {
   skip_if_not_installed("estimatr")
-  
+
   result <- lm2(mpg ~ wt, data = mtcars)
-  output <- capture.output(print(result, notes = FALSE))
-  output_text <- paste(output, collapse = "\n")
-  
-  expect_false(grepl("Notes:", output_text))
+  expect_message(
+    print(result, notes = FALSE),
+    "notes is a deprecated argument",
+    fixed = TRUE
+  )
 })
 
 #lm2_023
-test_that("print.lm2 respects notes=FALSE from lm2 call", {
+test_that("explicit notes argument on lm2 is deprecated", {
   skip_if_not_installed("estimatr")
-  
-  result <- lm2(mpg ~ wt, data = mtcars, notes = FALSE)
-  output <- capture.output(print(result))
-  output_text <- paste(output, collapse = "\n")
-  
-  expect_false(grepl("Notes:", output_text))
+
+  expect_message(
+    lm2(mpg ~ wt, data = mtcars, notes = FALSE),
+    "notes is a deprecated argument",
+    fixed = TRUE
+  )
 })
 
 #lm2_024
@@ -488,18 +489,43 @@ test_that("print.lm2 shows model summary statistics", {
 })
 
 #lm2_026
-test_that("print.lm2 shows interaction notes when model has interactions", {
+test_that("lm2_notes shows interaction notes when model has interactions", {
   skip_if_not_installed("estimatr")
-  
+
   result <- lm2(mpg ~ wt * hp, data = mtcars)
-  output <- capture.output(print(result))
-  output_text <- paste(output, collapse = "\n")
-  
-  # Should show interaction-specific notes
+  capture.output(print(result))
+  notes_out <- capture.output(lm2_notes())
+  notes_text <- paste(notes_out, collapse = "\n")
+
   expect_true(
-    grepl("X:", output_text) || grepl("interaction", output_text, ignore.case = TRUE),
+    grepl("r\\(x,z\\)", notes_text) || grepl("interaction", notes_text, ignore.case = TRUE),
     info = "Should show interaction-related notes"
   )
+})
+
+#lm2_026b
+test_that("lm2_notes returns notes built from last print", {
+  skip_if_not_installed("estimatr")
+
+  result <- lm2(mpg ~ wt, data = mtcars)
+  capture.output(print(result))
+  notes_out <- capture.output(lm2_notes())
+  notes_text <- paste(notes_out, collapse = "\n")
+
+  expect_true(grepl("Notes:", notes_text))
+  expect_true(grepl("std.estimate", notes_text))
+  expect_true(grepl("red.flag", notes_text))
+})
+
+#lm2_026c
+test_that("lm2_notes messages when nothing printed yet", {
+  skip_if_not_installed("estimatr")
+
+  st <- getFromNamespace(".statuser_state", "statuser")
+  if (exists(".lm2notes", envir = st, inherits = FALSE)) {
+    rm(".lm2notes", envir = st)
+  }
+  expect_message(lm2_notes(), "No lm2 notes available", fixed = TRUE)
 })
 
 # ============================================================================
@@ -587,7 +613,7 @@ test_that("lm2 mean column shows mean for numeric, % for factor levels", {
   )
   d$y <- 2 * d$x + as.numeric(d$group) + rnorm(n)
 
-  m <- lm2(y ~ x + group, data = d, notes = FALSE)
+  m <- lm2(y ~ x + group, data = d)
   tbl <- attr(m, "statuser_table")
 
   expect_true("x" %in% tbl$term)
@@ -652,27 +678,37 @@ test_that("lm2 print output format is stable", {
   skip_if_not_installed("estimatr")
   
   # Use mtcars for reproducible output
-  result <- lm2(mpg ~ wt + hp, data = mtcars, notes = FALSE)
-  
+  result <- lm2(mpg ~ wt + hp, data = mtcars)
+
   expect_snapshot(print(result))
 })
 
 #lm2_036
-test_that("lm2 print output with notes is stable", {
+test_that("lm2 print output with hint is stable", {
   skip_if_not_installed("estimatr")
-  
-  result <- lm2(mpg ~ wt, data = mtcars, notes = TRUE)
-  
+
+  result <- lm2(mpg ~ wt, data = mtcars)
+
   expect_snapshot(print(result))
 })
 
 #lm2_037
 test_that("lm2 print output with interaction is stable", {
   skip_if_not_installed("estimatr")
-  
-  result <- lm2(mpg ~ wt * hp, data = mtcars, notes = FALSE)
-  
+
+  result <- lm2(mpg ~ wt * hp, data = mtcars)
+
   expect_snapshot(print(result))
+})
+
+#lm2_037b
+test_that("lm2_notes output is stable", {
+  skip_if_not_installed("estimatr")
+
+  result <- lm2(mpg ~ wt, data = mtcars)
+  capture.output(print(result))
+
+  expect_snapshot(lm2_notes())
 })
 
 # ============================================================================
@@ -699,6 +735,22 @@ test_that("lm2 works without data argument (variables from environment)", {
   expect_true(!is.null(tbl))
   expect_equal(nrow(tbl), 3)  # intercept + 2 predictors
   expect_equal(tbl$term, c("(Intercept)", "x1", "x2"))
+})
+
+#lm2_051
+test_that("lm2 accepts df$y ~ df$x without data=", {
+  skip_if_not_installed("estimatr")
+  
+  df1 <- data.frame(y = rnorm(60), x = rnorm(60))
+  expect_error(lm2(df1$y ~ df1$x), NA)
+})
+
+#lm2_052
+test_that("lm2 errors if df$y ~ df$x is combined with data=", {
+  skip_if_not_installed("estimatr")
+  
+  df1 <- data.frame(y = rnorm(60), x = rnorm(60))
+  expect_error(lm2(df1$y ~ df1$x, data = df1), "Do not combine", fixed = TRUE)
 })
 
 #lm2_039
@@ -923,4 +975,106 @@ test_that("lm2 coef extraction works like lm_robust", {
   
   # confint() should work
   expect_equal(confint(m1), confint(m2))
+})
+
+#lm2_051
+test_that("lm2 chops near-zero noise to zero in default print", {
+  skip_if_not_installed("estimatr")
+
+  n <- 48
+  df <- data.frame(
+    writeups = runif(n, 70, 85),
+    b_points = runif(n, 85, 98),
+    participation = runif(n, 85, 98),
+    final_project = runif(n, 78, 92),
+    exam = runif(n, 80, 95)
+  )
+  df$final_grade <- 20 + 0.2 * df$writeups + 0.2 * df$b_points +
+    0.2 * df$final_project + 0.2 * df$exam
+
+  result <- lm2(
+    final_grade ~ writeups + b_points + participation + final_project + exam,
+    data = df
+  )
+  output <- capture.output(print(result))
+  output_text <- paste(output, collapse = "\n")
+
+  expect_false(grepl("e\\+", output_text, ignore.case = TRUE))
+  expect_false(grepl("e-", output_text, ignore.case = TRUE))
+  expect_match(output_text, "participation")
+  expect_match(output_text, "\\.000")
+  expect_match(output_text, ">999")
+})
+
+#lm2_052
+test_that("lm2 round argument forces uniform decimal places", {
+  skip_if_not_installed("estimatr")
+
+  n <- 48
+  df <- data.frame(
+    writeups = runif(n, 70, 85),
+    b_points = runif(n, 85, 98),
+    participation = runif(n, 85, 98),
+    final_project = runif(n, 78, 92),
+    exam = runif(n, 80, 95)
+  )
+  df$final_grade <- 20 + 0.2 * df$writeups + 0.2 * df$b_points +
+    0.2 * df$final_project + 0.2 * df$exam
+
+  result <- lm2(
+    final_grade ~ writeups + b_points + participation + final_project + exam,
+    data = df,
+    round = 3
+  )
+  expect_equal(attr(result, "round"), 3)
+
+  output <- capture.output(print(result))
+  output_text <- paste(output, collapse = "\n")
+
+  expect_match(output_text, "round = 3")
+  expect_match(output_text, "20\\.000\\*\\*")
+  expect_match(output_text, "writeups\\s+\\.200\\*\\*")
+  expect_match(output_text, "participation\\s+\\.000")
+})
+
+#lm2_053
+test_that("lm2 stores round attribute and print can override", {
+  skip_if_not_installed("estimatr")
+
+  result <- lm2(mpg ~ wt + hp, data = mtcars, round = 2)
+  expect_equal(attr(result, "round"), 2)
+
+  output <- capture.output(print(result, round = 3))
+  output_text <- paste(output, collapse = "\n")
+  expect_match(output_text, "37\\.227\\*\\*")
+})
+
+#lm2_054
+test_that("lm2 round = -1 uses R default format with leading-dot style", {
+  skip_if_not_installed("estimatr")
+
+  result <- lm2(mpg ~ wt + hp, data = mtcars, round = -1)
+  expect_equal(attr(result, "round"), -1L)
+
+  output <- capture.output(print(result))
+  output_text <- paste(output, collapse = "\n")
+
+  expect_match(output_text, "round = -1")
+  expect_match(output_text, "hp\\s+-.03177295")
+  expect_match(output_text, "\\.009385138")
+  expect_false(grepl("hp\\s+-.032\\*\\*", output_text))
+})
+
+#lm2_055
+test_that("lm2 validates round argument", {
+  skip_if_not_installed("estimatr")
+
+  expect_error(
+    lm2(mpg ~ wt, data = mtcars, round = -2),
+    "`round` must be NULL, -1, or a non-negative integer"
+  )
+  expect_error(
+    lm2(mpg ~ wt, data = mtcars, round = 1.5),
+    "`round` must be NULL, -1, or a non-negative integer"
+  )
 })

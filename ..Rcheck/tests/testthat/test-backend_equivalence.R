@@ -63,7 +63,7 @@ test_that("backend: lm2 matches estimatr::lm_robust coefficients and inference",
   y <- 1 + 0.5 * x1 - 0.2 * x2 + rnorm(n)
   df <- data.frame(y = y, x1 = x1, x2 = x2)
   
-  m2 <- statuser::lm2(y ~ x1 + x2, data = df, notes = FALSE)
+  m2 <- statuser::lm2(y ~ x1 + x2, data = df)
   ref <- estimatr::lm_robust(y ~ x1 + x2, data = df, se_type = "HC3")
   
   be_expect_equal_num(unname(m2$coefficients), unname(ref$coefficients), tol = 1e-10)

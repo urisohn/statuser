@@ -1,0 +1,665 @@
+#' Plot density of a variable, optionally by another variable
+#'
+#' Plots the distribution of a variable by group, simply: \code{plot_density(y ~ x)}
+#'
+#' @param formula Two possible uses (similar to \code{t.test()}):
+#'   \itemize{
+#'     \item {Single Variable (possibly by subgroup)}: \code{plot_density(y)} or \code{plot_density(y~x)}
+#'     \item {Contrast Two Variables}: \code{plot_density(y1, y2)}
+#'   }
+#' @param y2 optional second variable when contrasting two variables \code{plot_density(y1,y2)}
+#' @param data An optional data frame containing the variables in the formula.
+#' @param order Controls the order in which groups appear in the plot and legend. 
+#'   Use \code{-1} to reverse the default order. Alternatively, provide a vector specifying
+#'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
+#'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
+#'   alphabetically/numerically. Only applies when using grouped plots.
+#' @param show_means Logical. If TRUE (default), shows points at means.
+#' @param ... Additional arguments passed to plotting functions.
+
+#' @details
+#' Plot parameters like
+#' \code{col}, \code{lwd}, \code{lty}, and \code{pch} can be specified as:
+#' \itemize{
+#'   \item A single value: applied to all groups
+#'   \item A vector: applied to groups in order of unique \code{group} values
+#' }
+#'
+#'
+#' @examples
+#' # Basic usage with formula syntax (no grouping)
+#' y <- rnorm(100)
+#' plot_density(y)
+#'
+#' # With grouping variable
+#' group <- rep(c("A", "B", "C"), c(30, 40, 30))
+#' plot_density(y ~ group)
+#'
+#' # With custom colors (scalar - same for all)
+#' plot_density(y ~ group, col = "blue")
+#'
+#' # With custom colors (vector - different for each group)
+#' plot_density(y ~ group, col = c("red", "green", "blue"))
+#'
+#' # Multiple parameters
+#' plot_density(y ~ group, col = c("red", "green", "blue"), lwd = c(1, 2, 3))
+#'
+#' # With line type
+#' plot_density(y ~ group, col = c("red", "green", "blue"), lty = c(1, 2, 3), lwd = 2)
+#'
+#' # Using data frame
+#' df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+#' plot_density(value ~ group, data = df)
+#' plot_density(value ~ group, data = df, col = c("red", "blue"))
+#'
+#' # Compare two vectors
+#' y1 <- rnorm(50)
+#' y2 <- rnorm(50, mean = 1)
+#' plot_density(y1, y2)
+#'
+#' @return Invisibly returns a list with the following element:
+#'   \describe{
+#'     \item{densities}{A named list of density objects (class \code{"density"}), 
+#'       one for each group. Each density object contains \code{x} (evaluation points), 
+#'       \code{y} (density estimates), \code{bw} (bandwidth), and other components 
+#'       as returned by \code{\link[stats]{density}}. If no grouping variable is 
+#'       provided, the list contains a single element named \code{"all"}.}
+#'   }
+#'   The function is primarily called for its side effect of creating a plot.
+#'
+#' @export
+plot_density <- function(formula, y2 = NULL, data = NULL, order = NULL, show_means = TRUE, ...) {
+  #OUTLINE
+  #1. Capture variable names for labels
+  #2. Extract and handle parameters
+  #3. Handle data frame input
+  #4. Drop missing data
+  #5. Get unique groups
+  #6. Initialize return values
+  #7. Get default colors based on number of groups
+  #8. Helper function: extract parameter value for a group
+  #9. Separate density() arguments from plotting arguments
+  #10. Compute densities for each group
+  #11. Determine overall range for plotting
+  #12. Helper function: NULL coalescing
+  #13. Plot first density to set up the plot
+  #14. Get parameters for first group
+  #15. Build plot arguments
+  #16. Set up plot
+  #17. Add remaining densities
+  #18. Add points at y=0 and x=mean with labels
+  #19. Add vertical segments at means (if show.means=TRUE and 2-3 groups)
+  #20. Add legend
+  #21. Return densities
+  
+  #0. CAPTURE UNEVALUATED ARGUMENTS FIRST (before ANY evaluation!)
+  mc <- match.call()
+  
+  # Resolve first argument (formula or first vector)
+  formula_resolved <- evaluate_variable_arguments(
+    arg_expr = mc$formula,
+    arg_name = "formula",
+    data = data,
+    calling_env = parent.frame(),
+    func_name = "plot_density",
+    allow_null = FALSE
+  )
+  
+  # Resolve second argument if present (for two-vector mode)
+  y2_resolved <- if (!is.null(mc$y2)) {
+    evaluate_variable_arguments(
+      arg_expr = mc$y2,
+      arg_name = "y2",
+      data = data,
+      calling_env = parent.frame(),
+      func_name = "plot_density",
+      allow_null = TRUE
+    )
+  } else {
+    list(value = NULL, name = NULL, name_raw = NULL, was_symbol = FALSE)
+  }
+  
+  # Now overwrite the arguments with resolved values
+  formula <- formula_resolved$value
+  y2 <- y2_resolved$value
+  
+  #1. Extract and handle parameters
+  # Extract plotting parameters from ...
+    dots <- list(...)
+    
+  # Check if we're in two-vector comparison mode (formula is vector, y is vector)
+  if (!is.null(y2) && !inherits(formula, "formula")) {
+    # Two-vector comparison mode: plot_density(y1, y2)
+    # Use resolved names
+    y1_name <- formula_resolved$name
+    y2_name <- y2_resolved$name
+    
+    # Validate inputs
+    if (!is.numeric(formula) || !is.vector(formula)) {
+      stop(sprintf("plot_density(): First argument '%s' must be a numeric vector", y1_name), call. = FALSE)
+    }
+    if (!is.numeric(y2) || !is.vector(y2)) {
+      stop(sprintf("plot_density(): Second argument '%s' must be a numeric vector", y2_name), call. = FALSE)
+    }
+    
+    # Create a data frame and recursively call with grouped syntax
+    df <- data.frame(
+      value = c(formula, y2),
+      group = c(rep(y1_name, length(formula)), rep(y2_name, length(y2))),
+      stringsAsFactors = FALSE
+    )
+    
+    # Forward all arguments to the grouped version
+    return(plot_density(value ~ group, data = df, order = order, 
+                       show_means = show_means, ...))
+  }
+    
+    # Extract show.means parameter (from dots, as it's not a formal parameter)
+    show_mean_segments <- if ("show.means" %in% names(dots)) dots$show.means else TRUE
+    dots$show.means <- NULL  # Remove from dots so it doesn't get passed to plot functions
+  
+  # Validate formula early if it is one
+  validate_formula(formula, data, func_name = "plot_density", calling_env = parent.frame())
+  
+  # Check if formula is actually a formula or a vector
+  is_formula_input <- inherits(formula, "formula")
+  
+  # Capture data name for error messages
+  data_expr <- mc$data
+  data_name <- if (!is.null(data_expr)) {
+    data_name_val <- deparse(data_expr)
+    gsub('^"|"$', '', data_name_val)
+  } else {
+    NULL
+  }
+  
+  # Capture original group before validation (to preserve factor levels)
+  group_original_before_validation <- NULL
+  if (is_formula_input && inherits(formula, "formula")) {
+    f <- formula
+    if (length(f) >= 3L && identical(f[[1L]], quote(`~`))) {
+      rhs <- f[[3L]]
+      rhs_is_intercept_only <- is.numeric(rhs) && length(rhs) == 1L &&
+        !is.na(rhs[1]) && rhs[1] == 1
+      if (!rhs_is_intercept_only) {
+        group_original_before_validation <- tryCatch({
+          if (!is.null(data)) {
+            eval(rhs, envir = data, enclos = parent.frame())
+          } else {
+            fe <- environment(f)
+            if (is.null(fe)) fe <- parent.frame()
+            eval(rhs, envir = fe)
+          }
+        }, error = function(e) NULL)
+      }
+    }
+  }
+  
+  #2. Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
+  # If formula input, use validate_plot
+  if (is_formula_input) {
+    validated <- validate_plot(formula, NULL, data, func_name = "plot_density", require_group = FALSE, data_name = data_name)
+  } else {
+    # Not a formula - use resolved names from evaluate_variable_arguments
+    validated <- list(
+      y = formula,
+      group = NULL,
+      y_name = formula_resolved$name,
+      group_name = NULL,
+      y_name_raw = formula_resolved$name_raw,
+      group_name_raw = NULL,
+      data_name = data_name
+    )
+  }
+  y <- validated$y
+  group <- validated$group
+  y_name <- validated$y_name
+  group_name <- validated$group_name
+  y_name_raw <- validated$y_name_raw
+  group_name_raw <- validated$group_name_raw
+  
+  # Store original group for factor level checking (before NA removal)
+  # Use the version captured before validation if available (to preserve factor levels)
+  group_original <- if (!is.null(group_original_before_validation)) {
+    group_original_before_validation
+  } else {
+    group
+  }
+  
+  #3. Drop missing data
+    if (!is.null(group)) {
+      isnagroup=is.na(group)
+      isnay=is.na(y)
+      group=group[!isnagroup & !isnay]
+      y=y[!isnagroup & !isnay]
+      
+      n.nagroup = sum(isnagroup)
+      n.nay = sum(isnay)
+      
+      if (n.nagroup>0) message2("plot_density() says: dropped ",n.nagroup," observations with missing '",group_name_raw,"' values",col='red2')
+      if (n.nay>0) message2("plot_density() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red2')
+    } else {
+      isnay=is.na(y)
+      y=y[!isnay]
+      
+      n.nay = sum(isnay)
+      if (n.nay>0) message2("plot_density() says: dropped ",n.nay," observations with missing '",y_name_raw,"' values",col='red2')
+    }
+  
+  #5. Get unique groups (if group is provided)
+    if (!is.null(group)) {
+      unique_groups <- unique(group)
+      n_groups <- length(unique_groups)
+      
+      # Check if order = -1 (reverse default order)
+      reverse_order <- FALSE
+      if (!is.null(order) && length(order) == 1 && is.numeric(order) && order == -1) {
+        reverse_order <- TRUE
+        order <- NULL  # Process as default, then reverse
+      }
+      
+      if (!is.null(order)) {
+        # User specified custom order
+        # Validate that order contains all groups
+        missing_groups <- setdiff(unique_groups, order)
+        extra_groups <- setdiff(order, unique_groups)
+        
+        if (length(missing_groups) > 0) {
+          stop(sprintf("plot_density(): 'order' is missing group(s): %s", 
+                       paste(missing_groups, collapse = ", ")), call. = FALSE)
+        }
+        if (length(extra_groups) > 0) {
+          warning(sprintf("plot_density(): 'order' contains group(s) not in data: %s", 
+                         paste(extra_groups, collapse = ", ")))
+        }
+        
+        # Use the specified order (only groups that exist in data)
+        unique_x <- order[order %in% unique_groups]
+      } else if (is.factor(group_original)) {
+        # Respect factor levels
+        factor_levels <- levels(group_original)
+        # Only include levels that actually appear in the data
+        unique_x <- factor_levels[factor_levels %in% unique_groups]
+      } else {
+        # Default: sort alphabetically/numerically
+        unique_x <- sort(unique_groups)
+      }
+      
+      # Reverse order if order = -1 was specified
+      if (reverse_order) {
+        unique_x <- rev(unique_x)
+      }
+    } else {
+      unique_x <- NULL
+      n_groups <- 0
+    }
+  
+  #6. Initialize return values
+  
+  #7. Get default colors based on number of groups
+    if (is.null(group)) {
+      default_colors <- get.colors(1) #See utils.R
+    } else {
+      default_colors <- get.colors(n_groups) #See utils.R
+    }
+  
+  #8. Helper function: extract parameter value for a group
+  # Helper function to extract parameter value for a group
+    get_param <- function(param_name, group_idx) {
+      if (param_name %in% names(dots)) {
+        param_val <- dots[[param_name]]
+        if (length(param_val) == 1) {
+          return(param_val)
+        } else if (length(param_val) >= group_idx) {
+          return(param_val[group_idx])
+        } else {
+          return(param_val[1])  # Recycle if shorter
+        }
+      }
+      return(NULL)
+    }
+    
+  #9. Separate density() vs plotting arguments
+    density_args <- c("bw", "adjust", "kernel", "n", "from", "to", "na.rm", "weights")
+    density_params <- list()
+    plot_params <- dots
+    
+    for (arg in density_args) {
+      if (arg %in% names(dots)) {
+        density_params[[arg]] <- dots[[arg]]
+        plot_params[[arg]] <- NULL
+      }
+    }
+  
+  #10. Compute densities for each group (or single density if no group)
+    density_list <- list()
+    y_ranges <- list()
+    y_density_max <- list()
+    
+    if (is.null(group)) {
+      # No grouping: compute single density
+      if (length(y) > 0) {
+        density_obj <- do.call(density, c(list(x = y), density_params))
+        density_list[[1]] <- density_obj
+        y_ranges[[1]] <- range(density_obj$x)
+        y_density_max[[1]] <- max(density_obj$y)
+      }
+    } else {
+      # With grouping: compute density for each group
+      for (i in seq_along(unique_x)) {
+        group_val <- unique_x[i]
+        y_group <- y[group == group_val]
+        if (length(y_group) > 0) {
+          # Compute density with any density-specific arguments
+          density_obj <- do.call(density, c(list(x = y_group), density_params))
+          density_list[[i]] <- density_obj
+          y_ranges[[i]] <- range(density_obj$x)
+          y_density_max[[i]] <- max(density_obj$y)
+        }
+      }
+    }
+  
+  #11. Determine overall range for plotting
+    all_x <- unlist(lapply(density_list, function(d) range(d$x)))
+    all_y_density <- unlist(y_density_max)
+    x_min <- min(all_x, na.rm = TRUE)
+    x_max <- max(all_x, na.rm = TRUE)
+    x_range <- x_max - x_min
+    x_lim <- c(x_min - 0.05 * x_range, x_max + 0.05 * x_range)
+    y_max_density <- max(all_y_density, na.rm = TRUE)
+    # Reserve space for legend if there's a group (legend will be shown)
+    if (!is.null(group)) {
+      y_lim_density <- c(0, y_max_density * 1.3)  # Add 30% space for legend
+    } else {
+      y_lim_density <- c(0, y_max_density * 1.1)  # Add 10% space for margins only
+    }
+
+  #12. Helper function: NULL coalescing
+    `%||%` <- function(x, y) if (is.null(x)) y else x
+  
+  #13. Plot first density to set up the plot
+    if (length(density_list) > 0) {
+      first_density <- density_list[[1]]
+    
+    #14. Get parameters for first group
+      col1 <- get_param("col", 1) %||% default_colors[1]
+      lwd1 <- get_param("lwd", 1) %||% 4  # Default lwd=4
+      lty1 <- get_param("lty", 1) %||% 1
+      type1 <- get_param("type", 1) %||% "l"
+      pch1 <- get_param("pch", 1)
+      
+    #15. Build plot arguments
+    # Build plot arguments
+    # Set main title if not provided
+      if (!"main" %in% names(plot_params)) {
+        if (!is.null(group)) {
+          # With grouping: show grouping variable like plot_cdf
+          main_title <- paste0("Comparing Distribution of '", y_name, "' by '", group_name, "'")
+        } else {
+          # No grouping: simple format
+          main_title <- paste0("Distribution of '", y_name, "'")
+        }
+      } else {
+        main_title <- plot_params$main
+      }
+    # Set font and size for main title if not provided
+      font_main <- if ("font.main" %in% names(plot_params)) plot_params$font.main else 2
+      cex_main <- if ("cex.main" %in% names(plot_params)) plot_params$cex.main else 1.3
+    
+    # Set xlab if not provided
+      xlab_title <- if ("xlab" %in% names(plot_params)) plot_params$xlab else y_name
+    
+    # Set ylab if not provided
+      ylab_title <- if ("ylab" %in% names(plot_params)) plot_params$ylab else "Probability Density"
+    
+    # Set default ylim if not provided
+      if (!"ylim" %in% names(plot_params)) {
+        default_ylim <- y_lim_density
+        default_ylim[2]=default_ylim[2]*1.15
+      } else {
+        default_ylim <- plot_params$ylim
+        # Ensure ylim always starts at 0
+        default_ylim[1] <- 0
+      }
+    
+    # Set default xlim if not provided
+      if (!"xlim" %in% names(plot_params)) {
+        default_xlim <- x_lim
+      } else {
+        default_xlim <- plot_params$xlim
+      }
+    
+    # Remove vectorized parameters and data from plot_params for plot()
+    # Also remove xlab, ylab, main, xlim, ylim since we handle them separately
+    vectorized_params <- c("col", "lwd", "lty", "type", "pch", "data")
+    plot_params_to_remove <- c(vectorized_params, "xlab", "ylab", "main", "xlim", "ylim", "font.main", "cex.main")
+    plot_params[plot_params_to_remove] <- NULL
+    
+    # Track if user provided yaxt - if not, we'll draw custom axis with formatted labels
+    user_provided_yaxt <- "yaxt" %in% names(plot_params)
+    
+    plot_args <- list(x = first_density, 
+                      col = col1, lwd = lwd1, lty = lty1, type = type1,
+                      xlab = xlab_title, 
+                      ylab = ylab_title,
+                      main = main_title,
+                      font.main = font_main,
+                      cex.main = cex_main,
+                      xlim = default_xlim,
+                      ylim = default_ylim,
+                      yaxs = "i",  # Prevent padding below 0
+                      font.lab = 2, cex.lab = 1.2, las = 1)
+    if (!is.null(pch1)) plot_args$pch <- pch1
+    if (!user_provided_yaxt) plot_args$yaxt <- "n"  # Suppress default y-axis
+    
+    #16. Set up plot
+      # Ensure adequate top margin for main title and (n=...) text (like plot_freq)
+      old_mar <- par("mar")
+      on.exit(par(mar = old_mar), add = TRUE)
+      if (!"mar" %in% names(plot_params)) {
+        # Increase top margin if it's too small (less than 5 lines to accommodate title and N)
+        if (old_mar[3] < 5) {
+          par(mar = c(old_mar[1], old_mar[2], 5, old_mar[4]))
+        }
+      }
+      
+      # Set up plot
+      do.call(plot, c(plot_args, plot_params))
+      
+      # Add (n=...) below main title (like plot_cdf notation)
+      tot <- length(y)
+      mtext(paste0("(n=", tot, ")"), side = 3, line = 0.75, font = 3, cex = 0.9)
+      
+      # Draw custom y-axis with formatted labels (skip leading zeros)
+      if (!user_provided_yaxt) {
+        # Generate nice tick marks
+        y_ticks <- pretty(default_ylim, n = 5)
+        # Only keep ticks that are >= 0 and <= y_max (with small tolerance for rounding)
+        y_ticks <- y_ticks[y_ticks >= 0 & y_ticks <= default_ylim[2] + 0.1]
+        
+        # Format labels to skip leading zeros (e.g., 0.014 becomes .014)
+        format_label <- function(x) {
+          if (x == 0) {
+            return("0")
+          } else {
+            # Convert to character and remove leading zero
+            label <- as.character(x)
+            # If it starts with "0.", replace with "."
+            label <- sub("^0\\.", ".", label)
+            return(label)
+          }
+        }
+        y_labels <- sapply(y_ticks, format_label)
+        
+        axis(2, at = y_ticks, labels = y_labels, las = 1)
+      }
+    
+    #17. Add remaining densities
+      # Add remaining densities (only if there's grouping)
+      if (!is.null(group) && length(density_list) > 1) {
+        for (i in 2:length(density_list)) {
+          density_obj <- density_list[[i]]
+          
+          # Get parameters for this group
+          coli <- get_param("col", i) %||% default_colors[i]
+          lwdi <- get_param("lwd", i) %||% 4  # Default lwd=4
+          ltyi <- get_param("lty", i) %||% 1
+          typei <- get_param("type", i) %||% "l"
+          pchi <- get_param("pch", i)
+          
+          # Build lines arguments
+          lines_args <- list(x = density_obj, 
+                            col = coli, lwd = lwdi, lty = ltyi, type = typei)
+          if (!is.null(pchi)) lines_args$pch <- pchi
+          
+          do.call(lines, lines_args)
+        }
+      }
+    
+    #18. Add points at y=0 and x=mean
+      # Add points at y=0 and x=mean for each group (only if show_means is TRUE and there's grouping)
+      if (show_means && !is.null(group)) {
+        for (i in seq_along(density_list)) {
+          group_val <- unique_x[i]
+          y_group <- y[group == group_val]
+          group_mean <- mean(y_group, na.rm = TRUE)
+          
+          # Get color for this group
+          coli <- get_param("col", i) %||% default_colors[i]
+          
+          # Add point at (mean, 0)
+          points(x = group_mean, y = 0, pch = 16, col = coli)
+        }
+      } else if (show_means && is.null(group)) {
+        # No grouping: add single point at mean
+        group_mean <- mean(y, na.rm = TRUE)
+        coli <- get_param("col", 1) %||% default_colors[1]
+        points(x = group_mean, y = 0, pch = 16, col = coli)
+      }
+    
+    #19. Report means and t-test
+      
+      # Add vertical segments at mean values for non-grouped plots
+        if (show_means && show_mean_segments && is.null(group)) {
+          group_mean <- mean(y, na.rm = TRUE)
+          coli <- get_param("col", 1) %||% default_colors[1]
+          y_max_segment <- y_max_density * 1.1
+          
+          # Add vertical segment
+          segments(x0 = group_mean, y0 = 0, x1 = group_mean, y1 = y_max_segment,
+                   col = coli, lwd = 2)
+          # Add M= label at top of segment
+          text(x = group_mean, y = y_max_segment, 
+               labels = paste0("M=", round(group_mean, 2)),
+               pos = 3, col = coli, cex = 0.8, font = 2)
+        }
+      
+      # Add vertical segments at mean values (only if show_means and show.means are TRUE and there's grouping)
+        if (show_means && show_mean_segments && !is.null(group) && n_groups >= 2 && n_groups <= 3) {
+          # Calculate all means
+          all_means <- numeric(n_groups)
+          for (i in seq_along(density_list)) {
+            group_val <- unique_x[i]
+            y_group <- y[group == group_val]
+            all_means[i] <- mean(y_group, na.rm = TRUE)
+          }
+        
+        # Sort means to determine low/mid/high
+          sorted_indices <- order(all_means)
+          sorted_means <- all_means[sorted_indices]
+        
+        # Get maximum density value for segment height (1.1 times highest density)
+          y_max_segment <- y_max_density * 1.1
+          
+        # Add segments and labels based on number of groups
+          if (n_groups == 2) {
+            # Low mean: pos=2 (left), High mean: pos=4 (right)
+            low_idx <- sorted_indices[1]
+            high_idx <- sorted_indices[2]
+            
+          # Low mean segment
+            coli_low <- get_param("col", low_idx) %||% default_colors[low_idx]
+            segments(x0 = sorted_means[1], y0 = 0, x1 = sorted_means[1], y1 = y_max_segment,
+                     col = coli_low, lwd = 2)
+            text(x = sorted_means[1], y = y_max_segment, 
+                 labels = paste0("M=", round(sorted_means[1], 2)),
+                 pos = 2, col = coli_low, cex = 0.8, font = 2)
+          
+          # High mean segment
+            coli_high <- get_param("col", high_idx) %||% default_colors[high_idx]
+            segments(x0 = sorted_means[2], y0 = 0, x1 = sorted_means[2], y1 = y_max_segment,
+                     col = coli_high, lwd = 2,lty=2)
+            
+            text(x = sorted_means[2], y = y_max_segment, 
+                 labels = paste0("M=", round(sorted_means[2], 2)),
+                 pos = 4, col = coli_high, cex = 0.8, font = 2)
+            
+        } else if (n_groups == 3) {
+          # Show all three means: Low (pos=2), Mid (pos=3), High (pos=4)
+          low_idx <- sorted_indices[1]
+          mid_idx <- sorted_indices[2]
+          high_idx <- sorted_indices[3]
+          
+          # Low mean segment
+            coli_low <- get_param("col", low_idx) %||% default_colors[low_idx]
+            segments(x0 = sorted_means[1], y0 = 0, x1 = sorted_means[1], y1 = y_max_segment,
+                     col = coli_low, lwd = 2)
+            text(x = sorted_means[1], y = y_max_segment, 
+                 labels = paste0("M=", round(sorted_means[1], 2)),
+                 pos = 2, col = coli_low, cex = 0.8, font = 2)
+            
+          # Mid mean segment
+            coli_mid <- get_param("col", mid_idx) %||% default_colors[mid_idx]
+            segments(x0 = sorted_means[2], y0 = 0, x1 = sorted_means[2], y1 = y_max_segment,
+                     col = coli_mid, lwd = 2)
+            text(x = sorted_means[2], y = y_max_segment, 
+                 labels = paste0("M=", round(sorted_means[2], 2)),
+                 pos = 3, col = coli_mid, cex = 0.8, font = 2)
+            
+          # High mean segment
+            coli_high <- get_param("col", high_idx) %||% default_colors[high_idx]
+            segments(x0 = sorted_means[3], y0 = 0, x1 = sorted_means[3], y1 = y_max_segment,
+                     col = coli_high, lwd = 2, lty = 2)
+            text(x = sorted_means[3], y = y_max_segment, 
+                 labels = paste0("M=", round(sorted_means[3], 2)),
+                 pos = 4, col = coli_high, cex = 0.8, font = 2)
+          
+          }
+        }
+    
+    #20. Add legend (only if there's grouping, like plot_freq)
+      if (!is.null(group)) {
+        # Add legend on top with title showing x variable name
+        # Calculate means and sample sizes for each group
+        legend_cols <- sapply(1:length(density_list), function(i) get_param("col", i) %||% default_colors[i])
+        legend_lwds <- sapply(1:length(density_list), function(i) get_param("lwd", i) %||% 4)
+        legend_ltys <- sapply(1:length(density_list), function(i) get_param("lty", i) %||% 1)
+        
+        # Create legend labels with sample sizes (newline before sample size, lowercase n)
+        group_ns <- sapply(1:length(density_list), function(i) {
+          length(y[group == unique_x[i]])
+        })
+        
+        # Format: just the group value, then (n=sample_size) on new line
+        legend_labels <- paste0(as.character(unique_x), "\n(n=", group_ns, ")")
+        
+        legend("top", legend = legend_labels, 
+               col = legend_cols, lwd = legend_lwds, lty = legend_ltys,
+               horiz = TRUE, bty = "n")
+      }
+  }
+  
+  #21. Return densities
+  # Return densities
+    if (!is.null(group)) {
+      names(density_list) <- as.character(unique_x)
+    } else {
+      names(density_list) <- "all"
+    }
+  
+  # Build return list
+    result <- list(densities = density_list)
+  
+  invisible(result)
+}
+

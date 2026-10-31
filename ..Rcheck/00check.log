@@ -1,18 +1,23 @@
 * using log directory 'C:/git/statuser/..Rcheck'
-* using R version 4.5.2 (2025-10-31 ucrt)
+* using R version 4.6.0 (2026-04-24 ucrt)
 * using platform: x86_64-w64-mingw32
 * R was compiled by
     gcc.exe (GCC) 14.3.0
     GNU Fortran (GCC) 14.3.0
-* running under: Windows 11 x64 (build 26200)
+* running under: Windows 11 x64 (build 26300)
 * using session charset: UTF-8
-* using option '--as-cran'
+* current time: 2026-10-30 08:23:51 UTC
+* using options '--no-manual --as-cran'
 * checking for file './DESCRIPTION' ... OK
 * checking extension type ... Package
-* this is package 'statuser' version '0.2.1'
+* this is package 'statuser' version '0.4.0.9001'
 * package encoding: UTF-8
-* checking CRAN incoming feasibility ... [23s] NOTE
+* checking CRAN incoming feasibility ... [69s] NOTE
 Maintainer: 'Uri Simonsohn <urisohn@gmail.com>'
+
+Version contains large components (0.4.0.9001)
+
+Package has a VignetteBuilder field but no prebuilt vignette index.
 
 The build time stamp is missing.
 * checking package namespace information ... OK
@@ -48,8 +53,16 @@ store those of more than 256 bytes, with restrictions including to 100
 bytes for the final component.
 See section 'Package structure' in the 'Writing R Extensions' manual.
  OK
-* checking serialization versions ... OK
-* checking whether package 'statuser' can be installed ... OK
+* checking serialization versions ... WARNING
+Found file(s) with version 3 serialization:
+  'data/interprobe_sim.rda'
+  'tests/testthat/data/stimulus_saved_results/r1.rds'
+  'tests/testthat/data/stimulus_saved_results/r2.rds'
+  'tests/testthat/data/stimulus_saved_results/r3.rds'
+Such files are only readable in R >= 3.5.0.
+Recreate them with R < 3.5.0 or save(version = 2) or saveRDS(version =
+2) as appropriate
+* checking whether package 'statuser' can be installed ... [22s] OK
 * checking installed package size ... OK
 * checking package directory ... OK
 * checking for future file timestamps ... OK
@@ -58,9 +71,10 @@ Checking should be performed on sources prepared by 'R CMD build'.
 * checking top-level files ... NOTE
 Files 'README.md' or 'NEWS.md' cannot be checked without 'pandoc' being installed.
 Non-standard files/directories found at top level:
-  'CRAN-SUBMISSION' 'NSE_IMPLEMENTATION_SUMMARY.md' 'Rplots.pdf'
-  'assets' 'cran-comments.md' 'examples' 'scripts' 'statuser.Rcheck'
-  'statuser_0.2.1.tar.gz'
+  'CRAN-SUBMISSION' 'Meta' 'NSE_IMPLEMENTATION_SUMMARY.md' 'Rplots.pdf'
+  'assets' 'cran-comments.md' 'data-raw' 'doc' 'examples' 'scripts'
+  'statuser.Rcheck' 'statuser_0.2.1.9000.tar.gz'
+  'statuser_0.2.1.tar.gz' 'tmp_check_out.txt' 'tmp_doc_check.R'
 * checking for left-over files ... OK
 * checking index information ... OK
 * checking package subdirectories ... WARNING
@@ -85,7 +99,7 @@ These should not be in a package tarball.
 * checking S3 generic/method consistency ... OK
 * checking replacement functions ... OK
 * checking foreign function calls ... OK
-* checking R code for possible problems ... [14s] OK
+* checking R code for possible problems ... [34s] OK
 * checking Rd files ... OK
 * checking Rd metadata ... OK
 * checking Rd line widths ... OK
@@ -93,8 +107,8 @@ These should not be in a package tarball.
 * checking for missing documentation entries ... OK
 * checking for code/documentation mismatches ... OK
 * checking Rd \usage sections ... WARNING
-Undocumented arguments in Rd file 'var_labels.Rd'
-  'value'
+Documented arguments not in \usage in Rd file 'round2.Rd':
+  'leading.zero'
 
 Functions with \usage entries need to have the appropriate \alias
 entries, and all their arguments documented.
@@ -103,20 +117,61 @@ See chapter 'Writing R documentation files' in the 'Writing R
 Extensions' manual.
 * checking Rd contents ... OK
 * checking for unstated dependencies in examples ... OK
-* checking examples ... OK
-* checking examples with --run-donttest ... OK
+* checking contents of 'data' directory ... OK
+* checking data for non-ASCII characters ... OK
+* checking LazyData ... OK
+* checking data for ASCII and uncompressed saves ... WARNING
+  Warning: package needs dependence on R (>= 2.10)
+* checking files in 'vignettes' ... WARNING
+Files in the 'vignettes' directory but no files in 'inst/doc':
+  'interprobe.Rmd'
+* checking examples ... ERROR
+Running examples in 'statuser-Ex.R' failed
+The error most likely occurred in:
+
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: round2
+> ### Title: Round with Fixed Decimals
+> ### Aliases: round2
+> 
+> ### ** Examples
+> 
+> round2(0.34, 2)
+[1] ".34"
+> round2(0.34, 2, leading.zero = TRUE)
+Error in round2(0.34, 2, leading.zero = TRUE) : 
+  unused argument (leading.zero = TRUE)
+Execution halted
+* checking examples with --run-donttest ... [20s] ERROR
+Running examples in 'statuser-Ex.R' failed
+The error most likely occurred in:
+
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: round2
+> ### Title: Round with Fixed Decimals
+> ### Aliases: round2
+> 
+> ### ** Examples
+> 
+> round2(0.34, 2)
+[1] ".34"
+> round2(0.34, 2, leading.zero = TRUE)
+Error in round2(0.34, 2, leading.zero = TRUE) : 
+  unused argument (leading.zero = TRUE)
+Execution halted
+Examples with CPU (user + system) or elapsed time > 5s
+           user system elapsed
+interprobe 9.12   0.56    9.94
 * checking for unstated dependencies in 'tests' ... OK
-* checking tests ... [20s] OK
-  Running 'testthat.R' [20s]
-* checking PDF version of manual ... WARNING
-LaTeX errors when creating PDF version.
-This typically indicates Rd problems.
-* checking PDF version of manual without index ... ERROR
-Re-running with no redirection of stdout/stderr.
-* checking HTML version of manual ... OK
-* checking for non-standard things in the check directory ... NOTE
-Found the following files/directories:
-  'statuser-manual.tex'
+* checking tests ... [62s] OK
+  Running 'testthat.R' [61s]
+* checking for unstated dependencies in vignettes ... OK
+* checking package vignettes ... WARNING
+Directory 'inst/doc' does not exist.
+Package vignette without corresponding single PDF/HTML:
+  'interprobe.Rmd'
+* checking re-building of vignette outputs ... OK
+* checking for non-standard things in the check directory ... OK
 * checking for detritus in the temp directory ... OK
 * DONE
-Status: 2 ERRORs, 3 WARNINGs, 5 NOTEs
+Status: 3 ERRORs, 6 WARNINGs, 4 NOTEs

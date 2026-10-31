@@ -132,27 +132,33 @@ twolines(y ~ x, data = data, pngfile = "twolines_plot.png")
 <details>
 <summary><code>interprobe()</code>: probe and visualize nonlinear interactions</summary>
 
-Estimates or accepts a model, then plots **simple slopes** and **Johnson–Neyman** curves. Default engine is GAM (robust to nonlinearities); also supports linear models, supplied fits (including covariates), and `lm2()`. Axis placement defaults to `"auto"`: moderator on the x-axis when the focal predictor has ≤3 levels; focal predictor on the x-axis otherwise.
+Estimates or accepts a model, then plots **simple slopes** and **Johnson–Neyman** curves. Default engine is GAM (robust to nonlinearities); also supports `model = "linear"`, supplied fits (including covariates), and `lm2()`. By default the moderator is on the x-axis (`moderator.on.x.axis = TRUE`); when the focal predictor has 3 or fewer unique values that setting is forced.
 
-**References:** Simonsohn, U. (2024). *AMPPS*. https://doi.org/10.1177/25152459231207787; Montealegre & Simonsohn (2026).
+**References:** Simonsohn, U. (2024). *AMPPS*. https://doi.org/10.1177/25152459231207787; Montealegre & Simonsohn (2026). Run `citation("statuser")` for BibTeX.
 
-**Full walkthrough** (three study designs): after installing from source, run `vignette("interprobe", package = "statuser")`.
+**Docs:** `?interprobe` (full reference) and `vignette("interprobe", package = "statuser")` (worked examples).
 
 ```r
-# Examples use MASS::birthwt (see vignette for prep of smoke/race factors)
-# Case A: binary x × continuous moderator
-interprobe(x = smoke, z = age, y = bwt, data = bw)
+# This is a stylized dataset inspired by Montealegre & Simonsohn (2026).
+# It depicts how salsa spiciness relates to taco enjoyment,
+# moderated by respondents' tolerance for spicy food.
+data(tacos_data)
 
-# Case B: 3-level categorical x × continuous z
-interprobe(x = race, z = age, y = bwt, data = bw)
+# Case A: experiment with Mild vs Hot salsa (binary focal predictor)
+tacos_bin <- tacos_data[!is.na(tacos_data$spicy_bin), ]
+interprobe(x = spicy_bin, z = tolerance, y = enjoyment, data = tacos_bin)
 
-# Case C: continuous x × continuous z
-interprobe(x = age, z = lwt, y = bwt, data = bw)
+# Case B: three salsa levels (Mild / Medium / Hot)
+interprobe(x = salsa, z = tolerance, y = enjoyment, data = tacos_data)
 
-# Linear probe, or probe a fitted model (path for covariates)
-interprobe(x = smoke, z = age, y = bwt, data = bw, model = "linear")
-fit <- lm(bwt ~ smoke * age + lwt, data = bw)
-interprobe(model = fit, x = smoke, z = age)
+# Case C: continuous spiciness rating (1-7) by continuous tolerance
+interprobe(x = spicy, z = tolerance, y = enjoyment, data = tacos_data)
+
+# Same as Case A, but force a classical linear interaction
+interprobe(x = spicy_bin, z = tolerance, y = enjoyment, data = tacos_bin, model = "linear")
+# Probe a user-fitted model (here with age as a covariate)
+lm1 <- lm(enjoyment ~ spicy_bin * tolerance + age, data = tacos_bin)
+interprobe(model = lm1, x = spicy_bin, z = tolerance)
 ```
 </details>
 
@@ -366,4 +372,4 @@ GPL-3
 
 ## Version
 
-CRAN release: **0.4.0**.
+CRAN release: **0.4.1**.

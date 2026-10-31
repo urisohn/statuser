@@ -1,0 +1,249 @@
+---
+title: "Probing nonlinear interactions with interprobe()"
+author: "Uri Simonsohn"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Probing nonlinear interactions with interprobe()}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 6,
+  fig.align = "center"
+)
+library(statuser)
+```
+
+# Why probe without assuming linearity?
+
+Classical interaction models of the form `y ~ x * z` assume that the effect of
+`x` on `y` changes *linearly* with `z` (the linear interaction effect, or LIE,
+assumption). That assumption is often false, and when it is false, both the
+test of the interaction and the Johnson-Neyman / spotlight probes can
+mislead.
+
+`interprobe()` estimates a flexible GAM by default, then draws:
+
+- **Simple slopes** (spotlights): predicted `y` at selected values of one
+  predictor across the range of the other
+- **Johnson-Neyman** curves: the marginal effect of the focal predictor across
+  the moderator
+
+**Estimand.** For categorical `x` (2-3 levels), the quantity of interest is the
+difference in predicted `y` between levels of `x` as a function of `z`. For
+continuous `x`, it is the derivative $\partial y / \partial x$ at given values
+of `z` (or the reverse, depending on which variable is on the x-axis).
+
+## A taco example where the linear interaction is wrong
+
+The bundled dataset `tacos_data` is a fictitious spice-tolerance study inspired
+by Montealegre and Simonsohn (2026). Hot salsa is less enjoyable than mild salsa
+for people with low spice tolerance, and more enjoyable for people with high
+tolerance—with a nonlinear transition around the middle of the scale.
+
+```{r sim-demo}
+data(tacos_data)
+tacos_bin <- tacos_data[!is.na(tacos_data$spicy_bin), ]
+nrow(tacos_bin)
+
+interprobe(
+  x = spicy_bin, z = tolerance, y = enjoyment,
+  data = tacos_bin
+)
+```
+
+Compare with a linear probe of the same data: the linear model forces a
+straight Johnson-Neyman line even though the true Hot−Mild effect curves.
+
+```{r sim-linear}
+interprobe(
+  x = spicy_bin, z = tolerance, y = enjoyment,
+  data = tacos_bin,
+  model = "linear"
+)
+```
+
+For every argument, defaults, and return-value columns, see `?interprobe`.
+Run `citation("statuser")` for the papers behind this method.
+
+# Data setup (`tacos_data`)
+
+```{r tacos-setup}
+data(tacos_data)
+tacos_bin <- tacos_data[!is.na(tacos_data$spicy_bin), ]
+```
+
+Columns: `spicy` (1–7), `salsa` (Mild/Medium/Hot), `spicy_bin` (Mild/Hot when
+`spicy` is 1 or 7), `tolerance`, `enjoyment`, and `age` (a nuisance covariate).
+
+# Case A: binary x × continuous moderator
+
+Mild vs Hot salsa (`spicy_bin`) by spice `tolerance`, predicting `enjoyment`.
+
+```{r case-a}
+res_a <- interprobe(
+  x = spicy_bin, z = tolerance, y = enjoyment,
+  data = tacos_bin
+)
+```
+
+**How to read the figure.**
+
+- The **left panel** (simple slopes) shows predicted enjoyment as a function of
+  tolerance, separately for Mild and Hot salsa. Darker / thicker lines mark
+  regions with more data (`n.max` controls when darkness saturates).
+- The **right panel** (Johnson-Neyman) shows the Hot−Mild effect across
+  tolerance, with a confidence band. Where the band excludes zero, the effect
+  is significant.
+- The **histogram** under each panel shows the distribution of the moderator
+  (common support).
+
+Unless `quiet = TRUE`, the console also prints an HC3 linear interaction test
+and a GAM interaction F test for the internal GAM fit, plus Johnson-Neyman
+regions of significance for categorical focal predictors.
+
+# Case B: 3-level categorical x
+
+Salsa type (`salsa`: Mild / Medium / Hot) by tolerance.
+
+```{r case-b}
+res_b <- interprobe(
+  x = salsa, z = tolerance, y = enjoyment,
+  data = tacos_data
+)
+```
+
+With 2-3 unique values of `x`, `interprobe()` treats the focal predictor as
+**categorical**: one curve per level, spotlights unused, and Johnson-Neyman
+regions of significance printed to the console (pairwise contrasts across the
+moderator).
+
+# Case C: continuous × continuous
+
+Spiciness rating (`spicy`, 1–7) by tolerance.
+
+```{r case-c}
+res_c <- interprobe(
+  x = spicy, z = tolerance, y = enjoyment,
+  data = tacos_data
+)
+```
+
+For continuous (or discrete with more than 3 values) predictors, three
+**spotlights** are used. The default is the 15th, 50th, and 85th percentiles
+of the off-axis variable. You can set your own:
+
+```{r case-c-spotlights}
+interprobe(
+  x = spicy, z = tolerance, y = enjoyment, data = tacos_data,
+  spotlights = c(2, 4, 6),
+  spotlight.labels = c("Low tolerance (2)", "Mid (4)", "High (6)")
+)
+```
+
+By default the moderator is on the x-axis (`moderator.on.x.axis = TRUE`). Set
+it to `FALSE` to put the focal predictor on the x-axis (ignored when `x` has
+3 or fewer unique values)—useful here so spiciness is on the x-axis and each
+curve is a tolerance spotlight, matching the paper’s continuous-focal figure.
+
+```{r case-c-axis}
+interprobe(
+  x = spicy, z = tolerance, y = enjoyment, data = tacos_data,
+  moderator.on.x.axis = FALSE
+)
+```
+
+# Covariates
+
+To include covariates, fit the model yourself and pass it as `model`. Other
+predictors are held at their means on the prediction grid.
+
+```{r covariates}
+lm1 <- lm(enjoyment ~ spicy_bin * tolerance + age, data = tacos_bin)
+interprobe(model = lm1, x = spicy_bin, z = tolerance)
+```
+
+You can also pass `lm2()`, `glm()`, or `mgcv::gam()` fits.
+
+# GAM vs model = "linear"
+
+Same data, two engines:
+
+```{r gam-vs-linear, fig.show = "hold"}
+interprobe(x = spicy_bin, z = tolerance, y = enjoyment, data = tacos_bin)
+interprobe(
+  x = spicy_bin, z = tolerance, y = enjoyment,
+  data = tacos_bin, model = "linear"
+)
+```
+
+Use the GAM default when you want robustness to nonlinearities. Use
+`model = "linear"` when you specifically want the classical linear interaction
+probed (or when a GAM will not converge; see Troubleshooting).
+
+# Working with the returned list
+
+`interprobe()` returns (invisibly) a list. Capture it to reuse the numeric
+results without redrawing.
+
+```{r returned-list}
+res <- interprobe(
+  x = spicy_bin, z = tolerance, y = enjoyment,
+  data = tacos_bin,
+  draw = "none"
+)
+names(res)
+head(res$johnson.neyman)
+head(res$simple.slopes)
+```
+
+When a model is estimated inside `interprobe()`, `res$gam_results` holds that
+fit (an `lm2` object if you used `model = "linear"`). For a binary focal
+predictor under the GAM engine, `res$gam_results_testing` and
+`res$lm2_results` support the printed interaction tests.
+
+```{r inspect-model}
+summary(res$gam_results)
+```
+
+# Saving and customizing figures
+
+Brief options (full list in `?interprobe`):
+
+```{r customize, eval = FALSE}
+interprobe(
+  x = spicy_bin, z = tolerance, y = enjoyment, data = tacos_bin,
+  draw = "jn",                    # or "simple slopes", "both", "none"
+  cols = c("black", "steelblue"),
+  save.as = "spicy_tolerance_jn.png",
+  xlim = c(1, 7)
+)
+```
+
+# Troubleshooting
+
+- **GAM estimation fails.** Predictors with few unique values often need a
+  smaller basis: try `k = 3` or `k = 2`.
+- **Only one unique value of `x` or `z`.** `interprobe()` stops; there is
+  nothing to probe.
+- **`cols` length.** Binary focal predictors need length 2 (or 3); continuous /
+  discrete spotlights and 3-level categorical need length 3.
+- **`spotlights` length.** Must be length 3 when supplied.
+- **Both `data` and `model`.** Not allowed; pick one input path.
+
+# References
+
+Simonsohn, U. (2024). Interacting with curves: How to validly test and probe
+interactions in the real (nonlinear) world. *Advances in Methods and Practices
+in Psychological Science*, 7(1), Article 25152459231207787.
+https://doi.org/10.1177/25152459231207787
+
+Montealegre, D., & Simonsohn, U. (2026). *Johnson Neyman 2.0* (working paper).
+
+Run `citation("statuser")` for ready-to-use BibTeX / text citations.

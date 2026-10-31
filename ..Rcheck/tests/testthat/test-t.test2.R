@@ -29,6 +29,7 @@ test_that("t.test2 returns all expected columns", {
   expect_true("df" %in% names(result))
   expect_true("ci.L" %in% names(result))
   expect_true("ci.H" %in% names(result))
+  expect_true("d" %in% names(result))
   
   # Attributes
   expect_true(!is.null(attr(result, "method_type")))
@@ -66,6 +67,12 @@ test_that("t.test2 accepts df$col ~ df$col2 without bare column names in env", {
   expect_true("B" %in% names(result))
 })
 
+#t.test2_006
+test_that("t.test2 errors if df$y ~ df$g is combined with data=", {
+  df1 <- data.frame(y1 = rnorm(100), x1 = rep(c("A", "B"), 50))
+  expect_error(t.test2(df1$y1 ~ df1$x1, data = df1), "Do not combine", fixed = TRUE)
+})
+
 #t.test2_005
 test_that("t.test2 handles two-vector syntax", {
   x1 <- rnorm(50, mean = 5)
@@ -76,6 +83,7 @@ test_that("t.test2 handles two-vector syntax", {
   expect_true("x1" %in% names(result))
   expect_true("x2" %in% names(result))
   expect_true("x1-x2" %in% names(result))
+  expect_true("d" %in% names(result))
   expect_true("N(x1)" %in% names(result))
   expect_true("N(y2)" %in% names(result) || "N(x2)" %in% names(result))
 })
@@ -91,6 +99,7 @@ test_that("t.test2 handles paired tests", {
   expect_true(attr(result, "is_paired"))
   expect_true("N" %in% names(result))  # Single N for paired
   expect_true("r(y1,y2)" %in% names(result))  # Correlation
+  expect_false("d" %in% names(result))
 })
 
 #t.test2_007
@@ -103,6 +112,7 @@ test_that("t.test2 handles one-sample test", {
   expect_true("N" %in% names(result))
   expect_false("Group 1" %in% names(result))
   expect_false(any(grepl("-", names(result), fixed = TRUE)))  # No diff column
+  expect_false("d" %in% names(result))
   
   output <- capture.output(print(result))
   expect_true(any(grepl("One sample", output)))
@@ -198,6 +208,26 @@ test_that("t.test2 reports missing data for two-sample tests", {
   output <- capture.output(print(result))
   output_text <- paste(output, collapse = "\n")
   expect_true(grepl("missing", output_text, ignore.case = TRUE))
+})
+
+#t.test2_012b
+test_that("t.test2 does not double-count missing when group has NA", {
+  set.seed(12)
+  y <- rnorm(20)
+  group <- rep(0:1, each = 10)
+  
+  # One missing value in each group
+  y[2] <- NA
+  y[12] <- NA
+  
+  # Additional rows with missing group should not be attributed to either group
+  y <- c(y, 10, 11, 12)
+  group <- c(group, NA, NA, NA)
+  
+  result <- t.test2(y ~ group)
+  
+  expect_equal(attr(result, "NA1"), 1L)
+  expect_equal(attr(result, "NA2"), 1L)
 })
 
 #t.test2_013

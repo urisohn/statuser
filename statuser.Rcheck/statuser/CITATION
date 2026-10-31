@@ -1,0 +1,70 @@
+citHeader("To cite statuser in publications, please use:")
+
+bibentry(
+  bibtype = "Article",
+  title   = "Two lines: A valid alternative to the invalid testing of U-shaped relationships with quadratic regressions",
+  author  = person("Uri", "Simonsohn"),
+  journal = "Advances in Methods and Practices in Psychological Science",
+  year    = "2018",
+  volume  = "1",
+  number  = "4",
+  pages   = "538--555",
+  doi     = "10.1177/2515245918805755",
+  textVersion = paste(
+    "Simonsohn, U. (2018). Two lines: A valid alternative to the invalid",
+    "testing of U-shaped relationships with quadratic regressions.",
+    "Advances in Methods and Practices in Psychological Science, 1(4), 538-555.",
+    "https://doi.org/10.1177/2515245918805755"
+  )
+)
+
+bibentry(
+  bibtype = "Article",
+  title   = "Interacting with curves: How to validly test and probe interactions in the real (nonlinear) world",
+  author  = person("Uri", "Simonsohn"),
+  journal = "Advances in Methods and Practices in Psychological Science",
+  year    = "2024",
+  volume  = "7",
+  number  = "1",
+  doi     = "10.1177/25152459231207787",
+  textVersion = paste(
+    "Simonsohn, U. (2024). Interacting with curves: How to validly test and",
+    "probe interactions in the real (nonlinear) world.",
+    "Advances in Methods and Practices in Psychological Science, 7(1),",
+    "Article 25152459231207787. https://doi.org/10.1177/25152459231207787"
+  )
+)
+
+bibentry(
+  bibtype = "Unpublished",
+  title   = "Johnson Neyman 2.0",
+  author  = c(person("Diego", "Montealegre"), person("Uri", "Simonsohn")),
+  year    = "2026",
+  note    = "Working paper",
+  textVersion = paste(
+    "Montealegre, D., & Simonsohn, U. (2026). Johnson Neyman 2.0 (working paper)."
+  )
+)
+
+bibentry(
+  bibtype = "Article",
+  title   = "Stimulus sampling reimagined: Designing experiments with mix-and-match, analyzing results with stimulus plots",
+  author  = c(
+    person("Uri", "Simonsohn"),
+    person("Andres", "Montealegre"),
+    person("Ioannis", "Evangelidis")
+  ),
+  journal = "Journal of Personality and Social Psychology",
+  year    = "2025",
+  volume  = "129",
+  number  = "1",
+  pages   = "71--90",
+  doi     = "10.1037/pspa0000449",
+  textVersion = paste(
+    "Simonsohn, U., Montealegre, A., & Evangelidis, I. (2025).",
+    "Stimulus sampling reimagined: Designing experiments with mix-and-match,",
+    "analyzing results with stimulus plots.",
+    "Journal of Personality and Social Psychology, 129(1), 71-90.",
+    "https://doi.org/10.1037/pspa0000449"
+  )
+)

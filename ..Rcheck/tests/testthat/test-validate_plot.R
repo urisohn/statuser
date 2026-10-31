@@ -146,7 +146,54 @@ test_that("validate_plot with explicit data_name parameter", {
   expect_equal(result$data_name, "my_data")
 })
 
+#validate_plot_013
+test_that("extract_expr_label strips df$ prefixes and keeps expression structure", {
+  expect_equal(
+    statuser:::.extract_expr_label(quote(df$gpa8 - df$gpa7)),
+    "gpa8 - gpa7"
+  )
+  expect_equal(
+    statuser:::.extract_expr_label(quote(df$gpa8-df$gpa7)),
+    "gpa8 - gpa7"
+  )
+  expect_equal(
+    statuser:::.extract_expr_label(quote(round(df$gpa5, 1))),
+    "round(gpa5, 1)"
+  )
+  expect_equal(
+    statuser:::.extract_expr_label(quote(mean(df$gpa5))),
+    "mean(gpa5)"
+  )
+  expect_equal(
+    statuser:::.extract_expr_label(quote(df$gpa7)),
+    "gpa7"
+  )
+})
 
+#validate_plot_014
+test_that("evaluate_variable_arguments labels complex expressions via extract_expr_label", {
+  df <- data.frame(gpa8 = 1:5, gpa7 = 6:10, gpa5 = 1:5)
+  res <- statuser:::evaluate_variable_arguments(
+    arg_expr = quote(df$gpa8 - df$gpa7),
+    calling_env = environment(),
+    func_name = "test"
+  )
+  expect_equal(res$name, "gpa8 - gpa7")
+  res2 <- statuser:::evaluate_variable_arguments(
+    arg_expr = quote(round(df$gpa5, 1)),
+    calling_env = environment(),
+    func_name = "test"
+  )
+  expect_equal(res2$name, "round(gpa5, 1)")
+})
+
+#validate_plot_015
+test_that("validate_plot labels formula with $ expressions correctly", {
+  df <- data.frame(gpa5 = 1:5, completed = rep(c("Y", "N"), length.out = 5))
+  result <- validate_plot(round(df$gpa5, 1) ~ df$completed, require_group = TRUE)
+  expect_equal(result$y_name, "round(gpa5, 1)")
+  expect_equal(result$group_name, "completed")
+})
 
 
 
