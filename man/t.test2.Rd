@@ -10,7 +10,15 @@
 \item{x}{The first data argument passed to \code{\link[stats]{t.test}}. This can
 be a numeric vector or a formula.}
 
-\item{...}{Arguments passed to \code{\link[stats]{t.test}}}
+\item{...}{Further arguments passed to \code{\link[stats]{t.test}}. The first
+unnamed argument (or a named \code{y}) is the optional second sample. A
+numeric vector is a second sample; a \code{character}, \code{factor}, or
+\code{logical} vector with exactly two levels and the same length as
+\code{x} is a grouping variable, so \code{t.test2(df$y, df$group)} matches
+\code{t.test2(y ~ group, data = df)}. Numeric vectors are never treated as
+groups; use a formula for numeric group codes such as \code{0}/\code{1}.
+The formals are \code{function(x, ...)} so this S3 method for
+\code{\link[base]{t}} stays consistent with the generic.}
 }
 \value{
 A data frame with class \code{c("t.test2", "data.frame")} containing 
@@ -65,5 +73,8 @@ t.test2(data, mu = 0)
 # Formula syntax
 data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 t.test2(y ~ group, data = data)
+
+# Outcome vector and grouping variable
+t.test2(data$y, data$group)
 
 }

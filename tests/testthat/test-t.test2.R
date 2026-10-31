@@ -444,6 +444,77 @@ test_that("t.test2 print output with missing data is stable", {
   expect_snapshot(print(result))
 })
 
+#t.test2_027
+test_that("t.test2 accepts an outcome vector and a grouping variable", {
+  set.seed(1)
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), c(30, 70))
+  df <- data.frame(y = y, group = group)
+
+  formula_result <- t.test2(y ~ group, data = df)
+  vector_result <- t.test2(df$y, df$group)
+  vector_result_again <- t.test2(df$y, df$group)
+
+  cols <- c("A", "B", "A-B", "t", "df", "p.value", "d", "N(A)", "N(B)")
+  expect_equal(vector_result[cols], formula_result[cols])
+  expect_equal(vector_result_again[cols], formula_result[cols])
+  expect_equal(attr(vector_result, "NA1"), attr(formula_result, "NA1"))
+  expect_equal(attr(vector_result, "NA2"), attr(formula_result, "NA2"))
+  expect_equal(attr(vector_result, "method_type"), attr(formula_result, "method_type"))
+
+  # Factor groups follow level order, same as the formula interface
+  df$gf <- factor(df$group, levels = c("B", "A"))
+  formula_factor <- t.test2(y ~ gf, data = df)
+  vector_factor <- t.test2(df$y, df$gf)
+  expect_equal(vector_factor[c("B", "A", "B-A", "t", "p.value")], formula_factor[c("B", "A", "B-A", "t", "p.value")])
+
+  # Logical groups. Avoid the name `gl`: base::gl() is on the search path,
+  # and the formula interface reads environment bindings before data columns.
+  df$flag <- df$group == "A"
+  formula_logical <- t.test2(y ~ flag, data = df)
+  vector_logical <- t.test2(df$y, df$flag)
+  expect_equal(
+    vector_logical[c("FALSE", "TRUE", "FALSE-TRUE", "t", "df", "p.value", "d")],
+    formula_logical[c("FALSE", "TRUE", "FALSE-TRUE", "t", "df", "p.value", "d")]
+  )
+
+  # var.equal is forwarded
+  formula_student <- t.test2(y ~ group, data = df, var.equal = TRUE)
+  vector_student <- t.test2(df$y, df$group, var.equal = TRUE)
+  expect_equal(attr(vector_student, "method_type"), "student")
+  expect_equal(vector_student[c("t", "df", "p.value")], formula_student[c("t", "df", "p.value")])
+
+  # A numeric second vector is still a second sample, even with two distinct values
+  two_sample <- t.test2(c(1, 2, 3, 4), c(0, 0, 1, 1))
+  expect_equal(unname(unlist(two_sample[1])), mean(c(1, 2, 3, 4)))
+  expect_equal(unname(unlist(two_sample[2])), mean(c(0, 0, 1, 1)))
+})
+
+#t.test2_028
+test_that("t.test2 rejects invalid grouping vectors", {
+  y <- rnorm(10)
+  expect_error(
+    suppressMessages(t.test2(y, rep(c("A", "B", "C"), length.out = 10))),
+    "exactly 2 levels",
+    fixed = TRUE
+  )
+  expect_error(
+    suppressMessages(t.test2(y, c("A", "B"))),
+    "same length",
+    fixed = TRUE
+  )
+  expect_error(
+    suppressMessages(t.test2(y, rep(c("A", "B"), 5), paired = TRUE)),
+    "paired = TRUE",
+    fixed = TRUE
+  )
+  expect_error(
+    suppressMessages(t.test2(y, rep(c("A", "B"), 5), data = data.frame(y = y))),
+    "Do not pass data=",
+    fixed = TRUE
+  )
+})
+
 #t.test2_026
 test_that("t.test2 print output with long group names is stable", {
   set.seed(42)

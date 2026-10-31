@@ -13,7 +13,15 @@
 #'
 #' @param x The first data argument passed to \code{\link[stats]{t.test}}. This can
 #'   be a numeric vector or a formula.
-#' @param ... Arguments passed to \code{\link[stats]{t.test}}
+#' @param ... Further arguments passed to \code{\link[stats]{t.test}}. The first
+#'   unnamed argument (or a named \code{y}) is the optional second sample. A
+#'   numeric vector is a second sample; a \code{character}, \code{factor}, or
+#'   \code{logical} vector with exactly two levels and the same length as
+#'   \code{x} is a grouping variable, so \code{t.test2(df$y, df$group)} matches
+#'   \code{t.test2(y ~ group, data = df)}. Numeric vectors are never treated as
+#'   groups; use a formula for numeric group codes such as \code{0}/\code{1}.
+#'   The formals are \code{function(x, ...)} so this S3 method for
+#'   \code{\link[base]{t}} stays consistent with the generic.
 #'
 #' @return A data frame with class \code{c("t.test2", "data.frame")} containing 
 #'   a single row with the following columns:
@@ -59,23 +67,138 @@
 #' data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
 #' t.test2(y ~ group, data = data)
 #'
+#' # Outcome vector and grouping variable
+#' t.test2(data$y, data$group)
+#'
 #' @export t.test2
 t.test2 <- function(x, ...) {
-  
-  # Get dots_list for validation and later use (extracting group names, etc.)
+
+  # Keep formals as (x, ...) to match base::t for S3method(t, test2).
+  # Pull optional second sample / grouping vector out of ...
   dots_list <- list(...)
-  
-  # Validate formula early if first argument is one
-  if (!missing(x)) {
-    validate_formula(x, dots_list$data, func_name = "t.test2", calling_env = parent.frame())
-    # Do not allow combining `$` formulas with data= (user should pick one style).
-    if (inherits(x, "formula")) {
-      .assert_no_dollar_with_data(x, dots_list$data, func_name = "t.test2")
+  dot_names <- names(dots_list)
+  if (is.null(dot_names)) {
+    dot_names <- rep("", length(dots_list))
+  }
+
+  y <- NULL
+  y_idx <- NA_integer_
+  if ("y" %in% dot_names) {
+    y_idx <- which(dot_names == "y")[1]
+    y <- dots_list[[y_idx]]
+  } else {
+    unnamed_idx <- which(dot_names == "")
+    if (length(unnamed_idx) >= 1) {
+      y_idx <- unnamed_idx[1]
+      y <- dots_list[[y_idx]]
     }
   }
-  
-  # Run t.test with provided arguments (avoiding do.call to prevent expensive deparse)
-  tt_result <- stats::t.test(x, ...)
+
+  # Remaining args for t.test (without the second-sample / group vector)
+  if (!is.na(y_idx)) {
+    ttest_dots <- dots_list[-y_idx]
+  } else {
+    ttest_dots <- dots_list
+  }
+
+  # Validate formula early if first argument is one
+  if (!missing(x)) {
+    validate_formula(x, ttest_dots$data, func_name = "t.test2", calling_env = parent.frame())
+    # Do not allow combining `$` formulas with data= (user should pick one style).
+    if (inherits(x, "formula")) {
+      .assert_no_dollar_with_data(x, ttest_dots$data, func_name = "t.test2")
+    }
+  }
+
+  # Helper function to extract variable name from expression
+  extract_var_name <- function(expr) {
+    # Fast path for simple symbols (common case) - avoid expensive deparse()
+    if (is.symbol(expr)) {
+      return(as.character(expr))
+    }
+    # For complex expressions (e.g., df$col), use deparse
+    expr_str <- deparse(expr, width.cutoff = 500)
+    if (grepl("\\$", expr_str)) {
+      var_name <- sub(".*\\$", "", expr_str)
+      return(trimws(var_name))
+    }
+    return(trimws(expr_str))
+  }
+
+  # Expression used for the second argument (for labels / error messages)
+  y_expr <- NULL
+  mc_dots <- match.call(expand.dots = FALSE)$...
+  if (!is.null(mc_dots) && !is.na(y_idx) && length(mc_dots) >= y_idx) {
+    y_expr <- mc_dots[[y_idx]]
+  }
+
+  # Grouping-variable syntax: t.test2(outcome, group)
+  # Character, factor, and logical second arguments are groups, not a second sample.
+  # Numeric second arguments stay two-sample vectors (t.test2(men, women)).
+  grouping_vector <- FALSE
+  grouping_var_name <- NA_character_
+
+  if (!missing(x) && !is.null(y) && !inherits(x, "formula") &&
+      is.numeric(x) && !is.numeric(y) &&
+      (is.character(y) || is.factor(y) || is.logical(y))) {
+
+    grouping_var_name <- if (!is.null(y_expr)) {
+      extract_var_name(y_expr)
+    } else {
+      "group"
+    }
+
+    # Paired tests compare two numeric samples
+    if (isTRUE(ttest_dots$paired)) {
+      message2(
+        "t.test2() says: paired = TRUE cannot be combined with a grouping variable. Use two numeric vectors.",
+        col = "red",
+        stop = TRUE
+      )
+    }
+
+    # data= is the formula interface; these arguments are already the vectors
+    if ("data" %in% names(ttest_dots) && !is.null(ttest_dots$data)) {
+      message2(
+        "t.test2() says: Do not pass data= with an outcome vector and a grouping variable.\nUse either t.test2(y ~ group, data = df) or t.test2(df$y, df$group).",
+        col = "red",
+        stop = TRUE
+      )
+    }
+
+    if (length(y) != length(x)) {
+      message2(sprintf(
+        "t.test2() says: The grouping variable '%s' must have the same length as the outcome (outcome n=%d, group n=%d).",
+        grouping_var_name, length(x), length(y)
+      ), col = "red", stop = TRUE)
+    }
+
+    # Drop unused factor levels so a two-level subset is not rejected
+    if (is.factor(y)) {
+      y <- droplevels(y)
+    }
+
+    n_levels <- length(unique(y[!is.na(y)]))
+    if (n_levels != 2) {
+      message2(sprintf(
+        "t.test2() says: The grouping variable '%s' has %d unique values, cannot run t-test (requires exactly 2 levels).",
+        grouping_var_name, n_levels
+      ), col = "red", stop = TRUE)
+    }
+
+    grouping_vector <- TRUE
+    group_data <- data.frame(outcome = x, group = y, stringsAsFactors = FALSE)
+    tt_result <- do.call(stats::t.test, c(list(outcome ~ group, data = group_data), ttest_dots))
+  }
+
+  # Run t.test with provided arguments
+  if (!grouping_vector) {
+    if (is.null(y)) {
+      tt_result <- do.call(stats::t.test, c(list(x), ttest_dots))
+    } else {
+      tt_result <- do.call(stats::t.test, c(list(x, y), ttest_dots))
+    }
+  }
   
   # Determine test type
   is_paired <- grepl("Paired", tt_result$method, ignore.case = TRUE)
@@ -120,21 +243,6 @@ t.test2 <- function(x, ...) {
   calling_env <- parent.frame()
   dots_list <- list(...)
   
-  # Helper function to extract variable name from expression
-  extract_var_name <- function(expr) {
-    # Fast path for simple symbols (common case) - avoid expensive deparse()
-    if (is.symbol(expr)) {
-      return(as.character(expr))
-    }
-    # For complex expressions (e.g., df$col), use deparse
-    expr_str <- deparse(expr, width.cutoff = 500)
-    if (grepl("\\$", expr_str)) {
-      var_name <- sub(".*\\$", "", expr_str)
-      return(trimws(var_name))
-    }
-    return(trimws(expr_str))
-  }
-  
   # Helper function to check if variables were read from environment when data= was specified
   # Takes a list of variable info: list(list(name="var1", from_env=TRUE, from_data=FALSE), ...)
   # Returns warning message or NULL (warning is printed by print method at the end)
@@ -174,9 +282,17 @@ t.test2 <- function(x, ...) {
   
   # Try to extract data and group names
   tryCatch({
-    # Check if it's formula syntax
-    if (length(call_args) >= 2 && is.call(call_args[[2]]) && 
-        as.character(call_args[[2]][[1]]) %in% c("~", "formula")) {
+    # Formula syntax, or an outcome vector plus a grouping variable
+    is_formula_call <- length(call_args) >= 2 && is.call(call_args[[2]]) &&
+      as.character(call_args[[2]][[1]]) %in% c("~", "formula")
+
+    if (isTRUE(grouping_vector) || is_formula_call) {
+      if (isTRUE(grouping_vector)) {
+        # t.test2(df$y, df$group): groups were already checked above
+        y_var <- x
+        group_var <- y
+        group_var_name <- grouping_var_name
+      } else {
       # Formula syntax: y ~ group
       formula <- eval(call_args[[2]], envir = calling_env)
       data_arg <- if ("data" %in% names(call_args)) eval(call_args$data, envir = calling_env) else NULL
@@ -253,7 +369,8 @@ t.test2 <- function(x, ...) {
         ),
         data_arg, call_args
       )
-      
+      }
+
       # Get unique groups
       unique_groups <- sort(unique(group_var))
       if (length(unique_groups) == 2) {

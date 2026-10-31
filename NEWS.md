@@ -4,10 +4,12 @@
 - `plot_freq()`: character and factor inputs are supported (previously bare character vectors failed with an obscure `xlim` error). Thanks to Daniel Bankin for the report. New `x.order` controls category order on the x-axis: factor levels (default for factors), alphabetical, frequency (`"freq"` / `"freq.asc"`), `-1` to reverse the default, or a custom name vector.
 - `interprobe()`: `draw = "none"` skips plotting (and `save.as`) while still returning simple slopes, Johnson–Neyman results, and related output.
 - `interprobe()`: when `histogram = TRUE`, the sample-size distribution is drawn as its own panel under each curve plot (shared x-axis) instead of being carved out of the GAM y-axis, so frequency labels no longer collide with axis ticks.
-- `interprobe()`: documentation expanded and clarified (inputs, model paths, how `x`/`z` are classified, spotlights, plot options, and return value); `\usage` lines wrapped to satisfy CRAN Rd line-width checks.
+- Documentation expanded for `interprobe()` (inputs, model paths, how `x`/`z` are classified, spotlights, plot options, and return value); `\usage` lines wrapped to satisfy CRAN Rd line-width checks. Added the taco spiciness example via the bundled `tacos_data` dataset and the `interprobe` vignette.
 - Package-wide pass over user-facing messages: spelling/grammar fixes and clearer wording in `interprobe()`, `stimulus.plot()`, and related helpers.
 
 ### Bug fixes
+- `t.test2()`: `t.test2(outcome, group)` now runs a two-sample test when `group` is a character, factor, or logical vector with two levels (for example `t.test2(df$y, df$group)`). That call used to be passed to `t.test()` as a second sample, which failed or returned an empty result. Thanks to Rafael Mancuso (https://github.com/raffaelemancuso) for the report (https://github.com/urisohn/statuser/issues/7). Formals stay `function(x, ...)` so the S3 method for `t` remains consistent with the generic.
+- `lm2()` print tests: exact-fit models (undefined SE/t/p under current estimatr) no longer assert significance stars or `>999`.
 - `interprobe()`: discrete focal predictors with a continuous moderator on the x-axis now build frequency bins along the moderator (and return `bin_from` / `bin_to` only when breaks exist), fixing empty-break assignment errors.
 - `interprobe()`: Johnson–Neyman panel now shows the spotlight legend for discrete focal predictors (previously only categorical and continuous cases got a JN legend).
 

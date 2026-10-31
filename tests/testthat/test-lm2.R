@@ -978,7 +978,7 @@ test_that("lm2 coef extraction works like lm_robust", {
 })
 
 #lm2_051
-test_that("lm2 chops near-zero noise to zero in default print", {
+test_that("lm2 chops near-zero noise to zero in exact-fit print", {
   skip_if_not_installed("estimatr")
 
   n <- 48
@@ -1003,7 +1003,12 @@ test_that("lm2 chops near-zero noise to zero in default print", {
   expect_false(grepl("e-", output_text, ignore.case = TRUE))
   expect_match(output_text, "participation")
   expect_match(output_text, "\\.000")
-  expect_match(output_text, ">999")
+  expect_match(output_text, "R² = 1")
+  # Exact fit: older estimatr yields huge t (>999); newer leaves SE/t/p as NA ("--")
+  expect_true(
+    grepl(">999", output_text, fixed = TRUE) ||
+      grepl("--\\s+--\\s+--\\s+--", output_text)
+  )
 })
 
 #lm2_052
@@ -1032,8 +1037,9 @@ test_that("lm2 round argument forces uniform decimal places", {
   output_text <- paste(output, collapse = "\n")
 
   expect_match(output_text, "round = 3")
-  expect_match(output_text, "20\\.000\\*\\*")
-  expect_match(output_text, "writeups\\s+\\.200\\*\\*")
+  # Exact fit: no significance stars when SE/t/p are undefined
+  expect_match(output_text, "20\\.000")
+  expect_match(output_text, "writeups\\s+\\.200")
   expect_match(output_text, "participation\\s+\\.000")
 })
 
