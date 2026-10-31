@@ -38,7 +38,6 @@
 #'   test type (one-sample, two-sample, paired, Welch vs. Student).
 #'
 #' @importFrom stats cor
-#' @usage NULL
 #' @rawNamespace S3method(t,test2)
 #'
 #' @examples

@@ -385,3 +385,205 @@ test_that("error message shows original model name (linear)", {
   expect_true(any(grepl("model 'linear'", msgs, fixed = TRUE)))
 })
 
+#interprobe_012
+test_that("bare x/z/y names work with data= when columns are not in calling env", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("estimatr")
+
+  # Isolate so value/interest/gone are only columns of df, not env bindings
+  res <- local(
+    {
+      set.seed(222)
+      n <- 200
+      df <- data.frame(
+        value = rnorm(n),
+        interest = rnorm(n),
+        gone = rnorm(n)
+      )
+      df$gone <- df$value * df$interest + rnorm(n)
+
+      grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+      on.exit(grDevices::dev.off(), add = TRUE)
+
+      interprobe(
+        x = value,
+        z = interest,
+        y = gone,
+        data = df,
+        model = "linear",
+        quiet = TRUE,
+        draw = "jn",
+        histogram = FALSE,
+        spotlights = c(-1, 0, 1),
+        probe.bins = 30
+      )
+    },
+    envir = new.env(parent = globalenv())
+  )
+
+  expect_true(is.list(res))
+  expect_true(nrow(res$johnson.neyman) > 0)
+})
+
+#interprobe_013
+test_that("quoted x/z/y strings work with data=", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("estimatr")
+
+  set.seed(223)
+  n <- 200
+  df <- data.frame(
+    value = rnorm(n),
+    interest = rnorm(n),
+    gone = rnorm(n)
+  )
+  df$gone <- df$value * df$interest + rnorm(n)
+
+  grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  res <- interprobe(
+    x = "value",
+    z = "interest",
+    y = "gone",
+    data = df,
+    model = "linear",
+    quiet = TRUE,
+    draw = "jn",
+    histogram = FALSE,
+    spotlights = c(-1, 0, 1),
+    probe.bins = 30
+  )
+
+  expect_true(is.list(res))
+  expect_true(nrow(res$johnson.neyman) > 0)
+})
+
+#interprobe_014
+test_that("missing column with data= reports requested error wording", {
+  set.seed(224)
+  n <- 50
+  df <- data.frame(
+    interest = rnorm(n),
+    gone = rnorm(n)
+  )
+
+  msgs <- character(0)
+  out <- withCallingHandlers(
+    withRestarts(
+      interprobe(x = value, z = interest, y = gone, data = df, quiet = TRUE),
+      abort = function(...) "aborted"
+    ),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  expect_identical(out, "aborted")
+  expect_true(any(grepl("'value' is not a variable in dataframe 'df'", msgs, fixed = TRUE)))
+})
+
+#interprobe_015
+test_that("bare x/z names work with fitted model when columns not in calling env", {
+  skip_if_not_installed("marginaleffects")
+
+  res <- local(
+    {
+      set.seed(225)
+      n <- 200
+      df <- data.frame(
+        value = rnorm(n),
+        interest = rnorm(n)
+      )
+      df$gone <- df$value * df$interest + rnorm(n)
+      lm1 <- lm(gone ~ value * interest, data = df)
+
+      grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+      on.exit(grDevices::dev.off(), add = TRUE)
+
+      interprobe(
+        model = lm1,
+        x = value,
+        z = interest,
+        quiet = TRUE,
+        draw = "jn",
+        histogram = FALSE,
+        spotlights = c(-1, 0, 1),
+        probe.bins = 30
+      )
+    },
+    envir = new.env(parent = globalenv())
+  )
+
+  expect_true(is.list(res))
+  expect_true(nrow(res$johnson.neyman) > 0)
+})
+
+#interprobe_016
+test_that("binary x allows cols of length 2", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("mgcv")
+
+  set.seed(616)
+  n <- 200
+  z <- rnorm(n)
+  x <- rep(c(0, 1), each = n / 2)
+  y <- x + z + x * z + rnorm(n, sd = 2)
+
+  grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  res <- interprobe(
+    x, z, y,
+    quiet = TRUE,
+    draw = "both",
+    histogram = FALSE,
+    cols = c("red4", "dodgerblue"),
+    probe.bins = 30
+  )
+
+  expect_true(is.list(res))
+  expect_true(nrow(res$johnson.neyman) > 0)
+  expect_true(nrow(res$simple.slopes) > 0)
+})
+
+#interprobe_017
+test_that("continuous x rejects cols of length 2", {
+  skip_if_not_installed("marginaleffects")
+  skip_if_not_installed("mgcv")
+
+  set.seed(617)
+  n <- 200
+  x <- rnorm(n)
+  z <- rnorm(n)
+  y <- x * z + rnorm(n)
+
+  msgs <- character(0)
+  out <- withCallingHandlers(
+    withRestarts(
+      {
+        grDevices::pdf(file = tempfile(fileext = ".pdf"), width = 7, height = 7)
+        on.exit(grDevices::dev.off(), add = TRUE)
+        interprobe(
+          x, z, y,
+          quiet = TRUE,
+          draw = "jn",
+          histogram = FALSE,
+          cols = c("red4", "dodgerblue"),
+          spotlights = c(-1, 0, 1),
+          probe.bins = 30
+        )
+      },
+      abort = function(...) "aborted"
+    ),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  expect_identical(out, "aborted")
+  expect_true(any(grepl("cols' must have length 3", msgs, fixed = TRUE)))
+})
+

@@ -45,6 +45,7 @@ Same organization as `help(statuser)`:
 ### Formatting
 
 - `format_pvalue()` — format p-values for display
+- `round2()` — like `round()`, but fixed decimals as character; optional drop of leading zeros
 - `var_labels()` — get/set variable labels (as base-R `"label"` attributes)
 - `message2()` — print colored messages to console
 - `resize_images()` — resize images (SVG, PDF, EPS, JPG, PNG, etc.) to PNG with specified width
@@ -131,13 +132,27 @@ twolines(y ~ x, data = data, pngfile = "twolines_plot.png")
 <details>
 <summary><code>interprobe()</code>: probe and visualize nonlinear interactions</summary>
 
-Estimates or accepts a model, then plots simple slopes and Johnson–Neyman curves. Default engine is GAM; also supports linear models, supplied fits, and `lm2()`.
+Estimates or accepts a model, then plots **simple slopes** and **Johnson–Neyman** curves. Default engine is GAM (robust to nonlinearities); also supports linear models, supplied fits (including covariates), and `lm2()`. Axis placement defaults to `"auto"`: moderator on the x-axis when the focal predictor has ≤3 levels; focal predictor on the x-axis otherwise.
 
-**References:** Simonsohn, U. (2024). *AMPPS*. https://doi.org/10.1177/25152459231207787
+**References:** Simonsohn, U. (2024). *AMPPS*. https://doi.org/10.1177/25152459231207787; Montealegre & Simonsohn (2026).
+
+**Full walkthrough** (three study designs): after installing from source, run `vignette("interprobe", package = "statuser")`.
 
 ```r
-interprobe(x = "predictor", z = "moderator", y = "outcome", data = df)
-interprobe(x = "predictor", z = "moderator", y = "outcome", data = df, model = "linear")
+# Examples use MASS::birthwt (see vignette for prep of smoke/race factors)
+# Case A: binary x × continuous moderator
+interprobe(x = smoke, z = age, y = bwt, data = bw)
+
+# Case B: 3-level categorical x × continuous z
+interprobe(x = race, z = age, y = bwt, data = bw)
+
+# Case C: continuous x × continuous z
+interprobe(x = age, z = lwt, y = bwt, data = bw)
+
+# Linear probe, or probe a fitted model (path for covariates)
+interprobe(x = smoke, z = age, y = bwt, data = bw, model = "linear")
+fit <- lm(bwt ~ smoke * age + lwt, data = bw)
+interprobe(model = fit, x = smoke, z = age)
 ```
 </details>
 
@@ -273,6 +288,16 @@ format_pvalue(0.0001, include_p = TRUE)
 </details>
 
 <details>
+<summary><code>round2()</code>: round with fixed decimals (optional drop of leading zeros)</summary>
+
+```r
+round2(0.34, 2)
+round2(0.34, 2, leading.zero = TRUE)
+round2(c(0.34, 1.25), 2)
+```
+</details>
+
+<details>
 <summary><code>var_labels()</code>: get/set variable labels</summary>
 
 ```r
@@ -341,4 +366,4 @@ GPL-3
 
 ## Version
 
-CRAN release: **0.3.0** (stimulus plots, `lm2_notes()`, Cohen's d in `t.test2()`, and related fixes). Development version may be ahead of CRAN.
+CRAN release: **0.4.0**.

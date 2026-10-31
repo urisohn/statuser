@@ -71,11 +71,13 @@ Helper code: `tests/testthat/helper-backend_equivalence.R`.
 | Subset | What it checks |
 |--------|----------------|
 | **`lm` input** | Structure; fitted model returned when estimated internally; **APA** printing unless `quiet=TRUE`. |
-| **Binary x** | **ti**-based GAM testing path (`gam_results_testing`). |
+| **Binary x** | **ti**-based GAM testing path (`gam_results_testing`); `cols` of length 2 allowed. |
+| **`cols` validation** | Continuous focal still requires length-3 `cols`. |
 | **`lm2` input** | Works with **lm2** fits. |
 | **`model` / `data` routing** | Fits **lm2** when `model = linear` (or sentinel) with data; vector interface with `model = linear`. |
 | **Keyword vs object** | `linear` in calling env vs bare keyword; `lm` as keyword when appropriate. |
-| **Errors** | Messages preserve intended model name. |
+| **NSE names** | Bare and quoted `x`/`z`/`y` with `data=` (columns need not exist in calling env); bare `x`/`z` with fitted `model=`. |
+| **Errors** | Messages preserve intended model name; missing column uses `'var' is not a variable in dataframe 'df'`. |
 
 ---
 

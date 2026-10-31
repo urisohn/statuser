@@ -6,7 +6,14 @@
 #'  and yet another function, \code{\link[stats]{chisq.test}} to test difference of 
 #'  proportions.  \code{table2} does what those three functions do, producing easier to 
 #'  read output, and always shows variable names. 
-#' @param ... same arguments as \code{\link[base]{table}}, plus the arguments shown below
+#' @param ... Variables to tabulate, as in \code{\link[base]{table}} (e.g., vectors
+#'   or \code{df$col} expressions). Extra named arguments below may also be passed here.
+#' @param data Unused; reserved for compatibility. Prefer \code{df$col} in \code{...}.
+#' @param exclude Values to exclude, passed to \code{\link[base]{table}}.
+#' @param useNA Whether to include \code{NA} levels, passed to \code{\link[base]{table}}.
+#' @param dnn Optional dimension names, passed to \code{\link[base]{table}}.
+#' @param deparse.level Passed to \code{\link[base]{table}} for naming dimensions from
+#'   deparsed expressions when \code{dnn} is not set.
 #' @param prop report a table with:
 #'   \itemize{
 #'     \item \code{prop="all"}: Proportions for full table (each cell / total)
@@ -54,7 +61,6 @@
 #' # Table with chi-square test
 #' table2(df$group, df$status, chi = TRUE,prop='all')
 #'
-#' @usage NULL
 #' @export
 table2 <- function(..., data = NULL, exclude = if (useNA == "no") c(NA, NaN), 
                   useNA = c("no", "ifany", "always"), 

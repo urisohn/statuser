@@ -1,13 +1,16 @@
 #' Plot frequencies for a variable (histogram without binning)
 #'
 #' Creates a frequency plot showing the frequency of every observed value, optionally by group. 
-#' Most frequent values are labeled by default.
+#' Most frequent values are labeled by default. The plotted variable may be numeric,
+#' character, or factor. Category order on the x-axis is controlled by \code{x.order}.
 #'
 #' @param formula Two possible uses (similar to \code{t.test()}):
 #'   \itemize{
 #'     \item {Single Variable (possibly by subgroup)}: \code{plot_freq(y)} or \code{plot_freq(y~x)}
 #'     \item {Contrast Two Variables}: \code{plot_freq(y1, y2)}
 #'   }
+#'   The outcome may be numeric, character, or factor. When comparing two variables,
+#'   both must be the same kind (both numeric, or both character/factor).
 #' @param y2 optional second variable when contrasting two variables \code{plot_freq(y1,y2)}
 #' @param data An optional data frame containing the variables in the formula.
 #' @param freq Logical. If TRUE (default), displays frequencies. If FALSE, displays percentages.
@@ -16,6 +19,17 @@
 #'   the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
 #'   ordered by their factor levels (if the grouping variable is a factor) or sorted 
 #'   alphabetically/numerically. Only applies when using grouped plots or comparing two variables.
+#' @param x.order Controls the order of \emph{categories} on the x-axis when the plotted
+#'   variable is character or factor (ignored for numeric \code{x}, with a warning if set).
+#'   \itemize{
+#'     \item \code{NULL} (default): factor level order if \code{x} is a factor; otherwise alphabetical.
+#'     \item \code{-1}: reverse of that default.
+#'     \item \code{"alpha"}: alphabetical (even for factors).
+#'     \item \code{"freq"}: most frequent to least frequent (ties broken alphabetically).
+#'     \item \code{"freq.asc"}: least frequent to most frequent (ties broken alphabetically).
+#'     \item Character vector: exact category order (must include all observed categories).
+#'   }
+#'   For grouped plots, frequency-based orders use overall (pooled) counts.
 #' @param col Color for the bars. 
 #' @param lwd Line width for the frequency bars. Default is 9.
 #' @param width Numeric. Width of the frequency bars. If NULL (default), width is automatically calculated based on the spacing between values.
@@ -39,13 +53,20 @@
 #'
 #' @details
 #' This function creates a frequency plot where each observed value is shown
-#' with its frequency. Unlike a histogram (no binning) and unlike a barplot
-#' (which omits unobserved levels), unobserved values are shown at frequency 0.
+#' with its frequency. Unlike a histogram, there is no binning: each distinct
+#' observed value (or category) gets its own bar. For character and factor
+#' inputs, use \code{x.order} to control category order on the x-axis (default:
+#' factor levels if available, otherwise alphabetical).
 #'
 #' @examples
 #' # Simple example
 #' x <- c(1, 1, 2, 2, 2, 5, 5)
 #' plot_freq(x)
+#'
+#' # Character categories (alphabetical by default)
+#' cats <- c("a", "a", "b", "c")
+#' plot_freq(cats)
+#' plot_freq(cats, x.order = "freq")  # most frequent first
 #'
 #' # Pass on some common \code{plot()} arguments
 #' plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
@@ -76,11 +97,12 @@
 #: 3 topk_with_ties_mask: choose which bars receive frequency labels (top-k with ties)
 #: 4 compute_show_x_value: decide whether to draw x=<value> labels above freq labels
 #: 5 draw_freq_bars_and_labels: shared base-graphics drawing loop (bars + labels)
-#: 6 grouped path: build (n_unique x n_groups) matrices + legend, then draw via helper
-#: 7 non-grouped path: build single-group matrices, then draw via helper
+#: 6 resolve_x_labels: category axis order (levels / alpha / freq / custom)
+#: 7 grouped path: build (n_unique x n_groups) matrices + legend, then draw via helper
+#: 8 non-grouped path: build single-group matrices, then draw via helper
 #----------------------------------
 # plot_freq (exported) ----
-plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels='auto', ticks.max=30, show.x.value="auto", show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
+plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, x.order=NULL, col='dodgerblue', lwd=9, width=NULL, value.labels='auto', ticks.max=30, show.x.value="auto", show.legend=TRUE, legend.title=NULL, col.text=NULL, ...) {
   # 0. Capture the call before any evaluation (NSE-safe)
   # We intentionally use sys.call() in addition to match.call(): match.call() will
   # rename partial matches to formal argument names, which breaks detection of
@@ -235,8 +257,11 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
                                           label_masks_by_group,
                                           label_text_by_group,
                                           show_x_value,
-                                          col_text = NULL) {
+                                          col_text = NULL,
+                                          x_display = NULL) {
       n_groups <- ncol(heights_by_group)
+      # Display labels for show.x.value (category names when categorical)
+      x_show <- if (!is.null(x_display)) x_display else x_unique
       # Draw bars
         for (i in seq_len(n_groups)) {
           fs_i <- heights_by_group[, i]
@@ -269,7 +294,7 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
             
             if (show_x_value) {
               text(x = x_vals, y = y_vals,
-                   labels = paste0("x=", x_unique[mask_i]),
+                   labels = paste0("x=", x_show[mask_i]),
                    cex = 0.7, pos = 3, offset = 1.2, col = "gray77")
             }
           }
@@ -283,10 +308,68 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
     y2 <- NULL
   }
 
+  # Resolve categorical x-axis label order from x.order
+    resolve_x_labels <- function(x, x.order, x_levels_original = NULL) {
+      x_chr <- as.character(x)
+      observed <- unique(x_chr)
+
+      # x.order = -1 means reverse the default (levels or alpha)
+      reverse_order <- FALSE
+      if (!is.null(x.order) && length(x.order) == 1L && is.numeric(x.order) && !is.na(x.order) && x.order == -1) {
+        reverse_order <- TRUE
+        x.order <- NULL
+      }
+
+      if (is.null(x.order)) {
+        if (!is.null(x_levels_original)) {
+          x_labels <- x_levels_original[x_levels_original %in% observed]
+          # Any observed values not in levels (shouldn't happen) append sorted
+          missing_obs <- setdiff(observed, x_labels)
+          if (length(missing_obs) > 0) x_labels <- c(x_labels, sort(missing_obs))
+        } else {
+          x_labels <- sort(observed)
+        }
+      } else if (is.character(x.order) && length(x.order) == 1L && x.order %in% c("alpha", "freq", "freq.asc")) {
+        if (identical(x.order, "alpha")) {
+          x_labels <- sort(observed)
+        } else {
+          counts <- table(factor(x_chr, levels = sort(observed)))
+          labs <- names(counts)
+          freqs <- as.numeric(counts)
+          # Tie-break alphabetically via secondary key (not decreasing on labels)
+          if (identical(x.order, "freq")) {
+            ord <- order(-freqs, labs)
+          } else {
+            ord <- order(freqs, labs)
+          }
+          x_labels <- labs[ord]
+        }
+      } else if (is.character(x.order)) {
+        missing_cats <- setdiff(observed, x.order)
+        extra_cats <- setdiff(x.order, observed)
+        if (length(missing_cats) > 0) {
+          stop(sprintf("plot_freq(): 'x.order' is missing categor(y/ies): %s",
+                       paste(missing_cats, collapse = ", ")), call. = FALSE)
+        }
+        if (length(extra_cats) > 0) {
+          warning(sprintf("plot_freq(): 'x.order' contains categor(y/ies) not in data: %s",
+                          paste(extra_cats, collapse = ", ")), call. = FALSE)
+        }
+        x_labels <- x.order[x.order %in% observed]
+      } else {
+        stop("plot_freq(): 'x.order' must be NULL, -1, \"alpha\", \"freq\", \"freq.asc\", or a character vector of category names", call. = FALSE)
+      }
+
+      if (reverse_order) x_labels <- rev(x_labels)
+      x_labels
+    }
+
   # Decide x-axis tick positions for plot_freq
   # - If there are <= max_unique_ticks unique x values, we label them all.
   # - Otherwise we use pretty() on the plotting x-range and then clip.
-    get_plot_freq_x_ticks <- function(x_values, dots, max_unique_ticks = 30) {
+  # - For categorical (integer codes 1:n), thin to evenly spaced integers
+  #   instead of pretty() (which can yield non-integer ticks).
+    get_plot_freq_x_ticks <- function(x_values, dots, max_unique_ticks = 30, categorical = FALSE) {
       # Prefer user-supplied xlim (or computed dots$xlim) when available
         xlim_used <- if ("xlim" %in% names(dots)) dots$xlim else range(x_values, finite = TRUE)
         xlim_used <- as.numeric(xlim_used)
@@ -294,9 +377,14 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
           xlim_used <- range(x_values, finite = TRUE)
         }
 
-      # If few unique values, label them all; otherwise use pretty() on the range
+      # If few unique values, label them all; otherwise thin or use pretty()
         x_ticks <- if (length(x_values) <= max_unique_ticks) {
           x_values
+        } else if (isTRUE(categorical)) {
+          # Evenly spaced integer indices into the category positions
+          n <- length(x_values)
+          idx <- unique(round(seq(1, n, length.out = max_unique_ticks)))
+          x_values[idx]
         } else {
           pretty(xlim_used, n = 10)
         }
@@ -318,12 +406,24 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
     y1_name <- formula_resolved$name
     y2_name <- y2_resolved$name
     
-    # Validate inputs
-    if (!is.numeric(formula) || !is.vector(formula)) {
-      stop(sprintf("plot_freq(): First argument must be a numeric vector"), call. = FALSE)
+    # Validate inputs: both numeric, or both categorical (character/factor)
+    is_cat1 <- is.character(formula) || is.factor(formula)
+    is_cat2 <- is.character(y2) || is.factor(y2)
+    is_num1 <- is.numeric(formula) && is.vector(formula)
+    is_num2 <- is.numeric(y2) && is.vector(y2)
+    if (!(is_num1 || is_cat1)) {
+      stop(sprintf("plot_freq(): First argument must be numeric, character, or factor"), call. = FALSE)
     }
-    if (!is.numeric(y2) || !is.vector(y2)) {
-      stop(sprintf("plot_freq(): Second argument must be a numeric vector"), call. = FALSE)
+    if (!(is_num2 || is_cat2)) {
+      stop(sprintf("plot_freq(): Second argument must be numeric, character, or factor"), call. = FALSE)
+    }
+    if (is_num1 != is_num2) {
+      stop(sprintf("plot_freq(): Both arguments must be the same kind (both numeric, or both character/factor)"), call. = FALSE)
+    }
+    # c() on factors drops labels to integer codes; normalize to character
+    if (is_cat1) {
+      formula <- as.character(formula)
+      y2 <- as.character(y2)
     }
     
     # Create a data frame and recursively call with grouped syntax
@@ -334,7 +434,7 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
     )
     
     # Forward all arguments to the grouped version
-    return(plot_freq(value ~ group, data = df, freq = freq, order = order, 
+    return(plot_freq(value ~ group, data = df, freq = freq, order = order, x.order = x.order,
                      col = col, lwd = lwd, width = width, 
                      value.labels = value.labels, ticks.max = ticks.max, show.x.value = show.x.value, 
                      show.legend = show.legend, legend.title = legend.title, 
@@ -382,9 +482,9 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
   }
   
   # Validate inputs using validation function shared with plot_density, plot_cdf, plot_freq
-  # If formula input, use validate_plot
+  # If formula input, use validate_plot (allow character/factor; we check types below)
   if (is_formula_input) {
-    validated <- validate_plot(formula, NULL, data, func_name = "plot_freq", require_group = FALSE, data_name = data_name)
+    validated <- validate_plot(formula, NULL, data, func_name = "plot_freq", require_group = FALSE, data_name = data_name, require_numeric_y = FALSE)
   } else {
     # Not a formula - use resolved names from evaluate_variable_arguments
     validated <- list(
@@ -403,6 +503,16 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
   group_name <- validated$group_name
   x_name_raw <- validated$y_name_raw
   group_name_raw <- validated$group_name_raw
+
+  # Accept numeric, character, or factor (factors are not is.vector())
+  x_ok <- (is.numeric(x) && is.vector(x)) || is.character(x) || is.factor(x)
+  if (!x_ok) {
+    stop(sprintf("plot_freq(): '%s' must be numeric, character, or factor, and '%s' is not",
+                 x_name_raw, x_name_raw), call. = FALSE)
+  }
+
+  # Preserve factor levels for default x.order before NA drop / coercion
+  x_levels_original <- if (is.factor(x)) levels(x) else NULL
   
   # Store original group for factor level checking (before NA removal)
   # Use the version captured before validation if available (to preserve factor levels)
@@ -431,6 +541,16 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
     
     n.nax = sum(isnax)
     if (n.nax>0) message2("plot_freq() says: dropped ",n.nax," observations with missing '",x_name_raw,"' values",col='red2')
+  }
+
+  # Categorical: map labels -> integer positions per x.order; keep labels for axis/return
+  x_is_categorical <- is.character(x) || is.factor(x)
+  x_labels <- NULL
+  if (x_is_categorical) {
+    x_labels <- resolve_x_labels(x, x.order, x_levels_original)
+    x <- match(as.character(x), x_labels)
+  } else if (!is.null(x.order)) {
+    warning("plot_freq(): 'x.order' is ignored for numeric variables", call. = FALSE)
   }
   
   #----------------------------------
@@ -638,8 +758,9 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
       
       # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
-        existing_ticks <- get_plot_freq_x_ticks(all_xs, dots, max_unique_ticks = ticks.max)
-        axis(1, at = existing_ticks, las = 1)
+        existing_ticks <- get_plot_freq_x_ticks(all_xs, dots, max_unique_ticks = ticks.max, categorical = x_is_categorical)
+        tick_labels <- if (!is.null(x_labels)) x_labels[existing_ticks] else TRUE
+        axis(1, at = existing_ticks, labels = tick_labels, las = 1)
       }
       
       # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
@@ -733,7 +854,8 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
         label_masks_by_group = label_masks_by_group,
         label_text_by_group = label_text_by_group,
         show_x_value = do_show_x_value,
-        col_text = col.text
+        col_text = col.text,
+        x_display = if (!is.null(x_labels)) x_labels else NULL
       )
     
     # Add legend showing groups and colors
@@ -781,7 +903,8 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
     
     # Return frequencies or percentages invisibly (full table with separate columns for each group)
     # Build data frame with value column and one column per group
-    result_df <- data.frame(value = all_xs, stringsAsFactors = FALSE)
+    value_col <- if (!is.null(x_labels)) x_labels else all_xs
+    result_df <- data.frame(value = value_col, stringsAsFactors = FALSE)
     for (i in seq_len(n_groups)) {
       # Use percentages if freq=FALSE, otherwise use frequencies
       if (freq == FALSE) {
@@ -908,8 +1031,9 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
         
     # Draw custom x-axis with all x values (if we suppressed default)
       if (!user_provided_xaxt) {
-        existing_ticks <- get_plot_freq_x_ticks(xs, dots, max_unique_ticks = ticks.max)
-        axis(1, at = existing_ticks, las = 1)
+        existing_ticks <- get_plot_freq_x_ticks(xs, dots, max_unique_ticks = ticks.max, categorical = x_is_categorical)
+        tick_labels <- if (!is.null(x_labels)) x_labels[existing_ticks] else TRUE
+        axis(1, at = existing_ticks, labels = tick_labels, las = 1)
       }
             
     # Draw custom y-axis with tickmarks at 0, midpoint, and maximum (if we suppressed default)
@@ -998,16 +1122,18 @@ plot_freq <- function(formula, y2=NULL, data=NULL, freq=TRUE, order=NULL, col='d
       label_masks_by_group = label_masks_by_group,
       label_text_by_group = label_text_by_group,
       show_x_value = do_show_x_value,
-      col_text = col.text
+      col_text = col.text,
+      x_display = if (!is.null(x_labels)) x_labels else NULL
     )
     
   # Return frequencies or percentages invisibly
+  value_col <- if (!is.null(x_labels)) x_labels else xs
   if (freq == FALSE) {
     # Return percentages
-    invisible(data.frame(value = xs, percentage = fs))
+    invisible(data.frame(value = value_col, percentage = fs, stringsAsFactors = FALSE))
   } else {
     # Return frequencies
-    invisible(data.frame(value = xs, frequency = fs_original))
+    invisible(data.frame(value = value_col, frequency = fs_original, stringsAsFactors = FALSE))
   }
 }
 

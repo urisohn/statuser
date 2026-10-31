@@ -25,6 +25,7 @@ export(plot_freq)
 export(plot_gam)
 export(plot_means)
 export(resize_images)
+export(round2)
 export(scatter.gam)
 export(stimulus.beeswarm)
 export(stimulus.plot)
@@ -36,60 +37,68 @@ export(var_labels)
 import(lmerTest)
 importFrom(beeswarm,beeswarm)
 importFrom(digest,digest)
-importFrom(grDevices,adjustcolor)
-importFrom(grDevices,col2rgb)
-importFrom(grDevices,dev.list)
-importFrom(grDevices,dev.off)
-importFrom(grDevices,png)
-importFrom(grDevices,recordPlot)
-importFrom(grDevices,replayPlot)
-importFrom(grDevices,svg)
-importFrom(graphics,abline)
-importFrom(graphics,arrows)
-importFrom(graphics,axis)
-importFrom(graphics,box)
-importFrom(graphics,hist)
-importFrom(graphics,layout)
-importFrom(graphics,legend)
-importFrom(graphics,lines)
-importFrom(graphics,mtext)
-importFrom(graphics,par)
-importFrom(graphics,plot)
-importFrom(graphics,points)
-importFrom(graphics,polygon)
-importFrom(graphics,rect)
-importFrom(graphics,segments)
-importFrom(graphics,strheight)
-importFrom(graphics,strwidth)
-importFrom(graphics,text)
+importFrom(grDevices,
+  adjustcolor,
+  col2rgb,
+  dev.list,
+  dev.off,
+  png,
+  recordPlot,
+  replayPlot,
+  svg
+)
+importFrom(graphics,
+  abline,
+  arrows,
+  axis,
+  box,
+  hist,
+  layout,
+  legend,
+  lines,
+  mtext,
+  par,
+  plot,
+  points,
+  polygon,
+  rect,
+  segments,
+  strheight,
+  strwidth,
+  text
+)
 importFrom(lmtest,coeftest)
 importFrom(mgcv,gam)
 importFrom(sandwich,vcovHC)
-importFrom(stats,aggregate)
-importFrom(stats,as.formula)
-importFrom(stats,ave)
-importFrom(stats,complete.cases)
-importFrom(stats,cor)
-importFrom(stats,density)
-importFrom(stats,drop.terms)
-importFrom(stats,ecdf)
-importFrom(stats,formula)
-importFrom(stats,glm)
-importFrom(stats,ks.test)
-importFrom(stats,lm)
-importFrom(stats,median)
-importFrom(stats,model.frame)
-importFrom(stats,na.omit)
-importFrom(stats,na.pass)
-importFrom(stats,predict)
-importFrom(stats,qt)
-importFrom(stats,quantile)
-importFrom(stats,residuals)
-importFrom(stats,runif)
-importFrom(stats,sd)
-importFrom(stats,setNames)
-importFrom(stats,t.test)
-importFrom(stats,terms)
-importFrom(stats,update)
-importFrom(utils,packageVersion)
-importFrom(utils,read.csv)
+importFrom(stats,
+  aggregate,
+  as.formula,
+  ave,
+  complete.cases,
+  cor,
+  density,
+  drop.terms,
+  ecdf,
+  formula,
+  glm,
+  ks.test,
+  lm,
+  median,
+  model.frame,
+  na.omit,
+  na.pass,
+  predict,
+  qt,
+  quantile,
+  residuals,
+  runif,
+  sd,
+  setNames,
+  t.test,
+  terms,
+  update
+)
+importFrom(utils,
+  packageVersion,
+  read.csv
+)

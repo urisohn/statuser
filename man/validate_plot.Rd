@@ -10,11 +10,13 @@ validate_plot(
   data = NULL,
   func_name = "plot",
   require_group = TRUE,
-  data_name = NULL
+  data_name = NULL,
+  require_numeric_y = TRUE
 )
 }
 \arguments{
-\item{y}{A numeric vector, column name, or formula of the form y ~ group.}
+\item{y}{A numeric vector, column name, or formula of the form y ~ group.
+When \code{require_numeric_y = FALSE}, character and factor are also allowed.}
 
 \item{group}{A vector used to group the data, or a column name if data is provided.
 Can be NULL for functions where group is optional.}
@@ -27,11 +29,15 @@ Can be NULL for functions where group is optional.}
 
 \item{data_name}{Character string. Name of the data argument (for error messages). 
 If NULL, will attempt to infer from the call.}
+
+\item{require_numeric_y}{Logical. If TRUE (default), y must be a numeric vector.
+If FALSE, numeric/character/factor are accepted (caller validates further).}
 }
 \value{
 A list containing:
 \itemize{
-  \item \code{y}: Validated y variable (numeric vector)
+  \item \code{y}: Validated y variable (numeric vector, or character/factor when
+    \code{require_numeric_y = FALSE})
   \item \code{group}: Validated group variable (if provided, otherwise NULL)
   \item \code{y_name}: Clean variable name for y (for labels)
   \item \code{group_name}: Clean variable name for group (for labels)

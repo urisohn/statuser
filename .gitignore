@@ -30,3 +30,5 @@
 *.tar.gz
 *.zip
 
+/doc/
+/Meta/

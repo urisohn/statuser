@@ -10,6 +10,7 @@ plot_freq(
   data = NULL,
   freq = TRUE,
   order = NULL,
+  x.order = NULL,
   col = "dodgerblue",
   lwd = 9,
   width = NULL,
@@ -27,7 +28,9 @@ plot_freq(
 \itemize{
   \item {Single Variable (possibly by subgroup)}: \code{plot_freq(y)} or \code{plot_freq(y~x)}
   \item {Contrast Two Variables}: \code{plot_freq(y1, y2)}
-}}
+}
+The outcome may be numeric, character, or factor. When comparing two variables,
+both must be the same kind (both numeric, or both character/factor).}
 
 \item{y2}{optional second variable when contrasting two variables \code{plot_freq(y1,y2)}}
 
@@ -40,6 +43,18 @@ Use \code{-1} to reverse the default order. Alternatively, provide a vector spec
 the exact order (e.g., \code{c("B", "A", "C")}). If \code{NULL} (default), groups are 
 ordered by their factor levels (if the grouping variable is a factor) or sorted 
 alphabetically/numerically. Only applies when using grouped plots or comparing two variables.}
+
+\item{x.order}{Controls the order of \emph{categories} on the x-axis when the plotted
+variable is character or factor (ignored for numeric \code{x}, with a warning if set).
+\itemize{
+  \item \code{NULL} (default): factor level order if \code{x} is a factor; otherwise alphabetical.
+  \item \code{-1}: reverse of that default.
+  \item \code{"alpha"}: alphabetical (even for factors).
+  \item \code{"freq"}: most frequent to least frequent (ties broken alphabetically).
+  \item \code{"freq.asc"}: least frequent to most frequent (ties broken alphabetically).
+  \item Character vector: exact category order (must include all observed categories).
+}
+For grouped plots, frequency-based orders use overall (pooled) counts.}
 
 \item{col}{Color for the bars.}
 
@@ -73,17 +88,25 @@ Invisibly returns a data frame with values and their frequencies.
 }
 \description{
 Creates a frequency plot showing the frequency of every observed value, optionally by group. 
-Most frequent values are labeled by default.
+Most frequent values are labeled by default. The plotted variable may be numeric,
+character, or factor. Category order on the x-axis is controlled by \code{x.order}.
 }
 \details{
 This function creates a frequency plot where each observed value is shown
-with its frequency. Unlike a histogram (no binning) and unlike a barplot
-(which omits unobserved levels), unobserved values are shown at frequency 0.
+with its frequency. Unlike a histogram, there is no binning: each distinct
+observed value (or category) gets its own bar. For character and factor
+inputs, use \code{x.order} to control category order on the x-axis (default:
+factor levels if available, otherwise alphabetical).
 }
 \examples{
 # Simple example
 x <- c(1, 1, 2, 2, 2, 5, 5)
 plot_freq(x)
+
+# Character categories (alphabetical by default)
+cats <- c("a", "a", "b", "c")
+plot_freq(cats)
+plot_freq(cats, x.order = "freq")  # most frequent first
 
 # Pass on some common \code{plot()} arguments
 plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))

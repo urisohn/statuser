@@ -47,7 +47,6 @@
 #' 
 #' # Both padding increased
 #' text2(5, 2, "Extra padding", pad = 0.15, pad_v = 0.6, bg = "pink")
-#' @usage NULL
 #' @export
 text2 <- function(x, y, labels, align="center", bg="papayawhip", cex=1, pad=0.03, pad_v=0.25,  ...) {
 

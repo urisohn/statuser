@@ -3,7 +3,23 @@
 \name{lm2}
 \alias{lm2}
 \title{Enhanced alternative to lm()}
+\usage{
+lm2(
+  formula,
+  data = NULL,
+  se_type = "HC3",
+  notes = TRUE,
+  clusters = NULL,
+  fixed_effects = NULL,
+  round = NULL,
+  ...
+)
+}
 \arguments{
+\item{formula}{A formula as in \code{\link[stats]{lm}} (e.g., \code{y ~ x1 + x2}).}
+
+\item{data}{An optional data frame containing the variables in the model.}
+
 \item{se_type}{The type of standard error to use. Default is \code{"HC3"}.
 Without clusters: \code{"HC0"}, \code{"HC1"}, \code{"HC2"}, or \code{"HC3"}.
 When \code{clusters} is specified, \code{se_type} is automatically set to \code{"CR2"}.}
@@ -25,7 +41,8 @@ Passed to \code{\link[estimatr]{lm_robust}}.}
 \code{-1}: R default \code{format()} (respects \code{options("digits")}), with
 leading-dot style for \code{|x| < 1}. Non-negative \code{k}: fixed \code{k} decimal places.}
 
-\item{...}{Additional arguments passed to \code{\link[estimatr]{lm_robust}}.}
+\item{...}{Additional arguments passed to \code{\link[estimatr]{lm_robust}}
+(and, where applicable, the same style of arguments as \code{\link[stats]{lm}}).}
 }
 \value{
 An object of class \code{c("lm2", "lm_robust", "lm")}. This inherits 

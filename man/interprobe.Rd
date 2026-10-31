@@ -63,7 +63,7 @@ GAM engine.}
 
 \item{spotlight.labels}{Character vector of length 3. Labels for the legend.}
 
-\item{histogram}{Logical. If TRUE (default), show sample size distribution under the plot.}
+\item{histogram}{Logical. If TRUE (default), show a frequency panel under each curve plot.}
 
 \item{max.unique}{Integer. Threshold for treating a variable as continuous vs discrete.}
 
@@ -77,7 +77,9 @@ GAM engine.}
 
 \item{ylab2}{Character. Y-axis label for JN panel.}
 
-\item{cols}{Character vector of length 3. Colors for the three curves.}
+\item{cols}{Character vector of length 2 or 3. Colors for the curves.
+Length 2 is allowed when the focal predictor has exactly two levels;
+otherwise length 3 is required (three spotlights or up to three categorical levels).}
 
 \item{main1}{Character. Title for simple slopes panel.}
 
@@ -85,7 +87,7 @@ GAM engine.}
 
 \item{legend.round}{Integer vector length 2. Min/max decimals in legend.}
 
-\item{draw}{Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), or `"jn"`.}
+\item{draw}{Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), `"jn"`, or `"none"` (no plot).}
 
 \item{save.as}{Optional file path to save plot (`.png` or `.svg`).}
 

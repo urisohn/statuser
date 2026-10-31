@@ -340,6 +340,7 @@ validate_formula <- function(formula, data = NULL, func_name = "function", calli
 #' (y ~ group) or standard syntax (y, group), with optional data frame.
 #'
 #' @param y A numeric vector, column name, or formula of the form y ~ group.
+#'   When \code{require_numeric_y = FALSE}, character and factor are also allowed.
 #' @param group A vector used to group the data, or a column name if data is provided.
 #'   Can be NULL for functions where group is optional.
 #' @param data An optional data frame containing the variables.
@@ -347,10 +348,13 @@ validate_formula <- function(formula, data = NULL, func_name = "function", calli
 #' @param require_group Logical. If TRUE, group is required. If FALSE, group can be NULL.
 #' @param data_name Character string. Name of the data argument (for error messages). 
 #'   If NULL, will attempt to infer from the call.
+#' @param require_numeric_y Logical. If TRUE (default), y must be a numeric vector.
+#'   If FALSE, numeric/character/factor are accepted (caller validates further).
 #'
 #' @return A list containing:
 #' \itemize{
-#'   \item \code{y}: Validated y variable (numeric vector)
+#'   \item \code{y}: Validated y variable (numeric vector, or character/factor when
+#'     \code{require_numeric_y = FALSE})
 #'   \item \code{group}: Validated group variable (if provided, otherwise NULL)
 #'   \item \code{y_name}: Clean variable name for y (for labels)
 #'   \item \code{group_name}: Clean variable name for group (for labels)
@@ -360,7 +364,7 @@ validate_formula <- function(formula, data = NULL, func_name = "function", calli
 #' }
 #'
 #' @keywords internal
-validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", require_group = TRUE, data_name = NULL) {
+validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", require_group = TRUE, data_name = NULL, require_numeric_y = TRUE) {
   # Capture data name for error messages (before potentially overwriting)
   # If data_name not provided, try to infer it from the call
   if (is.null(data_name)) {
@@ -536,9 +540,11 @@ validate_plot <- function(y, group = NULL, data = NULL, func_name = "plot", requ
     }
   }
   
-  # Validate that y is a numeric vector
-  if (!is.numeric(y) || !is.vector(y)) {
-    stop(sprintf("%s(): '%s' must be a numeric vector, and '%s' is not", func_name, ifelse(is_formula, "y", y_name_raw), y_name_raw), call. = FALSE)
+  # Validate that y is a numeric vector (unless caller allows categorical)
+  if (isTRUE(require_numeric_y)) {
+    if (!is.numeric(y) || !is.vector(y)) {
+      stop(sprintf("%s(): '%s' must be a numeric vector, and '%s' is not", func_name, ifelse(is_formula, "y", y_name_raw), y_name_raw), call. = FALSE)
+    }
   }
   
   # Validate group if required

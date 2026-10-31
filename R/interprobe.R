@@ -21,18 +21,20 @@
 #'   GAM engine. 
 #' @param spotlights Numeric vector of length 3. Values at which curves are computed.
 #' @param spotlight.labels Character vector of length 3. Labels for the legend.
-#' @param histogram Logical. If TRUE (default), show sample size distribution under the plot.
+#' @param histogram Logical. If TRUE (default), show a frequency panel under each curve plot.
 #' @param max.unique Integer. Threshold for treating a variable as continuous vs discrete.
 #' @param n.bin.continuous Integer. Number of bins used in histogram when binning continuous values.
 #' @param n.max Integer. Sample size at which line darkness/width saturates.
 #' @param xlab Character. X-axis label.
-#' @param cols Character vector of length 3. Colors for the three curves.
+#' @param cols Character vector of length 2 or 3. Colors for the curves.
+#'   Length 2 is allowed when the focal predictor has exactly two levels;
+#'   otherwise length 3 is required (three spotlights or up to three categorical levels).
 #' @param ylab1 Character. Y-axis label for simple slopes panel.
 #' @param ylab2 Character. Y-axis label for JN panel.
 #' @param main1 Character. Title for simple slopes panel.
 #' @param main2 Character. Title for JN panel.
 #' @param legend.round Integer vector length 2. Min/max decimals in legend.
-#' @param draw Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), or `"jn"`.
+#' @param draw Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), `"jn"`, or `"none"` (no plot).
 #' @param save.as Optional file path to save plot (`.png` or `.svg`).
 #' @param xlim Numeric vector length 2. X-axis limits.
 #' @param ylim1 Numeric vector length 2. Y-axis limits for simple slopes.
@@ -76,11 +78,16 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   quiet = FALSE,
   probe.bins = 100
 ) {
-  xvar <- ip_clean_string(deparse(substitute(x)))
-  zvar <- ip_clean_string(deparse(substitute(z)))
-  yvar <- ip_clean_string(deparse(substitute(y)))
-
+  # Capture names without evaluating x/z/y (bare names may exist only in data=/model)
   mc <- match.call(expand.dots = FALSE)
+  provided_x <- "x" %in% names(mc)
+  provided_z <- "z" %in% names(mc)
+  provided_y <- "y" %in% names(mc)
+  xvar <- if (provided_x) ip_clean_string(deparse(substitute(x))) else NULL
+  zvar <- if (provided_z) ip_clean_string(deparse(substitute(z))) else NULL
+  yvar <- if (provided_y) ip_clean_string(deparse(substitute(y))) else NULL
+  dataname <- if (!is.null(data)) paste(deparse(substitute(data)), collapse = "") else NULL
+
   model_label <- NULL
   if ("model" %in% names(mc)) {
     model_label <- paste0(deparse(mc[["model"]]), collapse = " ")
@@ -98,16 +105,24 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
     attr(model, "interprobe_modelname") <- model_label
   }
 
-  if (!is.null(data)) {
-    if (is.null(x) | is.null(z) | is.null(y)) exit("interprobe says(): you must specify 'x', 'z' and 'y'")
-    x <- xvar
-    z <- zvar
-    y <- yvar
+  # With data= or model=, treat x/z/y as names — do not force env evaluation
+  if (!is.null(data) || !is.null(model)) {
+    if (!is.null(data) && (!provided_x || !provided_z || !provided_y)) {
+      exit("interprobe says(): you must specify 'x', 'z' and 'y'")
+    }
+    if (provided_x) x <- xvar
+    if (provided_z) z <- zvar
+    if (provided_y) y <- yvar
   }
 
   # Run before ip_validate_arguments() so missing x/z with model=... hits the
   # intended message instead of failing on focal variable ('NULL') not in model.
-  v <- ip_validate_input_combinations(data, model, x, y, z)
+  v <- ip_validate_input_combinations(
+    data, model,
+    x = if (provided_x) xvar else NULL,
+    y = if (provided_y) yvar else NULL,
+    z = if (provided_z) zvar else NULL
+  )
   if (v$input.model == TRUE) yvar <- all.vars(terms(model))[1]
 
   ip_validate_arguments(
@@ -125,14 +140,9 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
     save.as,
     xvar, zvar, yvar,
     x.ticks, y1.ticks, y2.ticks,
-    moderator.on.x.axis
+    moderator.on.x.axis,
+    dataname = dataname
   )
-
-  if (!is.null(data)) {
-    x <- xvar
-    z <- zvar
-    y <- yvar
-  }
 
   if (quiet == FALSE) {
     cat(paste0("Probing the interaction of '", xvar, "' * '", zvar, "'\n"))
@@ -161,6 +171,26 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   if (nux > max.unique) focal <- "continuous"
   if (nux <= max.unique & nux > 3) focal <- "discrete"
   if (nux <= 3) focal <- "categorical"
+
+  # cols length: categorical needs one color per x level; spotlights need 3
+  if (focal == "categorical") {
+    if (length(cols) < nux) {
+      exit(
+        paste0(
+          "interprobe() says: with ", nux, " levels of the focal predictor '",
+          xvar, "', 'cols' must have length at least ", nux,
+          " (got ", length(cols), ")"
+        )
+      )
+    }
+  } else if (length(cols) < 3) {
+    exit(
+      paste0(
+        "interprobe() says: for continuous/discrete focal predictors, 'cols' must ",
+        "have length 3 (got ", length(cols), ")"
+      )
+    )
+  }
 
   if (nuz > max.unique) moderation <- "continuous"
   if (nuz <= max.unique) moderation <- "discrete"
@@ -320,22 +350,56 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   draw2 <- draw
   if (identical(draw2, "simple.slopes")) draw2 <- "simple slopes"
 
-  if (!is.null(save.as)) {
-    extension <- tools::file_ext(save.as)
+  breaks <- NULL
 
-    if (draw2 == "both") {
-      if (extension == "svg") grDevices::svg(save.as, width = 14, height = 7)
-      if (extension == "png") grDevices::png(save.as, width = 14000, height = 7000, res = 1000)
-      par(mfrow = c(1, 2))
-      par(oma = c(0, 1, 0, 0))
-    } else {
-      if (extension == "svg") grDevices::svg(save.as, width = 7, height = 7)
-      if (extension == "png") grDevices::png(save.as, width = 7000, height = 7000, res = 1000)
-      par(oma = c(0, 1, 0, 0))
+  if (draw2 != "none") {
+    # Device height: extra room when frequency panels are stacked under the curves
+    fig_h <- if (isTRUE(histogram)) 8.5 else 7
+    fig_h_px <- if (isTRUE(histogram)) 8500 else 7000
+
+    if (!is.null(save.as)) {
+      extension <- tools::file_ext(save.as)
+
+      if (draw2 == "both") {
+        if (extension == "svg") grDevices::svg(save.as, width = 14, height = fig_h)
+        if (extension == "png") grDevices::png(save.as, width = 14000, height = fig_h_px, res = 1000)
+      } else {
+        if (extension == "svg") grDevices::svg(save.as, width = 7, height = fig_h)
+        if (extension == "png") grDevices::png(save.as, width = 7000, height = fig_h_px, res = 1000)
+      }
+
+      graphics::par(oma = c(0, 1, 0, 0))
+      ip_setup_plot_layout(draw2, histogram)
+
+      if (draw2 %in% c("both", "simple slopes")) {
+        ip_make_plot(
+          type = "simple.slopes",
+          xlab, ylab1, main1, simple.slopes, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
+          focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim1, legend.title = legend.simple.slopes,
+          x.ticks, y1.ticks, moderator.on.x.axis
+        )
+      }
+
+      if (draw2 %in% c("both", "jn")) {
+        ip_make_plot(
+          type = "jn",
+          xlab, ylab2, main2, jn, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
+          focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim2, legend.title = legend.jn,
+          x.ticks, y2.ticks, moderator.on.x.axis
+        )
+      }
+
+      message(paste0("The figures have been saved to '", save.as, "'"))
+      grDevices::dev.off()
     }
 
-    if (draw2 %in% c("both", "simple slopes")) {
-      ip_make_plot(
+    old_par <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(old_par), add = TRUE)
+    graphics::par(oma = c(0, 1, 0, 0))
+    ip_setup_plot_layout(draw2, histogram)
+
+    if (draw2 %in% c("simple slopes", "both")) {
+      breaks <- ip_make_plot(
         type = "simple.slopes",
         xlab, ylab1, main1, simple.slopes, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
         focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim1, legend.title = legend.simple.slopes,
@@ -343,45 +407,14 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
       )
     }
 
-    if (draw2 %in% c("both", "jn")) {
-      ip_make_plot(
+    if (draw2 %in% c("jn", "both")) {
+      breaks <- ip_make_plot(
         type = "jn",
         xlab, ylab2, main2, jn, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
         focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim2, legend.title = legend.jn,
         x.ticks, y2.ticks, moderator.on.x.axis
       )
     }
-
-    message(paste0("The figures have been saved to '", save.as, "'"))
-    dev.off()
-  }
-
-  old_par <- par(no.readonly = TRUE)
-  par(oma = c(0, 1, 0, 0))
-
-  if (draw2 == "both") {
-    par(mfrow = c(1, 2))
-    on.exit(par(old_par))
-  }
-
-  breaks <- NULL
-
-  if (draw2 %in% c("simple slopes", "both")) {
-    breaks <- ip_make_plot(
-      type = "simple.slopes",
-      xlab, ylab1, main1, simple.slopes, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
-      focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim1, legend.title = legend.simple.slopes,
-      x.ticks, y1.ticks, moderator.on.x.axis
-    )
-  }
-
-  if (draw2 %in% c("jn", "both")) {
-    breaks <- ip_make_plot(
-      type = "jn",
-      xlab, ylab2, main2, jn, histogram, data, xs, zs, gr, spotlights, cols, spotlight.labels,
-      focal, moderation, max.unique, fxz.list, nux, nuz, xvar, zvar, xlim, ylim2, legend.title = legend.jn,
-      x.ticks, y2.ticks, moderator.on.x.axis
-    )
   }
 
   regions.jn <- "N/A"
@@ -390,7 +423,7 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
     cat(regions.jn)
   }
 
-  if (!is.null(breaks)) {
+  if (!is.null(breaks) && is.data.frame(breaks) && nrow(breaks) > 0) {
     output$frequencies$bin_from <- breaks$from
     output$frequencies$bin_to <- breaks$to
   }

@@ -1,7 +1,7 @@
 Package: statuser
 Type: Package
 Title: Statistical Tools Designed for End Users
-Version: 0.3.1
+Version: 0.4.0.9001
 Authors@R: c(
     person(given = "Uri",
            family = "Simonsohn",
@@ -19,7 +19,6 @@ Description: The statistical tools in this package do one of four things:
     available elsewhere (e.g., clear(), convert_to_sql(), resize_images()).
 License: GPL-3
 Encoding: UTF-8
-RoxygenNote: 7.3.3
 Imports:
     mgcv,
     marginaleffects,
@@ -37,5 +36,10 @@ Suggests:
     quantreg,
     estimatr,
     broom,
-    modelsummary
+    modelsummary,
+    knitr,
+    rmarkdown,
+    MASS
+VignetteBuilder: knitr
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0
