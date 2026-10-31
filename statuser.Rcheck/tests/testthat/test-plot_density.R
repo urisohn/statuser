@@ -1,0 +1,264 @@
+#plot_density_001
+test_that("plot_density runs without errors", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Should not throw errors
+  expect_error(plot_density(y ~ group), NA)
+  
+  # Should return invisible list with densities
+  result <- plot_density(y ~ group)
+  expect_true(is.list(result))
+  expect_true("densities" %in% names(result))
+  expect_equal(length(result$densities), 3)
+  expect_true(all(sapply(result$densities, inherits, "density")))
+})
+
+#plot_density_002
+test_that("plot_density handles data frame input", {
+  df <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+  
+  # Use formula syntax
+  expect_error(plot_density(value ~ group, data = df), NA)
+  
+  # Check return value
+  result <- plot_density(value ~ group, data = df)
+  expect_equal(length(result$densities), 2)
+})
+
+#plot_density_003
+test_that("plot_density accepts df$col ~ df$col2 without bare column names in env", {
+  df1 <- data.frame(
+    y1 = rnorm(60),
+    x1 = rep(c("A", "B", "C"), each = 20)
+  )
+  expect_error(plot_density(df1$y1 ~ df1$x1), NA)
+  result <- plot_density(df1$y1 ~ df1$x1)
+  expect_equal(length(result$densities), 3)
+})
+
+#plot_density_004
+test_that("plot_density handles missing values", {
+  y <- c(rnorm(90), rep(NA, 10))
+  group <- rep(c("A", "B"), 50)
+  
+  # Should handle NAs gracefully
+  expect_error(plot_density(y ~ group), NA)
+  
+  result <- plot_density(y ~ group)
+  expect_equal(length(result$densities), 2)
+})
+
+#plot_density_005
+test_that("plot_density handles custom parameters", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  # Custom colors
+  expect_error(plot_density(y ~ group, col = c("red", "blue")), NA)
+  
+  # Custom line width
+  expect_error(plot_density(y ~ group, lwd = 2), NA)
+  
+  # Custom line type
+  expect_error(plot_density(y ~ group, lty = c(1, 2)), NA)
+  
+  # Multiple parameters
+  expect_error(plot_density(y ~ group, col = c("red", "blue"), lwd = c(1, 2)), NA)
+})
+
+#plot_density_006
+test_that("plot_density handles show.means parameter", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  expect_error(plot_density(y ~ group, show.means = TRUE), NA)
+  expect_error(plot_density(y ~ group, show.means = FALSE), NA)
+})
+
+#plot_density_007
+test_that("plot_density handles different numbers of groups", {
+  y <- rnorm(100)
+  
+  # Two groups
+  group2 <- rep(c("A", "B"), 50)
+  expect_error(plot_density(y ~ group2), NA)
+  
+  # Three groups
+  group3 <- rep(c("A", "B", "C"), c(30, 40, 30))
+  expect_error(plot_density(y ~ group3), NA)
+  
+  # Four groups
+  group4 <- rep(c("A", "B", "C", "D"), c(25, 25, 25, 25))
+  expect_error(plot_density(y ~ group4), NA)
+})
+
+#plot_density_008
+test_that("plot_density handles density() arguments", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  # Custom bandwidth
+  expect_error(plot_density(y ~ group, bw = 0.5), NA)
+  
+  # Custom kernel
+  expect_error(plot_density(y ~ group, kernel = "rectangular"), NA)
+})
+
+#plot_density_009
+test_that("plot_density returns correct structure", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  result <- plot_density(y ~ group)
+  
+  # Check structure
+  expect_true(is.list(result))
+  expect_true("densities" %in% names(result))
+  expect_true(is.list(result$densities))
+  
+  # Check density objects
+  expect_true(all(sapply(result$densities, inherits, "density")))
+  expect_equal(names(result$densities), c("A", "B"))
+})
+
+#plot_density_010
+test_that("plot_density error message shows correct dataset name", {
+  # Create a dataset with a specific name
+  IV5 <- data.frame(value = rnorm(100), group = rep(c("A", "B"), 50))
+  
+  # Try to access a variable that doesn't exist - should show "IV5" not "data"
+  expect_error(
+    plot_density(nonexistent ~ group, data = IV5),
+    'Variable "nonexistent" not found in dataset "IV5"',
+    fixed = TRUE
+  )
+})
+
+# ============================================================================
+# EDGE CASES
+# ============================================================================
+
+#plot_density_011
+test_that("plot_density handles single group", {
+  y <- rnorm(50)
+  group <- rep("Only", 50)
+  
+  result <- plot_density(y ~ group)
+  
+  expect_true(is.list(result))
+  expect_equal(length(result$densities), 1)
+})
+
+#plot_density_012
+test_that("plot_density handles many groups", {
+  y <- rnorm(200)
+  group <- rep(LETTERS[1:10], each = 20)  # 10 groups
+  
+  result <- plot_density(y ~ group)
+  
+  expect_true(is.list(result))
+  expect_equal(length(result$densities), 10)
+})
+
+#plot_density_013
+test_that("plot_density handles order parameter for groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Custom group order
+  expect_error(plot_density(y ~ group, order = c("C", "A", "B")), NA)
+  result <- plot_density(y ~ group, order = c("C", "A", "B"))
+  expect_true(is.list(result))
+  
+  # Check that densities are in specified order
+  expect_equal(names(result$densities), c("C", "A", "B"))
+})
+
+#plot_density_014
+test_that("plot_density order = -1 reverses default order", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B", "C"), c(30, 40, 30))
+  
+  # Default order is A, B, C (sorted)
+  result_default <- plot_density(y ~ group)
+  expect_equal(names(result_default$densities), c("A", "B", "C"))
+  
+  # order = -1 should reverse to C, B, A
+  result_reversed <- plot_density(y ~ group, order = -1)
+  expect_true(is.list(result_reversed))
+  expect_equal(names(result_reversed$densities), c("C", "B", "A"))
+})
+
+#plot_density_015
+test_that("plot_density respects factor levels for groups when order is NULL", {
+  y <- rnorm(100)
+  group <- factor(rep(c("A", "B", "C"), c(30, 40, 30)),
+                  levels = c("C", "A", "B"))
+  
+  result <- plot_density(y ~ group)
+  expect_true(is.list(result))
+  
+  # Check that factor levels are respected (C, A, B)
+  expect_equal(names(result$densities), c("C", "A", "B"))
+})
+
+#plot_density_016
+test_that("plot_density handles two-vector comparison", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Should not throw errors
+  expect_error(plot_density(y1, y2), NA)
+  
+  result <- plot_density(y1, y2)
+  expect_true(is.list(result))
+  expect_equal(length(result$densities), 2)
+})
+
+#plot_density_017
+test_that("plot_density two-vector with custom parameters", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  # Custom colors
+  expect_error(plot_density(y1, y2, col = c("red", "blue")), NA)
+  
+  # Show means
+  expect_error(plot_density(y1, y2, show_means = FALSE), NA)
+})
+
+#plot_density_018
+test_that("plot_density two-vector handles order parameter", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  
+  result <- plot_density(y1, y2, order = -1)
+  expect_equal(names(result$densities), c("y2", "y1"))
+})
+
+#plot_density_019
+test_that("plot_density two-vector with different lengths", {
+  y1 <- rnorm(50)
+  y2 <- rnorm(30)  # Different length
+  
+  # Should handle different lengths
+  expect_error(plot_density(y1, y2), NA)
+  
+  result <- plot_density(y1, y2)
+  expect_equal(length(result$densities), 2)
+})
+
+#plot_density_020
+test_that("plot_density reserves space for legend with groups", {
+  y <- rnorm(100)
+  group <- rep(c("A", "B"), 50)
+  
+  # Should reserve space for legend
+  expect_error(plot_density(y ~ group), NA)
+  
+  # Test with two-vector
+  y1 <- rnorm(50)
+  y2 <- rnorm(50)
+  expect_error(plot_density(y1, y2), NA)
+})

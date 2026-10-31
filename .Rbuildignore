@@ -13,6 +13,13 @@
 ^Rplots\.pdf$
 ^CHANGELOG\.md$
 ^examples/
+^data-raw$
+^tmp_
+^doc$
+^Meta$
+^\.\.Rcheck$
+^statuser\.Rcheck$
+^\.cursor$
 ^\\.editorconfig$
 ^CRAN-SUBMISSION$
 ^vignettes/figures_preview$

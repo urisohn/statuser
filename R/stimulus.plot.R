@@ -76,7 +76,7 @@ stimulus.plot <- function(
   args_passed <- as.list(match.call())[-1]
 
   if (!"data.frame" %in% class(data)) {
-    exit(paste0("stimulus.plot() says: the argument data must be a data.frame, but '", deparse(substitute(data)), "' is not a dataframe."))
+    exit(paste0("stimulus.plot() says: the argument data must be a data.frame, but '", deparse(substitute(data)), "' is not a data.frame."))
   }
   data <- data.frame(data)
 

@@ -481,7 +481,7 @@ test_that("missing column with data= reports requested error wording", {
   )
 
   expect_identical(out, "aborted")
-  expect_true(any(grepl("'value' is not a variable in dataframe 'df'", msgs, fixed = TRUE)))
+  expect_true(any(grepl("'value' is not a variable in data.frame 'df'", msgs, fixed = TRUE)))
 })
 
 #interprobe_015

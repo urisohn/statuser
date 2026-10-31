@@ -228,7 +228,7 @@ ip_validate_input_combinations <- function(data, model, x, y, z) {
   if (!is.null(x) & !is.null(z) & is.null(y)) input.xz <- TRUE
 
   if (input.data + input.model == 2) {
-    exit("interprobe() says: You may include either a data or a model argument, but you included both.")
+    exit("interprobe() says: You may include either a 'data' or a 'model' argument, but you included both.")
   }
 
   if (input.data == TRUE & input.xyz == FALSE) {
@@ -254,7 +254,7 @@ ip_validate_input_combinations <- function(data, model, x, y, z) {
   }
 
   if (input.model == TRUE & input.xyz == TRUE) {
-    message("interprobe says: you specified both a model and the y argument.\nPlease specify only one of them")
+    message("interprobe says: you specified both a model and the y argument.\nPlease specify only one of them.")
     exit("interprobe() stopped due to incompatible inputs.")
   }
 
@@ -294,13 +294,13 @@ ip_validate_arguments <- function(
   if (!is.null(data)) {
     if (is.null(dataname) || !nzchar(dataname)) dataname <- "data"
     if (!inherits(data, "data.frame")) {
-      exit(paste0("interprobe says(): the 'data' argument must be a data.frame, but '", dataname, "' is not a data.frame."))
+      exit(paste0("interprobe() says: the 'data' argument must be a data.frame, but '", dataname, "' is not a data.frame."))
     }
 
     n1 <- names(data)
-    if (!xvar %in% n1) exit(paste0("'", xvar, "' is not a variable in dataframe '", dataname, "'"))
-    if (!zvar %in% n1) exit(paste0("'", zvar, "' is not a variable in dataframe '", dataname, "'"))
-    if (!yvar %in% n1) exit(paste0("'", yvar, "' is not a variable in dataframe '", dataname, "'"))
+    if (!xvar %in% n1) exit(paste0("'", xvar, "' is not a variable in data.frame '", dataname, "'"))
+    if (!zvar %in% n1) exit(paste0("'", zvar, "' is not a variable in data.frame '", dataname, "'"))
+    if (!yvar %in% n1) exit(paste0("'", yvar, "' is not a variable in data.frame '", dataname, "'"))
   }
 
   if (
@@ -313,7 +313,7 @@ ip_validate_arguments <- function(
       paste0(
         "interprobe() says:\n",
         "There is a problem with the set of arguments provided to the function.\n",
-        "If you are providing a model as input, make sure to reference it explictly\n",
+        "If you are providing a model as input, make sure to reference it explicitly\n",
         "and to enter the variable names in quotes.\n",
         "\n   For example:\n      lm1=lm(y~cond*age)\n      interprobe(model=lm1,x='cond',z='age') "
       )
@@ -321,8 +321,8 @@ ip_validate_arguments <- function(
   }
 
   if (is.null(model) & is.null(data)) {
-    if (length(x) != length(z)) exit("interprobe says(): x and z must have the same length")
-    if (length(x) != length(y)) exit("interprobe says(): x and y must have the same length")
+    if (length(x) != length(z)) exit("interprobe() says: x and z must have the same length")
+    if (length(x) != length(y)) exit("interprobe() says: x and y must have the same length")
   }
 
   if (!is.null(model)) {
@@ -344,11 +344,11 @@ ip_validate_arguments <- function(
     exit("interprobe() says the argument 'spotlights' must be of length 3")
   }
   if (!is.null(spotlight.labels) & length(spotlight.labels) != 3) {
-    exit("interprobe() says the argument 'spotlight.labels' must be  of length 3")
+    exit("interprobe() says the argument 'spotlight.labels' must be of length 3")
   }
 
   if (!is.logical(histogram) && length(histogram) == 1) {
-    exit("interprobe() says, The argument 'histogram' must be TRUE or FALSE and of length 1")
+    exit("interprobe() says: the argument 'histogram' must be TRUE or FALSE and of length 1")
   }
 
   ip_check1(max.unique, "max.unique", 1, "integer")
@@ -413,7 +413,7 @@ ip_validate_arguments <- function(
           nux, " possible values. Make sure to define it as a factor before\n   ",
           "estimating the model '", model_txt, "'. You can do that by running\n   ",
           "df$", xvar, " <- factor(df$", xvar, "), where df is the name of the \n   ",
-          "data frame containing  '", xvar, "'."
+          "data frame containing '", xvar, "'."
         )
       )
     }
@@ -425,7 +425,7 @@ ip_validate_arguments <- function(
           "interprobe() says: you defined a variable as factor\n   ",
           "within the '", model_txt, "' call. This creates problems.\n   ",
           "Please define factor variables as factors in \n   ",
-          "the data before estimating the model \n   e.g., df$x <- factor(df$x))."
+          "the data before estimating the model \n   e.g., df$x <- factor(df$x)."
         )
       )
     }
@@ -813,9 +813,11 @@ ip_draw_histogram <- function(fxz.list, x1s, nux1, cols, xlim, max.unique, xlab 
     x.axis.bins <- nrow(fxz)
     lines.total <- ncol(fxz)
 
-  # 2. Match left margin with the panel above; tight top so it sits under the GAM
+  # 2. Match left margin with the panel above; tight top so it sits under the GAM.
+    # Bottom needs room for tick labels + xlab (cex.lab = 1.3); 3.2 was clipping xlab.
     m0 <- graphics::par("mar")
-    graphics::par(mar = c(3.2, m0[2], 0.15, m0[4]))
+    mar_bottom <- if (nzchar(xlab)) 4.5 else 3.2
+    graphics::par(mar = c(mar_bottom, m0[2], 0.15, m0[4]))
 
   # 3. Y-limit from raw counts (extra headroom for title + count labels inside the panel)
     if (nux1 > max.unique) {
@@ -1031,7 +1033,12 @@ ip_make_plot <- function(
     mar_left <- ylab_line + 2.0
     m0 <- graphics::par("mar")
     mar_bottom <- if (isTRUE(histogram)) 0.4 else m0[1]
-    graphics::par(mar = c(mar_bottom, mar_left, m0[3], m0[4]))
+    # Fixed top margin for every main panel. Using max(m0[3], 3) made the first
+    # panel (default mar[3] ~ 4.1) shorter than the next (after the frequency
+    # subplot left mar[3] ~ 0.15, so max -> 3).
+    mar_top <- 3
+    mar_right <- m0[4]
+    graphics::par(mar = c(mar_bottom, mar_left, mar_top, mar_right))
 
   # 4. When a frequency subplot follows, suppress x-axis on the GAM panel
     xlab_main <- xlab
@@ -1129,7 +1136,7 @@ ip_make_plot <- function(
         graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols[-1], title = legend.title, title.font = 2, legend = paste0(xs[-1], " - ", xs[1]))
       }
 
-      if (type == "jn" & focal == "continuous") {
+      if (type == "jn" & focal != "categorical") {
         graphics::legend("top", inset = 0.01, bty = "n", lwd = 5, col = cols, title = legend.title, title.font = 2, legend = spotlight.labels)
       }
     }

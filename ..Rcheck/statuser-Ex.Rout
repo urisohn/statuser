@@ -1,6 +1,6 @@
 
-R version 4.5.2 (2025-10-31 ucrt) -- "[Not] Part in a Rumble"
-Copyright (C) 2025 The R Foundation for Statistical Computing
+R version 4.6.0 (2026-04-24 ucrt) -- "Because it was There"
+Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-w64-mingw32/x64
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -34,6 +34,9 @@ Type 'q()' to quit R.
 > 
 > ### * </HEADER>
 > library('statuser')
+#######################################################
+This Version 2026 10 29 - 07.18AM
+
 > 
 > base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
 > base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
@@ -221,6 +224,83 @@ Note: mode not reported because all values of y are unique
 > base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
 > base::cat("format_pvalue", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
 > cleanEx()
+> nameEx("interprobe")
+> ### * interprobe
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: interprobe
+> ### Title: Probe interactions robustly to nonlinearities
+> ### Aliases: interprobe
+> 
+> ### ** Examples
+> 
+> ## No test: 
+> # Simulated example with a known nonlinear interaction
+> data(interprobe_sim)
+> interprobe(x = treat, z = mod, y = y, data = interprobe_sim, quiet = TRUE)
+> 
+> if (requireNamespace("MASS", quietly = TRUE)) {
++   bw <- MASS::birthwt
++   bw$smoke <- factor(bw$smoke, levels = c(0, 1), labels = c("No", "Yes"))
++   bw$race <- factor(bw$race, levels = c(1, 2, 3),
++                     labels = c("White", "Black", "Other"))
++ 
++   # Case A: binary x x continuous moderator
++   interprobe(x = smoke, z = age, y = bwt, data = bw, quiet = TRUE)
++ 
++   # Case B: 3-level categorical x
++   interprobe(x = race, z = age, y = bwt, data = bw, quiet = TRUE)
++ 
++   # Case C: continuous x x continuous z
++   interprobe(x = age, z = lwt, y = bwt, data = bw, quiet = TRUE)
++ 
++   # Linear probe, or probe a fitted model (covariates)
++   interprobe(x = smoke, z = age, y = bwt, data = bw, model = "linear", quiet = TRUE)
++   fit <- lm(bwt ~ smoke * age + lwt, data = bw)
++   interprobe(model = fit, x = smoke, z = age, quiet = TRUE)
++ }
+> ## End(No test)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("interprobe", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
+> nameEx("interprobe_sim")
+> ### * interprobe_sim
+> 
+> flush(stderr()); flush(stdout())
+> 
+> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
+> ### Name: interprobe_sim
+> ### Title: Simulated nonlinear interaction for interprobe demos
+> ### Aliases: interprobe_sim
+> ### Keywords: datasets
+> 
+> ### ** Examples
+> 
+> data(interprobe_sim)
+> head(interprobe_sim)
+    treat      mod        y
+1 Control 6.183019 7.200920
+2 Control 3.281221 5.987838
+3 Control 6.483509 7.018378
+4 Treated 1.726297 6.303422
+5 Treated 4.627696 7.076967
+6 Control 3.823572 7.156695
+> ## No test: 
+> interprobe(x = treat, z = mod, y = y, data = interprobe_sim, quiet = TRUE)
+> ## End(No test)
+> 
+> 
+> 
+> 
+> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
+> base::cat("interprobe_sim", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+> cleanEx()
 > nameEx("list2")
 > ### * list2
 > 
@@ -270,9 +350,9 @@ Note: mode not reported because all values of y are unique
 Call: lm2(formula = mpg ~ wt + hp, data = mtcars)
 
             estimate  SE.robust SE.classical t.value p.value std.estimate
-intercept    37.23**    2.230      1.599      16.70   <.0001        --   
-wt          -3.878**    0.769      0.633     -5.046   <.0001    -0.630   
-hp          -0.032**    .0094      .0090     -3.385    .0021    -0.361   
+intercept    37.23**    2.230      1.599      16.70   <.0001       --    
+wt          -3.878**    .769       .633      -5.046   <.0001    -.630    
+hp           -.032**    .009       .009      -3.385    .0021    -.361    
               mean missing red.flag
 intercept      --    --        !   
 wt          3.217    0         --  
@@ -280,17 +360,7 @@ hp          146.7    0         --
 
 N = 32  | missing = 0  | df = 29  | R² = 0.827  | SE type: HC3 
 
-Notes:
-  - ** p<.01 (based on SE.robust)
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag:
-     !: robust & classical SE differ by more than 25%
-     - Suggestion 1: to evaluate possible extreme skew or outliers:
-       plot_density() or plot_freq() for mpg and for flagged variable(s)
-     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(mpg ~ flagged variable(s))
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > # Without data argument (variables from environment)
 > y <- mtcars$mpg
@@ -300,9 +370,9 @@ Notes:
 Call: lm2(formula = y ~ x1 + x2)
 
             estimate  SE.robust SE.classical t.value p.value std.estimate
-intercept    37.23**    2.230      1.599      16.70   <.0001        --   
-x1          -3.878**    0.769      0.633     -5.046   <.0001    -0.630   
-x2          -0.032**    .0094      .0090     -3.385    .0021    -0.361   
+intercept    37.23**    2.230      1.599      16.70   <.0001       --    
+x1          -3.878**    .769       .633      -5.046   <.0001    -.630    
+x2           -.032**    .009       .009      -3.385    .0021    -.361    
               mean missing red.flag
 intercept      --    --        !   
 x1          3.217    0         --  
@@ -310,17 +380,7 @@ x2          146.7    0         --
 
 N = 32  | missing = 0  | df = 29  | R² = 0.827  | SE type: HC3 
 
-Notes:
-  - ** p<.01 (based on SE.robust)
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag:
-     !: robust & classical SE differ by more than 25%
-     - Suggestion 1: to evaluate possible extreme skew or outliers:
-       plot_density() or plot_freq() for y and for flagged variable(s)
-     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ flagged variable(s))
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > # RED FLAG EXAMPLES
 > 
@@ -335,25 +395,15 @@ Notes:
 Call: lm2(formula = y ~ x)
 
             estimate SE.robust SE.classical t.value p.value std.estimate   mean
-intercept   2.698**    0.228      0.226     11.81    <.0001       --        -- 
-x           0.151      0.175      0.138     0.862     .3895    0.078     0.038 
+intercept   2.698**    .228       .226      11.81    <.0001      --        --  
+x            .151      .175       .138       .862     .3895    .078      .038  
             missing red.flag
 intercept     --        --  
 x             0         !   
 
 N = 200  | missing = 0  | df = 198  | R² = 0.006  | SE type: HC3 
 
-Notes:
-  - ** p<.01 (based on SE.robust)
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag:
-     !: robust & classical SE differ by more than 25%
-     - Suggestion 1: to evaluate possible extreme skew or outliers:
-       plot_density() or plot_freq() for y and for x
-     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ x)
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > # Follow up with scatter.gam() to diagnose it
 > scatter.gam(x, y)
@@ -369,31 +419,20 @@ Notes:
 > lm2(y ~ x)
 Call: lm2(formula = y ~ x)
 
-            estimate SE.robust SE.classical t.value p.value std.estimate
-intercept   0.585      0.535      0.493     1.092     .2760       --    
-x           2.628      1.804      0.524     1.457     .1468    0.336    
-              mean  missing red.flag
-intercept       --    --        --  
-x           -.0086    0         !!! 
+            estimate SE.robust SE.classical t.value p.value std.estimate   mean
+intercept    .585      .535       .493      1.092     .2760      --         -- 
+x           2.628      1.804      .524      1.457     .1468    .336      -.009 
+            missing red.flag
+intercept     --        --  
+x             0         !!! 
 
 N = 200  | missing = 0  | df = 198  | R² = 0.113  | SE type: HC3 
 
-Notes:
-  - All estimates are p>.1 (based on SE.robust)
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag:
-     !!!: robust & classical SE differ by more than 100%
-     - Suggestion 1: to evaluate possible extreme skew or outliers:
-       plot_density() or plot_freq() for y and for x
-     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ x)
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > # Look at distribution of y to spot the outlier
 > plot_freq(y)
-
-plot_freq() says: because there are more than 30 unique values, frequency was printed only for the mode. Set  `value.labels` to modify this behavior> 
+> 
 > # Example 3: red flag catches an outlier in one predictor
 > # True model is y = x1 + x2, but x2 has an extreme value
 > set.seed(123)
@@ -407,9 +446,9 @@ plot_freq() says: because there are more than 30 unique values, frequency was pr
 Call: lm2(formula = y ~ x1 + x2)
 
             estimate SE.robust SE.classical t.value p.value std.estimate   mean
-intercept   0.028      0.076      0.076     0.375     .7084       --        -- 
-x1          1.009**    0.080      0.078     12.57    <.0001    0.667     0.010 
-x2          0.095      0.877      0.021     0.108     .9142    0.236     0.290 
+intercept    .028      .076       .076       .375     .7084      --        --  
+x1          1.009**    .080       .078      12.57    <.0001    .667      .010  
+x2           .095      .877       .021       .108     .9142    .236      .290  
             missing red.flag
 intercept     --        --  
 x1            0         --  
@@ -417,17 +456,7 @@ x2            0         !!!
 
 N = 200  | missing = 0  | df = 197  | R² = 0.478  | SE type: HC3 
 
-Notes:
-  - ** p<.01 (based on SE.robust)
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag:
-     !!!: robust & classical SE differ by more than 100%
-     - Suggestion 1: to evaluate possible extreme skew or outliers:
-       plot_density() or plot_freq() for y and for x2
-     - Suggestion 2: to evaluate possible nonlinearity, do plot_gam(y ~ x2)
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > # Look at distribution of x2 to spot the outlier
 > plot_freq(x2)
@@ -449,22 +478,15 @@ Notes:
 Call: lm2(formula = y ~ x, data = mydata, clusters = cluster_id)
 
             estimate SE.cluster SE.robust SE.classical t.value df    p.value
-intercept   1.279**    0.442      0.125      0.125     2.893    19.0   .0093
-x           0.396**    0.083      0.132      0.131     4.776    17.5   .0002
+intercept   1.279**    .442       .125       .125      2.893    19.0   .0093
+x            .396**    .083       .132       .131      4.776    17.5   .0002
             std.estimate   mean missing red.flag
-intercept         --        --    --        --  
-x              0.173     0.022    0         --  
+intercept        --        --     --        --  
+x              .173      .022     0         --  
 
 N = 300  | missing = 0  | R² = 0.030  | SE type: CR2 (cluster)
 
-Notes:
-  - ** p<.01 (based on SE.cluster)
-  - SE.robust (HC3) used only to contrast with SE.classical to flag observations
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag: none (robust and classical SE are similar)
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > # FIXED EFFECTS
 > # Use fixed_effects to absorb group-level variation (e.g., firm or year effects)
@@ -485,23 +507,16 @@ Call: lm2(formula = y ~ x, data = panel, fixed_effects = ~firm_id)
 
             estimate  SE.robust SE.classical t.value p.value std.estimate
 intercept   [dropped]   --         --        --       --        --       
-x           0.727**     0.085      0.082     8.527    <.0001    0.191    
+x           .727**      .085       .082      8.527    <.0001    .191     
 firm_id     df=30       --         --        --       --        --       
-              mean  missing red.flag
-intercept   --        --        --  
-x           -0.066    0         --  
-firm_id     --        0         --  
+              mean missing red.flag
+intercept   --       --        --  
+x           -.066    0         --  
+firm_id     --       0         --  
 
 N = 150  | missing = 0  | df = 119  | R² = 0.951  | SE type: HC3 
 
-Notes:
-  - ** p<.01 (based on SE.robust)
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag: none (robust and classical SE are similar)
-  - firm_id were entered as absorbed fixed effects; df is the number of unique values.
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > # Two-way fixed effects (firm and year)
 > lm2(y ~ x, data = panel, fixed_effects = ~ firm_id + year)
@@ -510,25 +525,18 @@ Call: lm2(formula = y ~ x, data = panel, fixed_effects = ~firm_id +
 
             estimate  SE.robust SE.classical t.value p.value std.estimate
 intercept   [dropped]   --         --        --       --        --       
-x           0.724**     0.087      0.083     8.286    <.0001    0.191    
+x           .724**      .087       .083      8.286    <.0001    .191     
 firm_id     df=30       --         --        --       --        --       
 year        df=5        --         --        --       --        --       
-              mean  missing red.flag
-intercept   --        --        --  
-x           -0.066    0         --  
-firm_id     --        0         --  
-year        --        0         --  
+              mean missing red.flag
+intercept   --       --        --  
+x           -.066    0         --  
+firm_id     --       0         --  
+year        --       0         --  
 
 N = 150  | missing = 0  | df = 115  | R² = 0.952  | SE type: HC3 
 
-Notes:
-  - ** p<.01 (based on SE.robust)
-  - std.estimate is the standardized coefficient: beta = b * sd(x) / sd(y)
-  - mean: for numeric variables, mean of x; for factors, % of observations
-  - missing: number of observations excluded due to missing values
-  - red.flag: none (robust and classical SE are similar)
-  - firm_id, year were entered as absorbed fixed effects; df is the number of unique values.
-  - To avoid these notes, lm2(..., notes=FALSE)
+Note: to see explanations for lm2() output, run: `lm2_notes()`
 > 
 > 
 > 
@@ -604,6 +612,9 @@ this will be shown after the try> ## End(No test)
 > plot_cdf(value ~ group, data = df)
 
 The p-values are based on quantile regressions that assume all observations are independent> plot_cdf(value ~ group, data = df, col = c("red", "blue"))
+> 
+> # Custom x-axis limits
+> plot_cdf(y ~ group, xlim = c(0, 10))
 > 
 > # Compare two vectors
 > y1 <- rnorm(50)
@@ -710,6 +721,11 @@ x_group      1.22325      0.66348  1.66794
 > x <- c(1, 1, 2, 2, 2, 5, 5)
 > plot_freq(x)
 > 
+> # Character categories (alphabetical by default)
+> cats <- c("a", "a", "b", "c")
+> plot_freq(cats)
+> plot_freq(cats, x.order = "freq")  # most frequent first
+> 
 > # Pass on some common \code{plot()} arguments
 > plot_freq(x, col = "steelblue", xlab = "Value", ylab = "Frequency",ylim=c(0,7))
 > 
@@ -752,7 +768,7 @@ x_group      1.22325      0.66348  1.66794
 > ## No test: 
 > library(mgcv)
 Loading required package: nlme
-Warning: package 'nlme' was built under R version 4.5.3
+Warning: package 'nlme' was built under R version 4.6.1
 This is mgcv 1.9-4. For overview type '?mgcv'.
 > # Fit a GAM model
 > data(mtcars)
@@ -851,7 +867,7 @@ pdf
 > graphics::par(old_par)
 > resize_images(tmp_png, width = 80)
 
-Resized 'file848836b03e5a_80.png'> ## End(No test)
+Resized 'file44b845f5103f_80.png'> ## End(No test)
 > 
 > 
 > 
@@ -860,392 +876,21 @@ Resized 'file848836b03e5a_80.png'> ## End(No test)
 > base::cat("resize_images", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
 > graphics::par(get("par.postscript", pos = 'CheckExEnv'))
 > cleanEx()
-> nameEx("scatter.gam")
-> ### * scatter.gam
+> nameEx("round2")
+> ### * round2
 > 
 > flush(stderr()); flush(stdout())
 > 
 > base::assign(".ptime", proc.time(), pos = "CheckExEnv")
-> ### Name: scatter.gam
-> ### Title: Scatter Plot with GAM Smooth Line
-> ### Aliases: scatter.gam
+> ### Name: round2
+> ### Title: Round with Fixed Decimals
+> ### Aliases: round2
 > 
 > ### ** Examples
 > 
-> # Generate sample data for examples
-> x <- rnorm(100)
-> y <- 2*x + rnorm(100)
-> 
-> # Plot GAM smooth line only
-> scatter.gam(x, y)
-> 
-> # Equivalent call using formula syntax (y ~ x)
-> scatter.gam(y ~ x)
-> 
-> # Include scatter plot with underlying data points behind the GAM line
-> scatter.gam(x, y, data.dots = TRUE)
-> 
-> # Include summary points showing mean x and y for each tertile bin
-> scatter.gam(x, y, three.dots = TRUE)
-> 
-> # Customize the plot with a custom title, line color, and line width
-> scatter.gam(x, y, data.dots = TRUE, col = "red", lwd = 2, main = "GAM Fit")
-> 
-> # Control smoothness of the GAM line by specifying the basis dimension
-> scatter.gam(x, y, k = 10)
-> 
-> 
-> 
-> 
-> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-> base::cat("scatter.gam", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
-> cleanEx()
-> nameEx("t.test2")
-> ### * t.test2
-> 
-> flush(stderr()); flush(stdout())
-> 
-> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
-> ### Name: t.test2
-> ### Title: Enhanced alternative to t.test()
-> ### Aliases: t.test2
-> 
-> ### ** Examples
-> 
-> # Two-sample t-test
-> men <- rnorm(100, mean = 5, sd = 1)
-> women <- rnorm(100, mean = 4.8, sd = 1)
-> t.test2(men, women)
-Two sample Welch t-test
-
-   men women men-women  ci  ci.L  ci.H    t    df p.value N(men) N(women)
- 5.109 4.762     0.347 95% 0.088 0.606 2.64 197.2   .0089    100      100
-
-APA Style:
-t(197.2) = 2.64, p = .0089
-> 
-> # Paired t-test
-> x <- rnorm(50, mean = 5, sd = 1)
-> y <- rnorm(50, mean = 5.2, sd = 1)
-> t.test2(x, y, paired = TRUE)
-Two sample paired t-test
-
-     x     y    x-y  ci   ci.L  ci.H      t df p.value  N r(x,y)
- 4.969 5.291 -0.322 95% -0.718 0.074 -1.634 49   .1087 50  0.099
-
-APA Style:
-t(49.0) = -1.63, p = .1087
-> 
-> # One-sample t-test
-> data <- rnorm(100, mean = 5, sd = 1)
-> t.test2(data, mu = 0)
-One sample Student t-test
-
-  mean  ci  ci.L  ci.H     t df p.value   N
- 5.052 95% 4.855 5.248 50.94 99  <.0001 100
-
-APA Style:
-t(99.0) = 50.94, p < .0001
-> 
-> # Formula syntax
-> data <- data.frame(y = rnorm(100), group = rep(c("A", "B"), 50))
-> t.test2(y ~ group, data = data)
-Two sample Welch t-test
-
-     A     B    A-B  ci   ci.L ci.H     t   df p.value N(A) N(B)
- 5.162 5.419 -0.256 95% -0.382 0.55 0.358 97.8   .7209   25   25
-
-APA Style:
-t(97.8) = 0.36, p = .7209
-
-note: 'A' is missing 25 of 50 values, while 'B' is missing 25 of 50
-> 
-> 
-> 
-> 
-> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-> base::cat("t.test2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
-> cleanEx()
-> nameEx("table2")
-> ### * table2
-> 
-> flush(stderr()); flush(stdout())
-> 
-> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
-> ### Name: table2
-> ### Title: Enhanced alternative to table()
-> ### Aliases: table2
-> 
-> ### ** Examples
-> 
-> # Create example data
-> df <- data.frame(
-+   group = c("A", "A", "B", "B", "A"),
-+   status = c("X", "Y", "X", "Y", "X")
-+ )
-> 
-> # Enhanced table with variable names (2 variables)
-> table2(df$group, df$status)
-     status
-group X Y
-    A 2 1
-    B 1 1
-> 
-> # Enhanced table with variable names (3 variables)
-> df3 <- data.frame(
-+   x = c("A", "A", "B", "B"),
-+   y = c("X", "Y", "X", "Y"),
-+   z = c("high", "low", "high", "low")
-+ )
-> table2(df3$x, df3$y, df3$z)
-, , z = high
-
-   y
-x   X Y
-  A 1 0
-  B 1 0
-
-, , z = low
-
-   y
-x   X Y
-  A 0 1
-  B 0 1
-
-> 
-> # Table with proportions
-> table2(df$group, df$status, prop = 'all')  # Overall proportions
-     status
-group X Y
-    A 2 1
-    B 1 1
-
-Overall proportions:
-       status
-group   X     Y     Total
-  A     0.400 0.200 0.600
-  B     0.200 0.200 0.400
-  Total 0.600 0.400 1.000
-> table2(df$group, df$status, prop = 'row')  # Row proportions
-     status
-group X Y
-    A 2 1
-    B 1 1
-
-Row proportions:
-     status
-group X     Y     Total
-    A 0.667 0.333 1.000
-    B 0.500 0.500 1.000
-> table2(df$group, df$status, prop = 'col')  # Column proportions
-     status
-group X Y
-    A 2 1
-    B 1 1
-
-Column proportions:
-       status
-group   X     Y    
-  A     0.667 0.500
-  B     0.333 0.500
-  Total 1.000 1.000
-> 
-> # Table with chi-square test
-> table2(df$group, df$status, chi = TRUE,prop='all')
-     status
-group X Y
-    A 2 1
-    B 1 1
-
-Overall proportions:
-       status
-group   X     Y     Total
-  A     0.400 0.200 0.600
-  B     0.200 0.200 0.400
-  Total 0.600 0.400 1.000
-
-
-	Pearson's Chi-squared test
-
-data:  result
-X-squared = 0.13889, df = 1, p-value = 0.7094
-
-> 
-> 
-> 
-> 
-> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-> base::cat("table2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
-> cleanEx()
-> nameEx("text2")
-> ### * text2
-> 
-> flush(stderr()); flush(stdout())
-> 
-> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
-> ### Name: text2
-> ### Title: Enhanced alternative to text()
-> ### Aliases: text2
-> 
-> ### ** Examples
-> 
-> # Create a simple plot
-> plot(1:10, 1:10, type = "n", main = "text2() - Alignment & Color")
-> 
-> # Alignment respect to x=5
-> text2(5, 8, "align='left' from 5", align = "left", bg = "yellow1")
-> text2(5, 7, "align='right' from 5", align = "right", bg = "blue", col = "white")
-> text2(5, 6, "align='center' from 5", align = "center", bg = "black", col = "white")
-> abline(v = 5, lty = 2)
-> 
-> # Multiple labels with different alignments
-> text2(c(2, 5, 8), c(5, 5, 5), 
-+       labels = c("Left", "Center", "Right"),
-+       align = c("left", "center", "right"),
-+       bg = c("pink", "lightblue", "lightgreen"))
-> 
-> # Text with custom font color (passed through ...)
-> text2(5, 3, "Red Text", col = "red", bg = "white")
-> 
-> # Padding examples
-> plot(1:10, 1:10, type = "n", main = "Padding Examples")
-> 
-> # Default padding (pad=0.03, pad_v=0.25)
-> text2(5, 8, "Default padding", bg = "lightblue")
-> 
-> # More horizontal padding
-> text2(5, 6, "Wide padding", pad = 0.2, bg = "lightgreen")
-> 
-> # More vertical padding
-> text2(5, 4, "Tall padding", pad_v = 0.8, bg = "lightyellow")
-> 
-> # Both padding increased
-> text2(5, 2, "Extra padding", pad = 0.15, pad_v = 0.6, bg = "pink")
-> 
-> 
-> 
-> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-> base::cat("text2", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
-> cleanEx()
-> nameEx("twolines")
-> ### * twolines
-> 
-> flush(stderr()); flush(stdout())
-> 
-> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
-> ### Name: twolines
-> ### Title: Two-Lines Test of U-Shapes
-> ### Aliases: twolines
-> 
-> ### ** Examples
-> 
-> ## No test: 
-> # Simple example with simulated data
-> set.seed(123)
-> x <- rnorm(100)
-> y <- -x^2 + rnorm(100)
-> data <- data.frame(x = x, y = y)
-> result <- twolines(y ~ x, data = data)
-
-Robin Hood calculations (see Simonsohn, 2018)
-Explaining why x = 0.05 is used as the breakpoint
-
-Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
-Local range of values considered for breakpoint 'x': [-0.33, 0.36]
-t-values for two lines at 'x' = 0.01:
-   t1 = 6.5
-   t2 = 9.35
-We compute t2/(t1+t2) = 0.59
-We then lookup the value of 'x' at that quantile, so we run
-quantile(x, 0.59) = 0.05 and set that value, 0.05, as the breakpoint.
-
-Note: you may turn off this message by setting `quiet=TRUE`> 
-> # With covariates
-> z <- rnorm(100)
-> y <- -x^2 + 0.5*z + rnorm(100)
-> data <- data.frame(x = x, y = y, z = z)
-> result <- twolines(y ~ x + z, data = data)
-
-Robin Hood calculations (see Simonsohn, 2018)
-Explaining why x = -0.35 is used as the breakpoint
-
-Most extreme value of fitted 'y' with GAM obtained at 'x' = -0.4
-Local range of values considered for breakpoint 'x': [-0.63, 0.3]
-t-values for two lines at 'x' = -0.4:
-   t1 = 4.49
-   t2 = 5.5
-We compute t2/(t1+t2) = 0.55
-We then lookup the value of 'x' at that quantile, so we run
-quantile(x, 0.55) = -0.35 and set that value, -0.35, as the breakpoint.
-
-Note: you may turn off this message by setting `quiet=TRUE`> 
-> # Without data argument (variables evaluated from environment)
-> x <- rnorm(100)
-> y <- -x^2 + rnorm(100)
-> result <- twolines(y ~ x)
-
-Robin Hood calculations (see Simonsohn, 2018)
-Explaining why x = 0.07 is used as the breakpoint
-
-Most extreme value of fitted 'y' with GAM obtained at 'x' = 0.01
-Local range of values considered for breakpoint 'x': [-0.41, 0.38]
-t-values for two lines at 'x' = 0.01:
-   t1 = 5.51
-   t2 = 7.83
-We compute t2/(t1+t2) = 0.59
-We then lookup the value of 'x' at that quantile, so we run
-quantile(x, 0.59) = 0.07 and set that value, 0.07, as the breakpoint.
-
-Note: you may turn off this message by setting `quiet=TRUE`> ## End(No test)
-> 
-> 
-> 
-> 
-> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-> base::cat("twolines", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
-> cleanEx()
-> nameEx("var_labels")
-> ### * var_labels
-> 
-> flush(stderr()); flush(stdout())
-> 
-> base::assign(".ptime", proc.time(), pos = "CheckExEnv")
-> ### Name: var_labels
-> ### Title: Get or set variable labels
-> ### Aliases: var_labels var_labels<-
-> 
-> ### ** Examples
-> 
-> df <- data.frame(x = 1:3, y = 4:6)
-> 
-> # Set labels for all columns
-> var_labels(df) <- c("this is x", "this is y")
-> var_labels(df)
-          x           y 
-"this is x" "this is y" 
-> 
-> # Set a label for a single column
-> var_labels(df$x) <- "this is x"
-> var_labels(df$x)
-[1] "this is x"
-> 
-> 
-> 
-> 
-> base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-> base::cat("var_labels", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
-> ### * <FOOTER>
-> ###
-> cleanEx()
-> options(digits = 7L)
-> base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  3.32 0.64 3.3 NA NA 
-> grDevices::dev.off()
-null device 
-          1 
-> ###
-> ### Local variables: ***
-> ### mode: outline-minor ***
-> ### outline-regexp: "\\(> \\)?### [*]+" ***
-> ### End: ***
-> quit('no')
+> round2(0.34, 2)
+[1] ".34"
+> round2(0.34, 2, leading.zero = TRUE)
+Error in round2(0.34, 2, leading.zero = TRUE) : 
+  unused argument (leading.zero = TRUE)
+Execution halted

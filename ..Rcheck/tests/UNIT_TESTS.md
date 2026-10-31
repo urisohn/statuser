@@ -71,11 +71,13 @@ Helper code: `tests/testthat/helper-backend_equivalence.R`.
 | Subset | What it checks |
 |--------|----------------|
 | **`lm` input** | Structure; fitted model returned when estimated internally; **APA** printing unless `quiet=TRUE`. |
-| **Binary x** | **ti**-based GAM testing path (`gam_results_testing`). |
+| **Binary x** | **ti**-based GAM testing path (`gam_results_testing`); `cols` of length 2 allowed. |
+| **`cols` validation** | Continuous focal still requires length-3 `cols`. |
 | **`lm2` input** | Works with **lm2** fits. |
 | **`model` / `data` routing** | Fits **lm2** when `model = linear` (or sentinel) with data; vector interface with `model = linear`. |
 | **Keyword vs object** | `linear` in calling env vs bare keyword; `lm` as keyword when appropriate. |
-| **Errors** | Messages preserve intended model name. |
+| **NSE names** | Bare and quoted `x`/`z`/`y` with `data=` (columns need not exist in calling env); bare `x`/`z` with fitted `model=`. |
+| **Errors** | Messages preserve intended model name; missing column uses `'var' is not a variable in dataframe 'df'`. |
 
 ---
 
@@ -214,6 +216,21 @@ Helper code: `tests/testthat/helper-backend_equivalence.R`.
 | **Equivalence** | Matches **`stats::t.test`** (incl. paired, one-sample, formula, small **n**, extremes, factor/numeric grouping). |
 | **Environment** | Variables resolved from env when `data` omitted. |
 | **Print snapshots** | Stable printed output across designs (incl. missing and long names). |
+
+---
+
+## `test-stimulus.plot.R` → `R/stimulus.plot.R`, `R/stimulus.beeswarm.R`, `R/clear_stimulus_cache.R`, `R/stimulus_auxiliary.R`
+
+| Subset | What it checks |
+|--------|----------------|
+| **Means plot** | Returns data frame with per-stimulus effect columns. |
+| **Effects plot** | Returns list with observed effects, null band, resamples, heterogeneity p-value. |
+| **Design validation** | Compared-stimulus data errors with message pointing to `stimulus.beeswarm()`. |
+| **Beeswarm** | Runs on compared-stimulus subset; returns coordinate matrix. |
+| **Cache** | `clear_stimulus_cache()` empties package resampling cache. |
+| **Regression fixtures** | Salerno & Slepian effects/means outputs match saved RDS reference (tolerance 1e-4); model=all subset same pattern. |
+
+Fixtures: `tests/testthat/data/stimulus_saved_results/*.rds`.
 
 ---
 

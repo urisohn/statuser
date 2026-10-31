@@ -1,0 +1,241 @@
+---
+title: "Probing nonlinear interactions with interprobe()"
+author: "Uri Simonsohn"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Probing nonlinear interactions with interprobe()}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 6,
+  fig.align = "center"
+)
+library(statuser)
+```
+
+# Why probe without assuming linearity?
+
+Classical interaction models of the form `y ~ x * z` assume that the effect of
+`x` on `y` changes *linearly* with `z` (the linear interaction effect, or LIE,
+assumption). That assumption is often false, and when it is false, both the
+test of the interaction and the Johnson-Neyman / spotlight probes can
+mislead.
+
+`interprobe()` estimates a flexible GAM by default, then draws:
+
+- **Simple slopes** (spotlights): predicted `y` at selected values of one
+  predictor across the range of the other
+- **Johnson-Neyman** curves: the marginal effect of the focal predictor across
+  the moderator
+
+**Estimand.** For categorical `x` (2-3 levels), the quantity of interest is the
+difference in predicted `y` between levels of `x` as a function of `z`. For
+continuous `x`, it is the derivative $\partial y / \partial x$ at given values
+of `z` (or the reverse, depending on which variable is on the x-axis).
+
+## A simulated case where the linear interaction is wrong
+
+The bundled dataset `interprobe_sim` has a binary treatment whose true effect
+rises with the moderator and then flattens: $2(1 - e^{-\mathrm{mod}/3})$.
+
+```{r sim-demo}
+data(interprobe_sim)
+# True effect at a few moderator values
+mod_grid <- c(1, 3, 5, 9)
+true_eff <- 2 * (1 - exp(-mod_grid / 3))
+cbind(mod = mod_grid, true_effect = round(true_eff, 2))
+
+interprobe(
+  x = treat, z = mod, y = y,
+  data = interprobe_sim,
+  quiet = TRUE
+)
+```
+
+Compare with a linear probe of the same data: the linear model forces a
+straight Johnson-Neyman line even though the true effect curves.
+
+```{r sim-linear}
+interprobe(
+  x = treat, z = mod, y = y,
+  data = interprobe_sim,
+  model = "linear",
+  quiet = TRUE
+)
+```
+
+For every argument, defaults, and return-value columns, see `?interprobe`.
+Run `citation("statuser")` for the papers behind this method.
+
+# Data setup (MASS::birthwt)
+
+The remaining examples use the `birthwt` data from **MASS**, with smoking and
+race coded as labeled factors.
+
+```{r birthwt}
+bw <- MASS::birthwt
+bw$smoke <- factor(bw$smoke, levels = c(0, 1), labels = c("No", "Yes"))
+bw$race <- factor(bw$race, levels = c(1, 2, 3),
+                  labels = c("White", "Black", "Other"))
+```
+
+# Case A: binary x × continuous moderator
+
+Smoking (`smoke`) by mother's age (`age`), predicting birth weight (`bwt`).
+
+```{r case-a}
+res_a <- interprobe(x = smoke, z = age, y = bwt, data = bw)
+```
+
+**How to read the figure.**
+
+- The **left panel** (simple slopes) shows predicted birth weight as a function
+  of age, separately for smokers and nonsmokers. Darker / thicker lines mark
+  regions with more data (`n.max` controls when darkness saturates).
+- The **right panel** (Johnson-Neyman) shows the smoking effect (smoker minus
+  nonsmoker) across age, with a confidence band. Where the band excludes zero,
+  the effect is significant.
+- The **histogram** under each panel shows the distribution of the moderator
+  (common support).
+
+Unless `quiet = TRUE`, the console also prints an HC3 linear interaction test
+and a GAM interaction F test for the internal GAM fit.
+
+# Case B: 3-level categorical x
+
+Race (`race`) by age.
+
+```{r case-b}
+res_b <- interprobe(x = race, z = age, y = bwt, data = bw)
+```
+
+With 2-3 unique values of `x`, `interprobe()` treats the focal predictor as
+**categorical**: one curve per level, spotlights unused, and Johnson-Neyman
+regions of significance printed to the console (pairwise contrasts across the
+moderator).
+
+# Case C: continuous × continuous
+
+Mother's age (`age`) by mother's weight (`lwt`).
+
+```{r case-c}
+res_c <- interprobe(x = age, z = lwt, y = bwt, data = bw)
+```
+
+For continuous (or discrete with more than 3 values) predictors, three
+**spotlights** are used. The default is the 15th, 50th, and 85th percentiles
+of the off-axis variable. You can set your own:
+
+```{r case-c-spotlights}
+interprobe(
+  x = age, z = lwt, y = bwt, data = bw,
+  spotlights = c(110, 130, 160),
+  spotlight.labels = c("Light (110)", "Typical (130)", "Heavy (160)"),
+  quiet = TRUE
+)
+```
+
+By default the moderator is on the x-axis (`moderator.on.x.axis = TRUE`). Set
+it to `FALSE` to put the focal predictor on the x-axis (ignored when `x` has
+3 or fewer unique values).
+
+```{r case-c-axis}
+interprobe(
+  x = age, z = lwt, y = bwt, data = bw,
+  moderator.on.x.axis = FALSE,
+  quiet = TRUE
+)
+```
+
+# Covariates
+
+To include covariates, fit the model yourself and pass it as `model`. Other
+predictors are held at their means on the prediction grid.
+
+```{r covariates}
+fit <- lm(bwt ~ smoke * age + lwt, data = bw)
+interprobe(model = fit, x = smoke, z = age, quiet = TRUE)
+```
+
+You can also pass `lm2()`, `glm()`, or `mgcv::gam()` fits.
+
+# GAM vs model = "linear"
+
+Same data, two engines:
+
+```{r gam-vs-linear, fig.show = "hold"}
+interprobe(x = smoke, z = age, y = bwt, data = bw, quiet = TRUE)
+interprobe(x = smoke, z = age, y = bwt, data = bw, model = "linear", quiet = TRUE)
+```
+
+Use the GAM default when you want robustness to nonlinearities. Use
+`model = "linear"` when you specifically want the classical linear interaction
+probed (or when a GAM will not converge; see Troubleshooting).
+
+# Working with the returned list
+
+`interprobe()` returns (invisibly) a list. Capture it to reuse the numeric
+results without redrawing.
+
+```{r returned-list}
+res <- interprobe(
+  x = smoke, z = age, y = bwt, data = bw,
+  draw = "none", quiet = TRUE
+)
+names(res)
+head(res$johnson.neyman)
+head(res$simple.slopes)
+```
+
+When a model is estimated inside `interprobe()`, `res$gam_results` holds that
+fit (an `lm2` object if you used `model = "linear"`). For a binary focal
+predictor under the GAM engine, `res$gam_results_testing` and
+`res$lm2_results` support the printed interaction tests.
+
+```{r inspect-model}
+summary(res$gam_results)
+```
+
+# Saving and customizing figures
+
+Brief options (full list in `?interprobe`):
+
+```{r customize, eval = FALSE}
+interprobe(
+  x = smoke, z = age, y = bwt, data = bw,
+  draw = "jn",                    # or "simple slopes", "both", "none"
+  cols = c("black", "steelblue"),
+  save.as = "smoke_age_jn.png",
+  xlim = c(15, 40),
+  quiet = TRUE
+)
+```
+
+# Troubleshooting
+
+- **GAM estimation fails.** Predictors with few unique values often need a
+  smaller basis: try `k = 3` or `k = 2`.
+- **Only one unique value of `x` or `z`.** `interprobe()` stops; there is
+  nothing to probe.
+- **`cols` length.** Binary focal predictors need length 2 (or 3); continuous /
+  discrete spotlights and 3-level categorical need length 3.
+- **`spotlights` length.** Must be length 3 when supplied.
+- **Both `data` and `model`.** Not allowed; pick one input path.
+
+# References
+
+Simonsohn, U. (2024). Interacting with curves: How to validly test and probe
+interactions in the real (nonlinear) world. *Advances in Methods and Practices
+in Psychological Science*, 7(1), Article 25152459231207787.
+https://doi.org/10.1177/25152459231207787
+
+Montealegre, D., & Simonsohn, U. (2026). *Johnson Neyman 2.0* (working paper).
+
+Run `citation("statuser")` for ready-to-use BibTeX / text citations.

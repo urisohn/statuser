@@ -5,8 +5,8 @@
     Output
       Two sample Welch t-test
       
-            x      y   x-y  ci    ci.L  ci.H      t   df p.value N(x) N(y)
-       101.03 103.16 -2.13 95% -11.105 6.845 -0.475 56.3   .6364   30   30
+            x      y   x-y  ci    ci.L  ci.H      t   df p.value N(x) N(y)      d
+       101.03 103.16 -2.13 95% -11.105 6.845 -0.475 56.3   .6364   30   30 -0.123
       
       APA Style:
       t(56.3) = -0.48, p = .6364
@@ -18,8 +18,8 @@
     Output
       Two sample Welch t-test
       
-       Group 1 Group 2   1-2  ci   ci.L   ci.H       t   df p.value N1 N2
-         50.18   54.74 -4.56 95% -5.212 -3.908 -14.108 43.7  <.0001 25 25
+       Group 1 Group 2   1-2  ci   ci.L   ci.H       t   df p.value N1 N2     d
+         50.18   54.74 -4.56 95% -5.212 -3.908 -14.108 43.7  <.0001 25 25 -3.99
       
       Group 1: Control
       Group 2: Treatment
@@ -62,8 +62,8 @@
     Output
       Two sample Welch t-test
       
-             x      y    x-y  ci    ci.L  ci.H      t   df p.value N(x) N(y)
-       101.026 103.16 -2.134 95% -11.737 7.469 -0.446 49.6   .6572   27   30
+             x      y    x-y  ci    ci.L  ci.H      t   df p.value N(x) N(y)     d
+       101.026 103.16 -2.134 95% -11.737 7.469 -0.446 49.6   .6572   27   30 -0.12
       
       APA Style:
       t(49.6) = -0.45, p = .6572
@@ -77,8 +77,8 @@
     Output
       Two sample Welch t-test
       
-       Group 1 Group 2    1-2  ci    ci.L  ci.H      t df p.value N1 N2
-        72.295   76.92 -4.625 95% -12.412 3.162 -1.203 37   .2365 20 20
+       Group 1 Group 2    1-2  ci    ci.L  ci.H      t df p.value N1 N2      d
+        72.295   76.92 -4.625 95% -12.412 3.162 -1.203 37   .2365 20 20 -0.381
       
       Group 1: Control Group B
       Group 2: Experimental Group A

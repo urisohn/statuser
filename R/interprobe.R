@@ -1,82 +1,222 @@
-#' Probe interactions robustly to nonlinearities
+#' Test and probe possibly nonlinear interactions
 #'
-#' Probes an interaction by estimating (or accepting) a model and computing:
-#' - simple slopes ("spotlights") using predicted values
-#' - Johnson-Neyman ("jn") curves using marginal effects
+#' @description
+#' Tests and probes 2-way regression interactions (i.e., between two predictors, x & z)
+#' on their association with the dependent variable, y. When the argument `model` is
+#' not specified, interprobe() estimates a Generalized Additive Model (`mgcv::gam`)
+#' and thus does not impose linearity on any of the associations (the optional argument `model`
+#' can be used to apply interprobe to other models, e.g., linear regression). 
+#' In terms of testing the interaction,
+#' when `model` is not specified, the interaction p-value comes from the null that the
+#' association between x and y is independent of z. For legacy purposes, the p-value 
+#' for the linear model's x*z interaction is also reported.
+#' In case of substantive differences between the GAM and linear p-values for the interaction,
+#' the plots `interprobe` generates (see below) are likely to help users identify
+#' the origin of the disagreement (e.g., a blatantly nonlinear association between
+#' x & y could produce a spurious (or eliminate a real) interaction between x & z).
+#' In terms of probing the interaction (describing the estimated association
+#' between the focal predictor, x, and the dependent variable, y, for a given
+#' set of x, z values), `interprobe` reports two traditional analyses:
+#' simple slopes and the Johnson-Neyman procedure. Simple slopes map the predicted y
+#' for combinations of x & z. Simple slopes are also known as "spotlight analysis".
+#' Johnson-Neyman analysis, in turn, maps the estimated marginal effect of x on y,
+#' for sets of x & z values. Both simple slopes and Johnson-Neyman keep all other
+#' predictors constant, which is necessary to conduct the analysis ceteris paribus
+#' (see https://datacolada.org/123).
 #'
-#' Designed for GAM models but works with any model supported by `marginaleffects`
-#' (including `lm`, `glm`, `mgcv::gam`, and `lm2` / `estimatr::lm_robust`).
+#' @section Input options:
+#' Call `interprobe()` in one of three ways:
+#' 1. `data` plus names `x`, `z`, and `y`
+#' 2. vectors `x`, `z`, and `y` (no `data`)
+#' 3. a fitted `model` plus names `x` and `z` (`y` is taken from the model)
 #'
-#' @param x The focal predictor. Can be a name (bare or quoted) when `data` or `model`
-#'   is provided, or a numeric/factor vector when probing from vectors.
-#' @param z The moderator. Same options as `x`.
-#' @param y The dependent variable. Same options as `x`. Not required when `model` is supplied.
-#' @param model By default `interprobe` estimates a GAM model predicting `y` with `x` and `z`.
-#' You can instead probe a linear interaction by setting model=linear. You can also probe a 
-#' model of your choice by running it separately, saving the output, and submitting it as the model 
-#' argument to interprobe. This is the way to include covariates for a probed interaction.
-#' @param data Optional data frame containing `x`, `z`, and `y`.
-#' @param moderator.on.x.axis Logical. If TRUE (default), moderator (`z`) is shown on the x-axis.
-#' @param k Integer. Smoothness parameter passed to `mgcv::gam()` when estimating with the default
-#'   GAM engine. 
-#' @param spotlights Numeric vector of length 3. Values at which curves are computed.
-#' @param spotlight.labels Character vector of length 3. Labels for the legend.
-#' @param histogram Logical. If TRUE (default), show a frequency panel under each curve plot.
-#' @param max.unique Integer. Threshold for treating a variable as continuous vs discrete.
-#' @param n.bin.continuous Integer. Number of bins used in histogram when binning continuous values.
-#' @param n.max Integer. Sample size at which line darkness/width saturates.
-#' @param xlab Character. X-axis label.
+#' You cannot pass both `data` and `model`. If both `model` and `y` are
+#' supplied, `y` is ignored.
+#'
+#' @section Model estimated:
+#' By default `interprobe()` fits a GAM with `mgcv::gam(..., method = "REML")`.
+#' GAM probing avoids the linear-interaction-effect assumption of the classical
+#' `y ~ x * z` model: the conditional effect of `x` can bend freely with `z`
+#' (and vice versa). The frequency panel under each plot shows where the data
+#' support the curves (common support across the moderator range).
+#'
+#' Default formulas:
+#' - If `x` has 3 or fewer unique values: `y ~ s(z, by = x) + x` (with `x` as a factor)
+#' - If `x` has 4 or more unique values: `y ~ s(z) + s(x) + ti(x, z)`
+#'
+#' Set `model = "linear"` (or `"lm"`) to fit `lm2(y ~ x * z)` instead. Pass a
+#' fitted model (e.g. `lm()`, `lm2()`, `glm()`, `mgcv::gam()`) to include
+#' covariates; other predictors are held at their means on the prediction grid.
+#' Any model supported by `marginaleffects` can be probed.
+#'
+#' @section How x and z are classified:
+#' Classification uses the number of unique observed values:
+#' - `x` with 2-3 unique values: **categorical** (one curve per level; spotlights unused)
+#' - `x` with 4 to `max.unique` unique values: **discrete** (still uses three spotlights)
+#' - `x` with more than `max.unique` unique values: **continuous**
+#' - `z` at or below `max.unique`: evaluated at observed values
+#' - `z` above `max.unique`: evaluated on a grid of `probe.bins` points from min to max
+#'
+#' If `x` has 3 or fewer unique values, `moderator.on.x.axis = FALSE` is ignored
+#' and the moderator is forced onto the x-axis.
+#'
+#' @section Spotlights:
+#' When `spotlights` is `NULL` and `x` is not categorical, curves are drawn at
+#' the 15th, 50th, and 85th percentiles (`stats::quantile(..., type = 3)`) of
+#' `x` if the moderator is on the x-axis, otherwise of `z`. Default legend
+#' labels are built from those percentiles and `legend.round`.
+#'
+#' @section Console output:
+#' Unless `quiet = TRUE`, prints the pair being probed. When a GAM is estimated
+#' internally, also prints an HC3 linear interaction test and a GAM interaction
+#' F test. Johnson-Neyman regions of significance are printed only for a
+#' categorical focal predictor when the JN panel is drawn.
+#'
+#' @param x Focal predictor. A name (bare or quoted) when `data` or `model` is
+#'   provided, or a numeric/factor vector when probing from vectors.
+#' @param z Moderator. Same options as `x`.
+#' @param y Dependent variable. Same options as `x`. Not required (and ignored)
+#'   when `model` is supplied.
+#' @param model Model to probe. Default `NULL` fits a GAM of `y` on `x` and `z`
+#'   (see Model estimated). Use `model = "linear"` or `model = "lm"` for an
+#'   internal linear interaction via `lm2()`. Pass a fitted object to probe a
+#'   model of your choice (the usual path for covariates).
+#' @param data Optional data frame containing `x`, `z`, and `y`. Cannot be
+#'   combined with a fitted `model`.
+#' @param moderator.on.x.axis Logical. If `TRUE` (default), moderator `z` is on
+#'   the x-axis. Ignored (forced to `TRUE`) when `x` has 3 or fewer unique values.
+#' @param k Integer smoothness parameter passed to `mgcv::gam()` when estimating
+#'   with the default GAM engine. Default `NULL` omits `k` (mgcv default), except
+#'   the binary-`x` testing GAM which uses `k = 10`.
+#' @param spotlights Optional numeric vector of length 3. Values at which curves
+#'   are computed. Default `NULL` uses the 15th/50th/85th percentiles (see Spotlights).
+#' @param spotlight.labels Optional character vector of length 3. Legend labels.
+#'   Default `NULL` builds labels from `spotlights` and `legend.round`.
+#' @param histogram Logical. If `TRUE` (default), show a frequency panel under
+#'   each curve plot (common support).
+#' @param max.unique Integer. Threshold for continuous vs discrete treatment of
+#'   a variable (default `11`). Separately, `x` with 2-3 unique values is always
+#'   categorical (see How x and z are classified).
+#' @param n.bin.continuous Integer. Number of bins in the histogram when binning
+#'   continuous values (default `10`).
+#' @param n.max Integer. Sample size at which line darkness/width saturates
+#'   (default `50`).
+#' @param xlab Character. X-axis label. Default `""` uses the variable name.
 #' @param cols Character vector of length 2 or 3. Colors for the curves.
 #'   Length 2 is allowed when the focal predictor has exactly two levels;
 #'   otherwise length 3 is required (three spotlights or up to three categorical levels).
-#' @param ylab1 Character. Y-axis label for simple slopes panel.
-#' @param ylab2 Character. Y-axis label for JN panel.
-#' @param main1 Character. Title for simple slopes panel.
-#' @param main2 Character. Title for JN panel.
-#' @param legend.round Integer vector length 2. Min/max decimals in legend.
-#' @param draw Which plots to draw: `"both"` (default), `"simple slopes"` (or legacy `"simple.slopes"`), `"jn"`, or `"none"` (no plot).
-#' @param save.as Optional file path to save plot (`.png` or `.svg`).
-#' @param xlim Numeric vector length 2. X-axis limits.
-#' @param ylim1 Numeric vector length 2. Y-axis limits for simple slopes.
-#' @param ylim2 Numeric vector length 2. Y-axis limits for JN.
-#' @param legend.simple.slopes Optional legend title for simple slopes.
-#' @param legend.jn Optional legend title for JN.
-#' @param x.ticks Optional custom x-axis ticks.
-#' @param y1.ticks Optional custom y-axis ticks for panel 1.
-#' @param y2.ticks Optional custom y-axis ticks for panel 2.
-#' @param quiet Logical. If TRUE, reduces console output.
-#' @param probe.bins Integer. Resolution for probing curves (larger = smoother/slower).
+#'   Default `c("red4", "dodgerblue", "green4")`.
+#' @param ylab1 Character. Y-axis label for simple slopes. Default `""` becomes
+#'   the name of `y`.
+#' @param ylab2 Character. Y-axis label for the JN panel. Default `""` becomes
+#'   `"Marginal effect of <x>"`.
+#' @param main1 Character. Title for simple slopes. Default `"GAM Simple Slopes"`;
+#'   rewritten to drop `"GAM"` when a non-GAM fitted model is supplied.
+#' @param main2 Character. Title for JN. Default `"GAM Johnson-Neyman"`; rewritten
+#'   like `main1` for non-GAM fitted models.
+#' @param legend.round Integer vector length 2. Min/max decimals in legend labels
+#'   (default `c(1, 4)`).
+#' @param draw Which plots to draw: `"both"` (default), `"simple slopes"` (or
+#'   legacy `"simple.slopes"`), `"jn"`, or `"none"` (no plot).
+#' @param save.as Optional file path to save the plot (`.png` or `.svg`).
+#' @param xlim Numeric vector length 2. X-axis limits. Default `NULL` uses the data range.
+#' @param ylim1 Numeric vector length 2. Y-axis limits for simple slopes. Default `NULL`.
+#' @param ylim2 Numeric vector length 2. Y-axis limits for JN. Default `NULL`.
+#' @param legend.simple.slopes Optional legend title for simple slopes. Default `NULL`.
+#' @param legend.jn Optional legend title for JN. Default `NULL`.
+#' @param x.ticks Optional custom x-axis ticks. Default `NULL`.
+#' @param y1.ticks Optional custom y-axis ticks for panel 1. Default `NULL`.
+#' @param y2.ticks Optional custom y-axis ticks for panel 2. Default `NULL`.
+#' @param quiet Logical. If `TRUE`, suppresses the probing message, interaction
+#'   tests, and JN region printout (default `FALSE`).
+#' @param probe.bins Integer. Grid resolution for continuous probing (default
+#'   `100`; larger = smoother/slower).
 #'
 #' @return Invisibly returns a list with:
 #' \itemize{
-#'   \item \code{simple.slopes}: data.frame of predicted values and confidence intervals
-#'   \item \code{johnson.neyman}: data.frame of marginal effects and confidence intervals
-#'   \item \code{frequencies}: data.frame with bin frequencies used for shading/histogram
-#'   \item \code{gam_results}: the fitted GAM model when estimated inside \code{interprobe()}
-#'   \item \code{gam_results_testing}: when \code{interprobe()} estimates a GAM internally and \code{x}
-#'     has exactly 2 unique values, a separate GAM fit used for interaction testing (with a \code{ti()}
-#'     term and numeric coding of \code{x})
-#'   \item \code{lm2_results}: when \code{interprobe()} estimates a GAM internally, also returns the
-#'     corresponding linear fit \code{lm2(y ~ x * z)} (or \code{NULL} if package \code{estimatr}
-#'     is not installed)
+#'   \item \code{simple.slopes}: data.frame of predicted values (\code{y.hat}) and
+#'     confidence limits, plus the evaluation grid for \code{x} and \code{z}
+#'   \item \code{johnson.neyman}: data.frame of marginal effects
+#'     (\code{marginal.effect}) and confidence limits on the same grid
+#'   \item \code{frequencies}: data.frame with bin frequencies used for
+#'     shading/histogram (\code{bin}, \code{f1}--\code{f3}; after a plot is drawn,
+#'     also \code{bin_from} / \code{bin_to})
+#'   \item \code{gam_results}: the model fitted inside \code{interprobe()} when
+#'     none was supplied. Despite the name, this is an \code{lm2} fit when
+#'     \code{model = "linear"} / \code{"lm"}
+#'   \item \code{gam_results_testing}: when a GAM is estimated internally and
+#'     \code{x} has exactly 2 unique values, a separate GAM used for interaction
+#'     testing (with a \code{ti()} term and numeric coding of \code{x})
+#'   \item \code{lm2_results}: when a GAM is estimated internally, the
+#'     corresponding linear fit \code{lm2(y ~ x * z)} (or \code{NULL} if
+#'     \code{estimatr} is not installed). Not set on the \code{model = "linear"} path
 #' }
 #'
+#' @references
+#' Simonsohn, U. (2024). Interacting with curves: How to validly test and probe
+#' interactions in the real (nonlinear) world. \emph{Advances in Methods and
+#' Practices in Psychological Science}, 7(1), Article 25152459231207787.
+#' \doi{10.1177/25152459231207787}
+#'
+#' Montealegre, D., & Simonsohn, U. (2026). \emph{Johnson Neyman 2.0} (working paper).
+#'
+#' Run \code{citation("statuser")} for ready-to-use citation entries.
+#'
+#' @seealso
+#' \code{vignette("interprobe", package = "statuser")}, \code{\link{lm2}},
+#' \code{\link[mgcv]{gam}}, \code{\link{tacos_data}}
+#'
+#' @examples
+#' \donttest{
+#' # This is a stylized dataset inspired by Montealegre & Simonsohn (2026).
+#' # It depicts how salsa spiciness relates to taco enjoyment,
+#' # moderated by respondents' tolerance for spicy food.
+#' data(tacos_data)
+#'
+#' # Case A: experiment with Mild vs Hot salsa (binary focal predictor)
+#' tacos_bin <- tacos_data[!is.na(tacos_data$spicy_bin), ]
+#' interprobe(x = spicy_bin, z = tolerance, y = enjoyment, data = tacos_bin)
+#'
+#' # Case B: three salsa levels (Mild / Medium / Hot)
+#' interprobe(x = salsa, z = tolerance, y = enjoyment, data = tacos_data)
+#'
+#' # Case C: continuous spiciness rating (1-7) by continuous tolerance
+#' interprobe(x = spicy, z = tolerance, y = enjoyment, data = tacos_data)
+#'
+#' # Same as Case A, but force a classical linear interaction
+#' interprobe(
+#'   x = spicy_bin, z = tolerance, y = enjoyment,
+#'   data = tacos_bin, model = "linear"
+#' )
+#' # Probe a user-fitted model (here with age as a covariate)
+#' lm1 <- lm(enjoyment ~ spicy_bin * tolerance + age, data = tacos_bin)
+#' interprobe(model = lm1, x = spicy_bin, z = tolerance)
+#' }
+#'
+#' @usage
+#' interprobe(
+#'   x = NULL, z = NULL, y = NULL, model = NULL, data = NULL,
+#'   moderator.on.x.axis = TRUE, k = NULL, spotlights = NULL, spotlight.labels = NULL,
+#'   histogram = TRUE, max.unique = 11, n.bin.continuous = 10, n.max = 50,
+#'   xlab = "", ylab1 = "", ylab2 = "", cols = c("red4", "dodgerblue", "green4"),
+#'   main1 = "GAM Simple Slopes", main2 = "GAM Johnson-Neyman",
+#'   legend.round = c(1, 4), draw = "both", save.as = NULL,
+#'   xlim = NULL, ylim1 = NULL, ylim2 = NULL,
+#'   x.ticks = NULL, y1.ticks = NULL, y2.ticks = NULL,
+#'   legend.simple.slopes = NULL, legend.jn = NULL, quiet = FALSE, probe.bins = 100
+#' )
+#' @md
 #' @export
-interprobe <- function( x = NULL, z = NULL, y = NULL,
-  model = NULL,  data = NULL,
-  moderator.on.x.axis = TRUE,
-  k = NULL,
-  spotlights = NULL, spotlight.labels = NULL,
-  histogram = TRUE, max.unique = 11,n.bin.continuous = 10,n.max = 50,
-  xlab = "", ylab1 = "", ylab2 = "",
-  cols = c("red4", "dodgerblue", "green4"),
+interprobe <- function(
+  x = NULL, z = NULL, y = NULL, model = NULL, data = NULL,
+  moderator.on.x.axis = TRUE, k = NULL, spotlights = NULL, spotlight.labels = NULL,
+  histogram = TRUE, max.unique = 11, n.bin.continuous = 10, n.max = 50,
+  xlab = "", ylab1 = "", ylab2 = "", cols = c("red4", "dodgerblue", "green4"),
   main1 = "GAM Simple Slopes", main2 = "GAM Johnson-Neyman",
-  legend.round = c(1, 4), draw = "both",
-  save.as = NULL,
-  xlim = NULL, ylim1 = NULL, ylim2 = NULL,x.ticks = NULL,   y1.ticks = NULL, y2.ticks = NULL, 
-  legend.simple.slopes = NULL, legend.jn = NULL,
-  quiet = FALSE,
-  probe.bins = 100
+  legend.round = c(1, 4), draw = "both", save.as = NULL,
+  xlim = NULL, ylim1 = NULL, ylim2 = NULL,
+  x.ticks = NULL, y1.ticks = NULL, y2.ticks = NULL,
+  legend.simple.slopes = NULL, legend.jn = NULL, quiet = FALSE, probe.bins = 100
 ) {
   # Capture names without evaluating x/z/y (bare names may exist only in data=/model)
   mc <- match.call(expand.dots = FALSE)
@@ -108,7 +248,7 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   # With data= or model=, treat x/z/y as names — do not force env evaluation
   if (!is.null(data) || !is.null(model)) {
     if (!is.null(data) && (!provided_x || !provided_z || !provided_y)) {
-      exit("interprobe says(): you must specify 'x', 'z' and 'y'")
+      exit("interprobe() says: you must specify 'x', 'z' and 'y'")
     }
     if (provided_x) x <- xvar
     if (provided_z) z <- zvar
@@ -198,8 +338,8 @@ interprobe <- function( x = NULL, z = NULL, y = NULL,
   if (nux <= 3 & moderator.on.x.axis == FALSE) {
     message(
       paste0(
-        "interprobe() says: Less than 3 unique values for x variable ('", xvar, "').\n",
-        "Will ignore request to have it on the x-axis"
+        "interprobe() says: 3 or fewer unique values for x variable ('", xvar, "').\n",
+        "Will ignore the request to put it on the x-axis."
       )
     )
     moderator.on.x.axis <- TRUE

@@ -267,6 +267,30 @@ test_that("table2 chi parameter returns chi-square test", {
   expect_true(!is.null(result_chi_prop$freq))
 })
 
+#table2_014b
+test_that("table2 accepts chi2 as alias for chi", {
+  set.seed(123)
+  df <- data.frame(
+    division = rep(c("A", "B"), each = 50),
+    takeup = sample(0:1, 100, replace = TRUE)
+  )
+  result_chi <- table2(division, takeup, prop = "row", chi = TRUE, data = df)
+  result_chi2 <- table2(division, takeup, prop = "row", chi2 = TRUE, data = df)
+  expect_true(inherits(result_chi$chisq, "htest"))
+  expect_true(inherits(result_chi2$chisq, "htest"))
+  expect_equal(result_chi$chisq$statistic, result_chi2$chisq$statistic)
+  expect_false(is.null(result_chi2$prop))
+})
+
+#table2_014c
+test_that("table2 errors when chi and chi2 conflict", {
+  df <- data.frame(x = rep(c("A", "B"), 50), y = sample(0:1, 100, TRUE))
+  expect_error(
+    table2(x, y, chi = TRUE, chi2 = FALSE, data = df),
+    "chi="
+  )
+})
+
 # ============================================================================
 # EDGE CASES AND ADDITIONAL TESTS
 # ============================================================================

@@ -19,7 +19,7 @@ utils::globalVariables(c("m1", "m2", "m3", "m1.cluster"))
 
 #Functions
 
-#1 round2()        - Rounding
+#1 sp_round2()     - Rounding (internal; do not collide with exported round2)
 #2 exit()          - message to show when executoin ends early
 #3 clean_string()  - Remove everything except letters, numbers, and underscores
 #4 tidy.t()        - t.test outputs to data.frame
@@ -43,7 +43,7 @@ utils::globalVariables(c("m1", "m2", "m3", "m1.cluster"))
 #----------------------------------
 
 #1 Rounding
-  round2 <- function(x, digits = 2) { 
+  sp_round2 <- function(x, digits = 2) {
     ncode <- paste0("%.", digits, "f")
     sub("^(-?)0.", "\\1.", sprintf(ncode, x))
   }
@@ -411,7 +411,7 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
       if (!plot.type %in% c('means','effects'))     exit(paste0(f,"() says: the argument 'plot.type' must be either 'effects' or 'means', you entered '",plot.type,"'"))
       if (!null.method %in% c('shuffle', 'demean', 'demeans')) exit(paste0(f,"() says: the argument 'null.method' must be either 'shuffle' or 'demean', you entered '",null.method,"'"))
       if (any(!model %in% c('all','regression','intercepts','slopes'))) {
-          exit(paste0(f,"() says:If the the argument 'model' is set, it must include only a subset of the following four values:\n ",
+          exit(paste0(f,"() says: If the argument 'model' is set, it must include only a subset of the following four values:\n ",
              "'all','regression','intercepts','slopes' "))
       }
       
@@ -439,8 +439,8 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
       n3=length(overall.p)
       n4=length(overall.label)
 
-      if (length(unique(c(n1,n3,n4)))>1 & n1>0) exit("The 'overall' arguments (estimate, p, and label) must have the same legnth")
-      if (n2!=2*n1) exit(paste0(f,"() says: Make sure that there are twice the number of values in overall.ci as in overall.estimate"))
+      if (length(unique(c(n1,n3,n4)))>1 & n1>0) exit("The 'overall' arguments (estimate, p, and label) must have the same length")
+      if (n2!=2*n1) exit(paste0(f,"() says: Make sure that there are twice as many values in 'overall.ci' as in 'overall.estimate'"))
      
 
       
@@ -460,18 +460,18 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
 
   validate.data = function(f, data, dv, condition, stimulus, sort.by,participant,dataname)
   {
-        if (missing(data))      exit(paste0(f," says: you must specify a dataframe"))
-        if (missing(dv))        exit(paste0(f," says: you must specify the dependent variable ('dv')"))
-        if (missing(condition)) exit(paste0(f," says: you must specify the condition variable ('condition')"))
-        if (missing(stimulus))  exit(paste0(f," says: you must specify the stimulus variable ('stimulus')"))
+        if (missing(data))      exit(paste0(f,"() says: you must specify a dataframe"))
+        if (missing(dv))        exit(paste0(f,"() says: you must specify the dependent variable ('dv')"))
+        if (missing(condition)) exit(paste0(f,"() says: you must specify the condition variable ('condition')"))
+        if (missing(stimulus))  exit(paste0(f,"() says: you must specify the stimulus variable ('stimulus')"))
     
     
       n1=names(data)
       if (!dv %in% n1)        exit(paste0(f,"() says the dv ('",dv,    "') is not in the dataset '",dataname,"'."))
       if (!condition %in% n1) exit(paste0(f,"() says the condition variable ('",condition,"') is not in the dataset '",dataname,"'."))
       if (!stimulus %in% n1)  exit(paste0(f,"() says the stimulus variable ('",stimulus,"') is not in the dataset '",dataname,"'."))
-      if (!sort.by %in% c(n1,"")    ) exit(paste0(f," says the sort.by variable ('",sort.by,"') is not in the dataset '",dataname,"'."))
-      if (!participant %in% c(n1,"")) exit(paste0(f," says the participant variable ('",participant,"') is not in the dataset '",dataname,"'."))
+      if (!sort.by %in% c(n1,"")    ) exit(paste0(f,"() says the sort.by variable ('",sort.by,"') is not in the dataset '",dataname,"'."))
+      if (!participant %in% c(n1,"")) exit(paste0(f,"() says the participant variable ('",participant,"') is not in the dataset '",dataname,"'."))
   }
   
   
@@ -1244,8 +1244,8 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
     #Labels themselves
       if (dv.is.percentage==FALSE)
       {
-      text(1:n,bh,round2(bh,auto.decimals(bh)),col=col.h,cex=.75,pos=3)
-      text(1:n,bl,round2(bl,auto.decimals(bl)),col=col.l,cex=.75,pos=1)
+      text(1:n,bh,sp_round2(bh,auto.decimals(bh)),col=col.h,cex=.75,pos=3)
+      text(1:n,bl,sp_round2(bl,auto.decimals(bl)),col=col.l,cex=.75,pos=1)
       }
       
       if (dv.is.percentage==TRUE)
@@ -1267,8 +1267,8 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
     if (m1<m2) d.pos=rev(d.pos)
     if (dv.is.percentage==FALSE)
       {
-      text(n+3,m1 , round2(m1,auto.decimals(m1)),cex=.8,col='black',pos=d.pos[1])
-      text(n+3,m2 , round2(m2,auto.decimals(m1)),cex=.8,col='black',pos=d.pos[2])
+      text(n+3,m1 , sp_round2(m1,auto.decimals(m1)),cex=.8,col='black',pos=d.pos[1])
+      text(n+3,m2 , sp_round2(m2,auto.decimals(m1)),cex=.8,col='black',pos=d.pos[2])
       }
     
     
@@ -1564,7 +1564,7 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
         if (decimals=='auto') d.decimals=auto.decimals(d)
         if (decimals!='auto') d.decimals=decimals
       
-      if (dv.is.percentage==FALSE) text(1:n,d ,round2(d , d.decimals),col='blue4',cex=.65,pos=4)
+      if (dv.is.percentage==FALSE) text(1:n,d ,sp_round2(d , d.decimals),col='blue4',cex=.65,pos=4)
       if (dv.is.percentage==TRUE)  text(1:n,d ,format_percent(d,decimals), col='blue4',cex=.65,pos=4) #utils.R #9 <-- 'format_percent()'
 
      
@@ -1620,7 +1620,7 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
                       lwd=c(NA,1,1,14,NA),
                       col=c('black', col.ci, col.null1 , col.null2,NA),
                       c(paste0("Observed effect: '",label1,"' - '",label2,"'"),
-                        "95 CI for observed effect (t-test for this stimulus)",
+                        "95% CI for observed effect (t-test for this stimulus)",
                         paste0("Expected under null of ",null_text),
                         "95% confidence band under null",
                         paste0("Heterogeneity test: ",p.hetero_text," (N=",simtot, " resamples)")),
@@ -1633,7 +1633,7 @@ validate.stimulus.plot=function(plot.type, data,dv, condition, stimulus, save.as
                       lwd=c(NA,1),
                       col=c('black',col.ci),
                       c(paste0('Observed effect: ',label1," - ",label2),
-                        "95 CI for observed effect"),
+                        "95% CI for observed effect"),
                         inset=.03)
           
         }

@@ -1,0 +1,34 @@
+Package: statuser
+Type: Package
+Title: Statistical Tools Designed for End Users
+Version: 0.4.0.9001
+Authors@R: c(
+    person(given = "Uri",
+           family = "Simonsohn",
+           role = c("aut", "cre"),
+           email = "urisohn@gmail.com"))
+Author: Uri Simonsohn [aut, cre]
+Maintainer: Uri Simonsohn <urisohn@gmail.com>
+Description: The statistical tools in this package do one of four things:
+    1) Enhance basic statistical functions with more 
+    flexible inputs, smarter defaults, and richer, clearer, and ready-to-use 
+    output (e.g., t.test2())
+    2) Produce publication-ready commonly needed figures with one line of code (e.g., plot_cdf())
+    3) Implement novel analytical tools developed by the authors (e.g., twolines())
+    4) Deliver niche functions of high value to the authors that are not easily
+    available elsewhere (e.g., clear(), convert_to_sql(), resize_images()).
+License: GPL-3
+URL: https://github.com/urisohn/statuser
+BugReports: https://github.com/urisohn/statuser/issues
+Depends: R (>= 3.5.0)
+Encoding: UTF-8
+LazyData: true
+Imports: mgcv, marginaleffects, rsvg, magick, sandwich, lmtest,
+        lmerTest, digest, beeswarm, utils
+Suggests: testthat (>= 3.0.0), crayon, quantreg, estimatr, broom,
+        modelsummary, knitr, rmarkdown, MASS
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0
+NeedsCompilation: no
+Packaged: 2026-10-30 08:32:57 UTC; uri_s

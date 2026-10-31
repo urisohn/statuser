@@ -8,6 +8,18 @@ test_that("plot_means runs with formula + data and returns desc_var object", {
   expect_true(is.data.frame(result$means))
 })
 
+#plot_means_009
+test_that("plot_means accepts df$y ~ df$g without data=", {
+  df <- data.frame(y = rnorm(100), g = rep(c("A", "B"), 50))
+  expect_error(plot_means(df$y ~ df$g, quiet = TRUE), NA)
+})
+
+#plot_means_010
+test_that("plot_means errors if df$y ~ df$g is combined with data=", {
+  df <- data.frame(y = rnorm(100), g = rep(c("A", "B"), 50))
+  expect_error(plot_means(df$y ~ df$g, data = df, quiet = TRUE), "Do not combine", fixed = TRUE)
+})
+
 #plot_means_002
 test_that("plot_means works with multiple grouping variables (y ~ x1 + x2)", {
   df <- data.frame(
@@ -226,5 +238,100 @@ test_that("plot_means clustered CI uses regression-based intervals governed by c
     expect_equal(pm$means$ciL[i], ci_df$lwr[j], tolerance = 1e-3)
     expect_equal(pm$means$ciH[i], ci_df$upr[j], tolerance = 1e-3)
   }
+})
+
+#plot_means_013
+test_that("plot_means_n_band_layout extends below user ylim for n= band", {
+  heights <- c(75, 80, 70, 85)
+  ci_map <- data.frame(
+    cell_key = paste0("L", 1:4),
+    lwr = c(70, 75, 65, 80),
+    upr = c(80, 85, 75, 90),
+    stringsAsFactors = FALSE
+  )
+  layout <- statuser:::plot_means_n_band_layout(
+    heights = heights,
+    ci_map = ci_map,
+    cell_keys_drawn = ci_map$cell_key,
+    x_centers_drawn = 1:4,
+    y_min_data = 60,
+    y_max_data = 100
+  )
+  expect_lt(layout$ylim_low_needed, 60)
+  expect_lt(layout$n_y, 60)
+  expect_lt(layout$n_y, layout$geom_bottom)
+  expect_equal(layout$geom_bottom, 0)
+})
+
+#plot_means_015
+test_that("plot_means_n_band_layout respects high user ylim floor (not pulled to 0)", {
+  heights <- c(82, 84, 83, 85)
+  ci_map <- data.frame(
+    cell_key = paste0("L", 1:4),
+    lwr = heights - 2,
+    upr = heights + 2,
+    stringsAsFactors = FALSE
+  )
+  layout <- statuser:::plot_means_n_band_layout(
+    heights = heights,
+    ci_map = ci_map,
+    cell_keys_drawn = ci_map$cell_key,
+    x_centers_drawn = 1:4,
+    y_min_data = 0,
+    y_max_data = 90,
+    user_ylim = c(80, 90)
+  )
+  expect_equal(layout$visible_floor, 80)
+  expect_gte(layout$ylim_low_needed, 70)
+  expect_lt(layout$ylim_low_needed, 80)
+  expect_lt(layout$n_y, layout$visible_floor - layout$pad_n)
+  expect_gte(layout$n_y, layout$ylim_low_needed)
+})
+
+#plot_means_014
+test_that("plot_means with user ylim extends lower limit for n= labels", {
+  n <- 20L
+  set.seed(42)
+  df_long <- data.frame(
+    y = c(rnorm(n, 75, 2), rnorm(n, 80, 2)),
+    spreadout = rep(c("A", "B"), each = n),
+    outcome = rep(c("Predicted", "Final"), times = n)
+  )
+  user_ylim_low <- 60
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  plot_means(
+    y ~ spreadout + outcome,
+    data = df_long,
+    tests = "none",
+    ylim = c(user_ylim_low, 100),
+    quiet = TRUE
+  )
+  expect_lt(par("usr")[3], user_ylim_low)
+})
+
+#plot_means_016
+test_that("plot_means with ylim=c(80,90) keeps axis near requested range", {
+  n <- 20L
+  set.seed(1)
+  df_long <- data.frame(
+    y = c(rnorm(n, 82, 1), rnorm(n, 84, 1)),
+    spreadout = rep(c("A", "B"), each = n),
+    outcome = rep(c("Predicted", "Final"), times = n)
+  )
+  user_ylim <- c(80, 90)
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  plot_means(
+    y ~ spreadout + outcome,
+    data = df_long,
+    tests = "none",
+    ylim = user_ylim,
+    quiet = TRUE
+  )
+  usr <- par("usr")
+  expect_gte(usr[3], user_ylim[1] - 5)
+  expect_lte(usr[3], user_ylim[1])
+  expect_equal(usr[4], user_ylim[2], tolerance = 1)
 })
 

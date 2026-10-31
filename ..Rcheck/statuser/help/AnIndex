@@ -1,12 +1,15 @@
 statuser-package	statuser-package
 clear	clear
+clear_stimulus_cache	clear_stimulus_cache
 convert_to_sql	convert_to_sql
 desc_var	desc_var
 evaluate_variable_arguments	evaluate_variable_arguments
 format_pvalue	format_pvalue
 interprobe	interprobe
+interprobe_sim	interprobe_sim
 list2	list2
 lm2	lm2
+lm2_notes	lm2_notes
 message2	message2
 plot_cdf	plot_cdf
 plot_density	plot_density
@@ -20,8 +23,11 @@ print.t.test2	print.t.test2
 print.table2	print.table2
 reg2	reg2
 resize_images	resize_images
+round2	round2
 scatter.gam	scatter.gam
 statuser	statuser-package
+stimulus.beeswarm	stimulus.beeswarm
+stimulus.plot	stimulus.plot
 summary.lm2	summary.lm2
 t.test2	t.test2
 table2	table2
